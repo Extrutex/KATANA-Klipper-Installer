@@ -1,7 +1,6 @@
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/9efad6eb-91cf-4e4d-998e-d2c3e4ff433a" width="100%" alt="KATANA Interface" />
+<img width="610" height="688" alt="KATANAOS" src="https://github.com/user-attachments/assets/47f710ef-05d4-4dcc-9973-207e3da95182" />
 
-  # ⚔️ KATANA - Klipper Deployment Utility
+  # ⚔️ KATANAOS - Pro-Grade Klipper Suite
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
   [![Platform](https://img.shields.io/badge/Platform-Debian%20%7C%20Raspbian%20%7C%20Armbian-blue.svg)]()
@@ -15,43 +14,51 @@
 
 ## ⚡ Overview
 
-**KATANA** is a CLI utility engineered to streamline the deployment of the Klipper ecosystem. Unlike modular toolboxes that require extensive manual menu navigation, KATANA utilizes an **"Auto-Pilot" workflow** to provision the entire stack (Firmware, API, Reverse Proxy, UI) in a single execution pass.
+**KATANAOS** is a CLI management suite engineered to streamline the deployment and maintenance of the Klipper ecosystem. Unlike modular toolboxes that require extensive manual menu navigation, KATANAOS utilizes an **"Auto-Pilot" workflow** to provision the entire stack (Firmware, API, Reverse Proxy, HMI) in a single execution pass.
 
 It is designed for users who treat their 3D printer as a production appliance, prioritizing **security, stability, and reproducible configuration** over manual tinkering.
 
 ## 📦 Core Architecture
 
 ### 1. 🟣 Deployment Matrix
-A real-time dashboard that verifies the installation state of the stack components.
-* **Function:** Checks for the presence of Klipper, Moonraker, UI frontends, and system services.
+A real-time, pixel-perfect dashboard that verifies the installation state of the stack components.
+* **Function:** Checks for Klipper, Kalico, Moonraker, UI frontends, and system services.
 * **Purpose:** Provides immediate visual feedback on which parts of the ecosystem are deployed on the host.
 
 ### 2. ⚡ Dynamic Nginx Management
-KATANA handles the reverse proxy configuration automatically.
+KATANAOS handles the reverse proxy configuration automatically.
 * **Feature:** Switch between **Mainsail** and **Fluidd** instantly via the menu.
-* **Mechanism:** The script rewrites the Nginx site configuration (`/etc/nginx/sites-available/klipper`) to point to the selected frontend and restarts the service seamlessly. No manual config editing required.
+* **Mechanism:** The script rewrites the Nginx site configuration to point to the selected frontend and restarts the service seamlessly.
 
-### 3. 🛡️ System Hardening (Standardized)
+### 3. 🔥 The Forge (Hardware Automator)
+A dedicated engine for MCU management and communication.
+* **Smart Flash:** Scans `/dev/serial/by-id/` to detect connected MCUs. Allows direct flashing via a selection menu without manual path copying.
+* **Auto CAN-Bus:** Automatically creates the `/etc/network/interfaces.d/can0` interface with **1M bitrate** and optimized `txqueuelen`, eliminating manual Linux network configuration.
+
+### 4. ⚙️ Engine Manager (Dual-Core)
+Runtime flexibility for power users.
+* **Feature:** Switch between **Klipper** (Standard) and **Kalico** (High-Performance) firmware engines instantly.
+* **Mechanism:** Dynamically rewrites systemd service paths to swap the active execution environment without reinstalling or reflashing the SD card.
+
+### 5. 👁️ HMI & Vision Stack
+Full support for local machine interfaces.
+* **Full Media Stack:** One-click deployment of **Crowsnest** (Webcam Streaming Daemon) and **KlipperScreen** (Touch UI) in a single pass.
+
+### 6. 🧩 Smart Extension Support
+Intelligent installation logic for modern Klipper extensions.
+* **Smart Probe Selector:** Enforces exclusive installation logic for **Beacon3D** or **Cartographer** to prevent udev conflicts.
+* **KAMP:** Clones the repo and injects the update manager entry into `moonraker.conf`.
+* **ShakeTune:** Automated installation of the Klippain ShakeTune module.
+
+### 7. 🛡️ System Hardening (Standardized)
 Security is not an option; it is a default.
 * **UFW Firewall:** Automated rule generation denying all incoming traffic except essential ports (SSH:22, HTTP:80, API:7125).
-* **Log2Ram:** Integrates the Log2Ram daemon to redirect system logging to RAM, significantly reducing write cycles on SD cards and preventing corruption during power loss.
-
-### 4. 🧩 Integrated Extension Support
-First-class support for modern Klipper extensions.
-* **KAMP:** Clones the repo and injects the update manager entry into `moonraker.conf`. (Note: `[include KAMP_Settings.cfg]` must be added to `printer.cfg` manually).
-* **ShakeTune:** Automated installation of the Klippain ShakeTune module for advanced input shaper analysis.
-
-### 5. 🤖 Auto-Pilot (God Mode)
-The "Auto-Pilot" function executes a linear provisioning script:
-1. **System Prep:** Updates `apt`, installs Python3 venv, builds dependencies.
-2. **Core Stack:** Clones Klipper/Moonraker, creates systemd services.
-3. **Network:** Configures Moonraker auth and CORS for local access.
-4. **UI:** Deploys selected frontend and configures Nginx.
+* **Log2Ram:** Integrates the Log2Ram daemon to redirect system logging to RAM, significantly reducing write cycles on SD cards.
 
 ## 🛠️ Usage
 
 **Requirements:**
-* Hardware: Raspberry Pi (3/4/Zero2), Orange Pi, or generic Linux host.
+* Hardware: Raspberry Pi (3/4/5/Zero2), Orange Pi, or generic Linux host.
 * OS: Debian Bookworm / Bullseye (Lite recommended).
 * User: Standard user with `sudo` privileges.
 
@@ -59,6 +66,7 @@ The "Auto-Pilot" function executes a linear provisioning script:
 
 ```bash
 cd ~
-git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
-chmod +x katana.sh
-./katana.sh
+git clone [https://github.com/Extrutex/KATANA-Klipper-Installer.git](https://github.com/Extrutex/KATANA-Klipper-Installer.git)
+mv KATANA-Klipper-Installer/katanaos.sh .
+chmod +x katanaos.sh
+./katanaos.sh
