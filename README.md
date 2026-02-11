@@ -73,7 +73,7 @@ Security is not an option; it is a default.
 
 ```bash
 cd ~
-git clone [https://github.com/Extrutex/KATANA-Klipper-Installer.git](https://github.com/Extrutex/KATANA-Klipper-Installer.git)
+git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
 cd KATANA-Klipper-Installer/katanaos.sh 
 chmod +x katanaos.sh
 ./katanaos.sh
