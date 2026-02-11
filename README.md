@@ -1,18 +1,11 @@
-<img width="610" height="688" alt="KATANAOS" src="https://github.com/user-attachments/assets/c898dd8c-3713-4f9c-b630-379a73b9b95d" />
+# ⚔️ KATANAOS - Pro-Grade Klipper Suite
 
-  <h1>⚔️ KATANAOS - Pro-Grade Klipper Suite</h1>
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Platform](https://img.shields.io/badge/Platform-Debian%20%7C%20Raspbian%20%7C%20Armbian-blue.svg)]()
+[![Bash](https://img.shields.io/badge/Language-Bash%20Script-green.svg)]()
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
-  [![Platform](https://img.shields.io/badge/Platform-Debian%20%7C%20Raspbian%20%7C%20Armbian-blue.svg)]()
-  [![Bash](https://img.shields.io/badge/Language-Bash%20Script-green.svg)]()
-
-  <br>
-
-  <p>
-    <b>Opinionated automation for the modern 3D printing stack.</b><br>
-    Deploys a hardened, fully configured Klipper environment in minutes.
-  </p>
-</div>
+> **Opinionated automation for the modern 3D printing stack.** <br>
+> Deploys a hardened, fully configured Klipper environment in minutes.
 
 ---
 
@@ -73,4 +66,4 @@ cd ~
 git clone [https://github.com/Extrutex/KATANA-Klipper-Installer.git](https://github.com/Extrutex/KATANA-Klipper-Installer.git)
 mv KATANA-Klipper-Installer/katanaos.sh .
 chmod +x katanaos.sh
-./katanaos.sh
+./katanaos.sh<img width="610" height="688" alt="KATANAOS" src="https://github.com/user-attachments/assets/fe4b533c-cf0f-4da4-b15c-2ebb802018dd" />
