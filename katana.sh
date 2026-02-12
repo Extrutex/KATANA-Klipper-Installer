@@ -164,7 +164,6 @@ do_prep() {
 }
 
 do_core() {
-    mkdir -p "$CONFIG_DIR" "$LOG_DIR" "$PRINTER_DATA/comms"
     mkdir -p "$CONFIG_DIR" "$LOG_DIR" "$PRINTER_DATA/comms" "$PRINTER_DATA/gcodes"
     exec_silent "Clone Klipper" "[ -d ~/klipper ] || git clone https://github.com/Klipper3d/klipper.git ~/klipper"
     exec_silent "Build Env" "rm -rf ~/klipper-env && virtualenv -p python3 ~/klipper-env && ~/klipper-env/bin/pip install -U pip && ~/klipper-env/bin/pip install -r ~/klipper/scripts/klippy-requirements.txt"
@@ -389,6 +388,54 @@ EOF
     echo -e "${C_GREEN}  [OK] Network configuration updated (eth0 + can0). Reboot recommended.${NC}"
 }
 
+do_katapult() {
+    echo -e "${C_CYAN}  >> Initializing Katapult (formerly CanBoot)...${NC}"
+    exec_silent "Clone Katapult" "[ -d ~/katapult ] || git clone https://github.com/Arksine/katapult.git ~/katapult"
+    cd ~/katapult
+    
+    echo -e "${C_CYAN}  === KATAPULT BOOTLOADER MANAGER ===${NC}"
+    echo -e "  1) Build Bootloader (Menuconfig + Make)"
+    echo -e "  2) Flash via DFU (Initial Install)"
+    echo -e "  3) Flash via Serial/Katapult (Update)"
+    echo -e "  B) < BACK"
+    read -p "  >> " k_choice
+
+    case $k_choice in
+        [Bb]) return ;;
+        1)
+            exec_silent "Configuring" "make menuconfig"
+            exec_silent "Building" "make clean && make -j4"
+            echo -e "${C_GREEN}  [OK] Build Complete.${NC}"
+            echo -e "${C_CYAN}  >> Binary: ~/katapult/out/katapult.bin${NC}"
+            echo -e "${C_GREY}  (For SD-Card flashing, rename to 'firmware.bin' or as required by board)${NC}"
+            ;;
+        2)
+            echo -e "${C_WARN}  [!] Ensure your board is in DFU Mode (Boot button/Jumper).${NC}"
+            read -p "  Press Enter to start flashing..."
+            if sudo dfu-util -l 2>/dev/null | grep -q "Found DFU"; then
+                exec_silent "Flashing via DFU" "make flash"
+            else
+                echo -e "${C_RED}  [!!] No DFU device found via dfu-util.${NC}"
+            fi
+            ;;
+        3)
+            mapfile -t serial_devs < <(ls /dev/serial/by-id/* 2>/dev/null)
+            if [ ${#serial_devs[@]} -eq 0 ]; then
+                echo -e "${C_RED}  [!!] No serial devices found.${NC}"
+            else
+                PS3="  Select Device to Update: "
+                select dev in "${serial_devs[@]}"; do
+                    if [ -n "$dev" ]; then
+                        exec_silent "Flashing" "make flash FLASH_DEVICE=$dev"
+                        break
+                    fi
+                done
+            fi
+            ;;
+    esac
+    read -p "  Press Enter..."
+}
+
 do_forge() {
     if [ ! -d ~/klipper ]; then
         echo -e "${C_RED}  [!!] Klipper repository not found. Please install Core Engine (Option 2) first.${NC}"
@@ -397,10 +444,11 @@ do_forge() {
     fi
     cd ~/klipper
     echo -e "${C_CYAN}  === THE FORGE: MCU FLASHING ENGINE ===${NC}"
-    echo -e "  1) Build & Flash via USB/Serial"
+    echo -e "  1) Build & Flash Klipper (USB/Serial)"
     echo -e "  2) Build & Flash Host MCU (Pi)"
-    echo -e "  3) Setup CAN-Bus Network"
-    echo -e "  4) Scan for Serial Devices"
+    echo -e "  3) Katapult Manager (Bootloader)"
+    echo -e "  4) Setup CAN-Bus Network"
+    echo -e "  5) Scan for Devices"
     echo -e "  B) < BACK"
     read -p "  >> " f_choice
 
@@ -448,8 +496,9 @@ do_forge() {
             sudo cp ./scripts/klipper-mcu.service /etc/systemd/system/
             sudo systemctl daemon-reload && sudo systemctl enable --now klipper-mcu.service
             ;;
-        3) do_can_setup ;;
-        4)
+        3) do_katapult ;;
+        4) do_can_setup ;;
+        5)
             DEVICES=$(ls /dev/serial/by-id/* 2>/dev/null)
             if [ -z "$DEVICES" ]; then
                 echo -e "${C_RED}  [!!] NO SERIAL DEVICES FOUND in /dev/serial/by-id/.${NC}"
