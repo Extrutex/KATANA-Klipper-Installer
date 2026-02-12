@@ -69,14 +69,31 @@ Security is not an option; it is a default.
 * OS: Debian Bookworm / Bullseye (Lite recommended).
 * User: Standard user with `sudo` privileges.
 
-**(Optional) Remove legacy KIAUH to save space**
+### Installation & Migration
+
+**1. (Optional) Remove legacy KIAUH:**
+
+````bash
+
 cd ~
 rm -rf ~/kiauh
+````
 
-
-**Download & Install KATANAOS**
+````bash
 cd ~
-git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
-KATANA-Klipper-Installer/katanaos.sh 
+git clone [https://github.com/Extrutex/KATANA-Klipper-Installer.git](https://github.com/Extrutex/KATANA-Klipper-Installer.git)
+mv KATANA-Klipper-Installer/katanaos.sh .
 chmod +x katanaos.sh
 ./katanaos.sh
+````
+
+**License**
+KATANAOS is free software: 
+This file may be distributed under the terms of the GNU GPLv3 license.
+
+## 👤 Author
+
+**KATANAOS** created by **Extrutex**.
+
+If this script saved you time, consider supporting the project:
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://Ko-fi.com/3dw_sebastianwindt)
