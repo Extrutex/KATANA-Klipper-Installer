@@ -1,0 +1,15 @@
+# Logs
+*.log
+katana.log
+
+# Backups
+katana_backups/
+katana_migration_backup_*/
+backup_/
+
+# Configs (don't commit user secrets if they end up here)
+configs/userspace/*.cfg
+!configs/userspace/overrides.cfg
+
+# System
+.DS_Store
