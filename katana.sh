@@ -263,6 +263,8 @@ EOF
     sudo rm -f /etc/nginx/sites-enabled/default
     sudo ln -sf /etc/nginx/sites-available/klipper /etc/nginx/sites-enabled/
     sudo systemctl restart nginx
+    # Fix: Ensure Nginx can access the home directory immediately
+    chmod 755 "$HOME_DIR"
     read -p "  Press Enter..."
 }
 
@@ -281,18 +283,41 @@ do_hmi() {
 }
 
 do_can_setup() {
-    echo -e "${C_CYAN}  >> Automating CAN-Bus Interface...${NC}"
+    echo -e "${C_CYAN}  >> Automating CAN-Bus & Network Interfaces...${NC}"
+    
+    # Ensure dependencies for network management
+    exec_silent "Install Network Tools" "sudo apt install -y ifupdown can-utils"
+
+    # Ensure main interfaces file sources the .d directory
+    if ! grep -q "source /etc/network/interfaces.d/*" /etc/network/interfaces; then
+        echo -e "\nsource /etc/network/interfaces.d/*" | sudo tee -a /etc/network/interfaces > /dev/null
+    fi
+
+    # Configure ETH0 (Standard DHCP)
+    sudo tee /etc/network/interfaces.d/eth0 > /dev/null << EOF
+auto eth0
+allow-hotplug eth0
+iface eth0 inet dhcp
+EOF
+
+    # Configure CAN0 (1M Bitrate, 1024 Queue)
     sudo tee /etc/network/interfaces.d/can0 > /dev/null << EOF
 allow-hotplug can0
 iface can0 can static
     bitrate 1000000
-    up ifconfig \$IFACE txqueuelen 1024
+    up ip link set \$IFACE txqueuelen 1024
 EOF
-    exec_silent "Bring up CAN0" "sudo ip link set can0 up type can bitrate 1000000 txqueuelen 1024 || true"
+    exec_silent "Bring up CAN0" "sudo ip link set can0 up type can bitrate 1000000 txqueuelen 1024 2>/dev/null || true"
+    echo -e "${C_GREEN}  [OK] Network configuration updated (eth0 + can0). Reboot recommended.${NC}"
 }
 
 do_forge() {
-    cd ~/klipper || { echo -e "${C_RED}Klipper not found!${NC}"; return; }
+    if [ ! -d ~/klipper ]; then
+        echo -e "${C_RED}  [!!] Klipper repository not found. Please install Core Engine (Option 2) first.${NC}"
+        read -p "  Press Enter..."
+        return
+    fi
+    cd ~/klipper
     echo -e "${C_CYAN}  === THE FORGE: MCU FLASHING ENGINE ===${NC}"
     echo -e "  1) Build & Flash via USB/Serial"
     echo -e "  2) Build & Flash Host MCU (Pi)"
@@ -316,6 +341,8 @@ do_forge() {
                         exec_silent "Configuring Firmware" "make menuconfig"
                         exec_silent "Building Firmware" "make clean && make -j4"
                         exec_silent "Flashing MCU" "make flash FLASH_DEVICE=$dev"
+                        echo -e "${C_CYAN}  >> Firmware binary: ~/klipper/out/klipper.bin${NC}"
+                        echo -e "${C_GREY}  (If USB flash failed, copy this file to an SD card and rename it if needed)${NC}"
                         break
                     fi
                 done
@@ -343,6 +370,7 @@ do_extras() {
     [ -d ~/klipper-env ] && [ ! -d ~/klippy-env ] && ln -sf ~/klipper-env ~/klippy-env
     echo -e "  1) Install All (KAMP, ShakeTune + Probe Selector)"
     echo -e "  2) Custom Selection"
+    echo -e "  3) Install RatOS (Clone Repository)"
     echo -e "  B) < BACK"
     read -p "  >> " exch
     
@@ -365,6 +393,10 @@ do_extras() {
         elif [ "$probech" == "2" ]; then
              exec_silent "Cartographer3D" "rm -rf ~/cartographer-klipper && git clone https://github.com/Cartographer3D/cartographer-klipper.git ~/cartographer-klipper && ~/cartographer-klipper/install.sh"
         fi
+
+    elif [[ "$exch" == "3" ]]; then
+        exec_silent "RatOS" "rm -rf ~/RatOS && git clone https://github.com/Rat-OS/RatOS.git ~/RatOS"
+        echo -e "${C_GREEN}  [OK] RatOS Repository cloned to ~/RatOS${NC}"
 
     # FEHLENDER BLOCK für Option 2 (Einzelabfrage)
     elif [[ "$exch" == "2" ]]; then
@@ -391,6 +423,12 @@ do_extras() {
         elif [ "$probech" == "2" ]; then
              exec_silent "Cartographer3D" "rm -rf ~/cartographer-klipper && git clone https://github.com/Cartographer3D/cartographer-klipper.git ~/cartographer-klipper && ~/cartographer-klipper/install.sh"
         fi
+
+        # 4. RatOS Abfrage
+        read -p "  Install RatOS (Clone Repo)? (y/n, j/n): " rat_choice
+        if is_yes "$rat_choice"; then
+             exec_silent "RatOS" "rm -rf ~/RatOS && git clone https://github.com/Rat-OS/RatOS.git ~/RatOS"
+        fi
     else
         echo -e "${C_RED}  Invalid selection.${NC}"
     fi
@@ -402,11 +440,16 @@ do_extras() {
 }
 
 do_get_config() {
-    if [ ! -d ~/klipper/config ]; then echo -e "${C_RED}  Klipper not found. Install Core first.${NC}"; return; fi
+    if [ ! -d ~/klipper/config ]; then 
+        echo -e "${C_RED}  [!!] Klipper configs not found. Install Core Engine (Option 2) first.${NC}"
+        read -p "  Press Enter..."
+        return 
+    fi
 
     mapfile -t generic_cfgs < <(find ~/klipper/config -maxdepth 1 -type f -name 'generic-*.cfg' -printf '%f\n' | sort)
     if [ ${#generic_cfgs[@]} -eq 0 ]; then
         echo -e "${C_RED}  [!!] No generic config templates found in ~/klipper/config.${NC}"
+        read -p "  Press Enter..."
         return
     fi
 
@@ -414,6 +457,7 @@ do_get_config() {
     PS3="  Enter number (q to quit): "
     select filename in "${generic_cfgs[@]}"; do
         if [ -n "$filename" ]; then
+            mkdir -p "$CONFIG_DIR"
             cp ~/klipper/config/$filename "$CONFIG_DIR/printer.cfg"
             echo -e "${C_GREEN}  [OK] Copied $filename to $CONFIG_DIR/printer.cfg${NC}"
             break
@@ -435,6 +479,7 @@ do_maint() {
         sudo chown -R $USER_NAME:$USER_NAME "$PRINTER_DATA"
         chmod 755 $HOME_DIR
         sudo systemctl restart klipper moonraker nginx
+        echo -e "${C_WARN}  [!] IMPORTANT: REBOOT REQUIRED to apply group permissions (dialout/tty)!${NC}"
     fi
     if [ "$mch" == "2" ]; then
         TS=$(date +%Y%m%d_%H%M%S)

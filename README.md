@@ -39,7 +39,9 @@ KATANAOS handles the reverse proxy configuration automatically.
 
 ### 3. 🔥 The Forge (Hardware Automator)
 A dedicated engine for MCU management and communication.
-* **Smart Flash:** Scans `/dev/serial/by-id/` to detect connected MCUs. Allows direct flashing via a selection menu without manual path copying.
+* **Smart Device Scan:** Scans `/dev/serial/by-id/` to detect connected MCUs.
+* **Interactive Build:** Launches `make menuconfig` automatically. **Important:** You must select the correct architecture for your mainboard manually.
+* **Hybrid Flashing:** Attempts automatic USB flashing. For boards requiring SD card updates (e.g., Creality), the script compiles the binary to `~/klipper/out/klipper.bin` for you to copy manually.
 * **Auto CAN-Bus:** Automatically creates the `/etc/network/interfaces.d/can0` interface with **1M bitrate** and optimized `txqueuelen`, eliminating manual Linux network configuration.
 
 ### 4. ⚙️ Engine Manager (Dual-Core)
