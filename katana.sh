@@ -158,13 +158,14 @@ exec_silent() {
 
 do_prep() {
     exec_silent "Update Apt" "sudo apt update"
-    exec_silent "Install Tools" "sudo apt install -y git zip unzip rsync mc htop nano usbutils ranger ncdu can-utils fd-find build-essential gcc-arm-none-eabi libnewlib-arm-none-eabi python3-pip python3-venv virtualenv python3-virtualenv dfu-util nginx libsodium-dev libffi-dev iptraf-ng tcpdump"
+    exec_silent "Install Tools" "sudo apt install -y git zip unzip rsync mc htop nano usbutils ranger ncdu can-utils fd-find build-essential gcc-arm-none-eabi libnewlib-arm-none-eabi python3-pip python3-venv virtualenv python3-virtualenv dfu-util nginx libsodium-dev libffi-dev iptraf-ng tcpdump libncurses-dev"
     exec_silent "Purge Bloat" "sudo apt autoremove -y modem* cups* pulse* avahi* triggerhappy*"
     read -p "  Press Enter..."
 }
 
 do_core() {
     mkdir -p "$CONFIG_DIR" "$LOG_DIR" "$PRINTER_DATA/comms"
+    mkdir -p "$CONFIG_DIR" "$LOG_DIR" "$PRINTER_DATA/comms" "$PRINTER_DATA/gcodes"
     exec_silent "Clone Klipper" "[ -d ~/klipper ] || git clone https://github.com/Klipper3d/klipper.git ~/klipper"
     exec_silent "Build Env" "rm -rf ~/klipper-env && virtualenv -p python3 ~/klipper-env && ~/klipper-env/bin/pip install -U pip && ~/klipper-env/bin/pip install -r ~/klipper/scripts/klippy-requirements.txt"
     
@@ -236,6 +237,76 @@ EOF
              echo -e "[include mainsail.cfg]\n[mcu]\nserial: /dev/null\n[printer]\nkinematics: none\nmax_velocity: 100\nmax_accel: 100" > "$CONFIG_DIR/printer.cfg"
         fi
         touch "$CONFIG_DIR/mainsail.cfg"
+        cat > "$CONFIG_DIR/mainsail.cfg" << EOF
+[virtual_sdcard]
+path: $PRINTER_DATA/gcodes
+on_error_gcode: CANCEL_PRINT
+
+[pause_resume]
+
+[display_status]
+
+[gcode_macro PAUSE]
+description: Pause the actual running print
+rename_existing: PAUSE_BASE
+variable_extrude: 1.0
+gcode:
+    ##### read E from pause macro #####
+    {% set E = printer["gcode_macro PAUSE"].extrude|float %}
+    ##### set park positon for x and y #####
+    # default is your max posion from your printer.cfg
+    {% set x_park = printer.toolhead.axis_maximum.x|float - 5.0 %}
+    {% set y_park = printer.toolhead.axis_maximum.y|float - 5.0 %}
+    ##### calculate save lift position #####
+    {% set max_z = printer.toolhead.axis_maximum.z|float %}
+    {% set act_z = printer.toolhead.position.z|float %}
+    {% if act_z < (max_z - 2.0) %}
+        {% set z_safe = 2.0 %}
+    {% else %}
+        {% set z_safe = max_z - act_z %}
+    {% endif %}
+    ##### end of definitions #####
+    PAUSE_BASE
+    G91
+    {% if printer.extruder.can_extrude|lower == 'true' %}
+      G1 E-{E} F2100
+    {% else %}
+      {action_respond_info("Extruder not hot enough")}
+    {% endif %}
+    {% if "xyz" in printer.toolhead.homed_axes %}
+      G1 Z{z_safe} F900
+      G90
+      G1 X{x_park} Y{y_park} F6000
+    {% else %}
+      {action_respond_info("Printer not homed")}
+    {% endif %} 
+
+[gcode_macro RESUME]
+description: Resume the actual running print
+rename_existing: RESUME_BASE
+gcode:
+    ##### read E from pause macro #####
+    {% set E = printer["gcode_macro PAUSE"].extrude|float %}
+    #### get VELOCITY parameter if specified ####
+    {% set get_params = "" %}
+    {% if 'VELOCITY' in params|upper %}
+      {% set get_params = ('VELOCITY=' + params.VELOCITY)  %}
+    {% endif %}
+    ##### end of definitions #####
+    {% if printer.extruder.can_extrude|lower == 'true' %}
+      G1 E{E} F2100
+    {% else %}
+      {action_respond_info("Extruder not hot enough")}
+    {% endif %}  
+    RESUME_BASE {get_params}
+
+[gcode_macro CANCEL_PRINT]
+description: Cancel the actual running print
+rename_existing: CANCEL_PRINT_BASE
+gcode:
+    TURN_OFF_HEATERS
+    CANCEL_PRINT_BASE
+EOF
     fi
 
     sudo systemctl restart moonraker
@@ -349,9 +420,10 @@ do_forge() {
             fi
             ;;
         2)
-            exec_silent "Building Host MCU" "make clean && make menuconfig && make flash"
+            echo -e "${C_WARN}  [!] IMPORTANT: In the menu, select Architecture -> 'Linux process'${NC}"
+            exec_silent "Building Host MCU" "make clean && make menuconfig && make -j4 && sudo make flash"
             sudo cp ./scripts/klipper-mcu.service /etc/systemd/system/
-            sudo systemctl daemon-reload && sudo systemctl enable klipper-mcu.service
+            sudo systemctl daemon-reload && sudo systemctl enable --now klipper-mcu.service
             ;;
         3) do_can_setup ;;
         4)
