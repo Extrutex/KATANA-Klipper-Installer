@@ -400,14 +400,30 @@ do_forge() {
     case $f_choice in
         [Bb]) return ;;
         1)
-            DEVICES=$(ls /dev/serial/by-id/* 2>/dev/null)
-            if [ -z "$DEVICES" ]; then
-                echo -e "${C_RED}  [!!] NO DEVICES FOUND! Connect MCU or check permissions.${NC}"
+            # Gather Serial Devices
+            mapfile -t serial_devs < <(ls /dev/serial/by-id/* 2>/dev/null)
+            
+            # Gather DFU Devices (Check via dfu-util)
+            if sudo dfu-util -l 2>/dev/null | grep -q "Found DFU"; then
+                serial_devs+=("DFU_MODE_FLASH")
+            fi
+
+            if [ ${#serial_devs[@]} -eq 0 ]; then
+                echo -e "${C_RED}  [!!] NO DEVICES FOUND!${NC}"
+                echo -e "${C_GREY}  - Check USB Cable (Data capable?)${NC}"
+                echo -e "${C_GREY}  - Check if board is in DFU mode (try lsusb)${NC}"
             else
                 echo -e "${C_NEON}  Found Devices:${NC}"
-                PS3="  Select MCU to flash: "
-                select dev in $DEVICES; do
-                    if [ -n "$dev" ]; then
+                PS3="  Select Target: "
+                select dev in "${serial_devs[@]}"; do
+                    if [ "$dev" == "DFU_MODE_FLASH" ]; then
+                        echo -e "  Targeting: DFU Device (Auto-Detect)"
+                        exec_silent "Configuring Firmware" "make menuconfig"
+                        exec_silent "Building Firmware" "make clean && make -j4"
+                        exec_silent "Flashing via DFU" "make flash"
+                        echo -e "${C_CYAN}  >> Firmware binary: ~/klipper/out/klipper.bin${NC}"
+                        break
+                    elif [ -n "$dev" ]; then
                         echo -e "  Targeting: $dev"
                         exec_silent "Configuring Firmware" "make menuconfig"
                         exec_silent "Building Firmware" "make clean && make -j4"
