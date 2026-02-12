@@ -158,7 +158,7 @@ exec_silent() {
 
 do_prep() {
     exec_silent "Update Apt" "sudo apt update"
-    exec_silent "Install Tools" "sudo apt install -y git zip unzip mc htop nano usbutils ranger ncdu can-utils fd-find build-essential gcc-arm-none-eabi libnewlib-arm-none-eabi python3-pip python3-venv virtualenv python3-virtualenv dfu-util nginx libsodium-dev libffi-dev iptraf-ng tcpdump"
+    exec_silent "Install Tools" "sudo apt install -y git zip unzip rsync mc htop nano usbutils ranger ncdu can-utils fd-find build-essential gcc-arm-none-eabi libnewlib-arm-none-eabi python3-pip python3-venv virtualenv python3-virtualenv dfu-util nginx libsodium-dev libffi-dev iptraf-ng tcpdump"
     exec_silent "Purge Bloat" "sudo apt autoremove -y modem* cups* pulse* avahi* triggerhappy*"
     read -p "  Press Enter..."
 }
@@ -469,6 +469,68 @@ do_get_config() {
     done
 }
 
+BACKUP_ROOT="$HOME_DIR/katana_backups"
+
+create_backup() {
+    mkdir -p "$BACKUP_ROOT"
+    local TS=$(date +%Y%m%d_%H%M%S)
+    local NEW_BACKUP="$BACKUP_ROOT/backup_$TS"
+    local LATEST_LINK="$BACKUP_ROOT/latest"
+    
+    echo -e "${C_CYAN}  >> Creating Incremental Backup (Rsync)...${NC}"
+    
+    # Rsync options: Archive, Delete removed files in dest, Exclude junk
+    local OPTS="-a --delete --exclude=katana_backups --exclude=.cache --exclude=*.img --exclude=*.zip --exclude=klipper-env --exclude=kalico-env"
+    
+    # Link against latest for incremental space saving
+    if [ -d "$LATEST_LINK" ]; then
+        OPTS="$OPTS --link-dest=$LATEST_LINK"
+        echo -e "${C_GREY}  (Linking against previous backup to save space)${NC}"
+    fi
+    
+    # Execute Backup
+    sudo rsync $OPTS "$HOME_DIR/" "$NEW_BACKUP/"
+    sudo chown -R $USER_NAME:$USER_NAME "$NEW_BACKUP"
+    
+    # Update Symlink
+    rm -f "$LATEST_LINK"
+    ln -s "$NEW_BACKUP" "$LATEST_LINK"
+
+    # Cleanup old backups (Keep last 5)
+    local MAX_BACKUPS=5
+    mapfile -t backups < <(find "$BACKUP_ROOT" -maxdepth 1 -type d -name "backup_*" | sort)
+    local count=${#backups[@]}
+    
+    if [ $count -gt $MAX_BACKUPS ]; then
+        local remove_count=$((count - MAX_BACKUPS))
+        echo -e "${C_WARN}  >> Cleaning up old backups ($remove_count to remove)...${NC}"
+        for ((i=0; i<remove_count; i++)); do
+            echo -e "${C_GREY}  Removing: ${backups[$i]}${NC}"
+            sudo rm -rf "${backups[$i]}"
+        done
+    fi
+    
+    echo -e "${C_GREEN}  [OK] Backup Complete: $NEW_BACKUP${NC}"
+    read -p "  Press Enter..."
+}
+
+restore_backup() {
+    echo -e "${C_WARN}  >> Available Backups:${NC}"
+    local backups=($(ls -d "$BACKUP_ROOT"/backup_* 2>/dev/null))
+    if [ ${#backups[@]} -eq 0 ]; then echo "No backups found."; read -p "Press Enter..."; return; fi
+    
+    backups+=("CANCEL")
+    PS3="  Select backup to restore: "
+    select b_path in "${backups[@]}"; do
+        if [[ "$b_path" == "CANCEL" || -z "$b_path" ]]; then return; fi
+        echo -e "${C_WARN}  [!!] RESTORING FROM: $b_path${NC}"
+        read -p "  ARE YOU SURE? (y/n) " confirm
+        [[ "$confirm" =~ ^([yY][eE][sS]|[yY]) ]] || return
+        sudo rsync -a --overwrite "$b_path/" "$HOME_DIR/"
+        echo -e "${C_GREEN}  [OK] System Restored.${NC}"; read -p "  Press Enter..."; break
+    done
+}
+
 do_maint() {
     echo -e "  1) Security (Firewall/Log2Ram)  2) Backup Config"
     read -p "  >> " mch
@@ -482,10 +544,7 @@ do_maint() {
         echo -e "${C_WARN}  [!] IMPORTANT: REBOOT REQUIRED to apply group permissions (dialout/tty)!${NC}"
     fi
     if [ "$mch" == "2" ]; then
-        TS=$(date +%Y%m%d_%H%M%S)
-        BACKUP_FILE="$HOME_DIR/klipper_backup_$TS.zip"
-        exec_silent "Backup Config" "zip -r $BACKUP_FILE $PRINTER_DATA/config"
-        echo -e "${C_GREEN}  >> Backup created: $BACKUP_FILE${NC}"
+        create_backup
     fi
     read -p "  Press Enter..."
 }
@@ -557,7 +616,9 @@ while true; do
     read choice
     case $choice in
         1) do_prep; do_core; do_ui; do_hmi; do_extras; do_maint ;;
-        2) do_core ;;
+        2) 
+            create_backup; 
+            do_core ;;
         3) do_ui ;;
         4) do_hmi ;;
         5) do_forge ;;
@@ -590,6 +651,9 @@ while true; do
                   \/
 EOF
             echo -e "${NC}"
+            
+            # Rollback Option
+            restore_backup
             exit 0 ;;
         *) echo -e "${C_RED}  Invalid Option!${NC}"; sleep 1 ;;
     esac
