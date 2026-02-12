@@ -71,6 +71,13 @@ Security is not an option; it is a default.
 
 ### Installation & Migration
 
+### **Empfehlung für dich**
+Wenn du vor der Installation alle Pakete aktualisieren willst, führe vorher manuell aus:
+
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
 **1. (Optional) Remove legacy KIAUH:**
 
 ````bash
