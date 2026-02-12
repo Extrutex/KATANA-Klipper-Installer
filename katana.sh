@@ -159,7 +159,7 @@ exec_silent() {
 do_prep() {
     exec_silent "Update Apt" "sudo apt update"
     exec_silent "Install Tools" "sudo apt install -y git zip unzip rsync mc htop nano usbutils ranger ncdu can-utils fd-find build-essential gcc-arm-none-eabi libnewlib-arm-none-eabi python3-pip python3-venv virtualenv python3-virtualenv dfu-util nginx libsodium-dev libffi-dev iptraf-ng tcpdump libncurses-dev"
-    exec_silent "Purge Bloat" "sudo apt autoremove -y modem* cups* pulse* avahi* triggerhappy*"
+    exec_silent "Purge Bloat" "sudo apt purge -y brltty modemmanager && sudo apt autoremove -y cups* pulse* avahi* triggerhappy*"
     read -p "  Press Enter..."
 }
 
@@ -320,6 +320,13 @@ do_ui() {
     [ "$uich" == "2" ] && UI="fluidd"
     exec_silent "Install $UI" "rm -rf ~/$UI && mkdir -p ~/$UI && cd ~/$UI && wget -q -O ui.zip https://github.com/${UI}-crew/${UI}/releases/latest/download/${UI}.zip || wget -q -O ui.zip https://github.com/${UI}-core/${UI}/releases/latest/download/${UI}.zip && unzip -o ui.zip && rm ui.zip"
     
+    # Conflict Check: Apache2 (Fixes 'Port 80 in use' or 'Apache default page' issues)
+    if systemctl is-active --quiet apache2; then
+        echo -e "${C_WARN}  [!] Apache2 detected (Port 80 conflict). Disabling it...${NC}"
+        sudo systemctl stop apache2
+        sudo systemctl disable apache2
+    fi
+
     # NGINX Configuration
     sudo tee /etc/nginx/sites-available/klipper > /dev/null << EOF
 server {
