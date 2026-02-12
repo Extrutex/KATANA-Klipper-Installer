@@ -13,7 +13,7 @@
 
   <p>
     <b>Opinionated automation for the modern 3D printing stack.</b><br>
-    Deploys a hardened, fully configured Klipper environment in minutes.
+    Deploys a hardened, fully configured Klipper environment (including essential macros) in minutes.
   </p>
 </div>
 
@@ -58,6 +58,7 @@ Intelligent installation logic for modern Klipper extensions.
 * **Smart Probe Selector:** Enforces exclusive installation logic for **Beacon3D** or **Cartographer** to prevent udev conflicts.
 * **KAMP:** Clones the repo and injects the update manager entry into `moonraker.conf`.
 * **ShakeTune:** Automated installation of the Klippain ShakeTune module.
+* **RatOS:** Option to clone the RatOS configuration repository for easy integration.
 
 ### 7. 🛡️ System Hardening (Standardized)
 Security is not an option; it is a default.
@@ -106,4 +107,3 @@ This file may be distributed under the terms of the GNU GPLv3 license.
 
 If this script saved you time, consider supporting the project:
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://Ko-fi.com/3dw_sebastianwindt)
-
