@@ -143,7 +143,7 @@ EOF
     draw_bot
     echo ""
     echo -e "${C_GREY}  USER: $USER_NAME  |  IP: $(hostname -I | cut -d' ' -f1)  |  SYSTEM: READY${NC}"
-    echo -e "${C_GREY}  [ TIP: Select (1-E) | 'X' Exit | 'B' Back to Menu ]${NC}"
+    echo -e "${C_GREY}  [ TIP: Select (1-E) | 'X' Exit ]${NC}"
 }
 
 # --- [ 3. LOGIC ENGINES ] ---
@@ -272,10 +272,10 @@ do_hmi() {
     if [[ "$mch" == "b" || "$mch" == "B" ]]; then return; fi
     
     if [[ "$mch" == "1" || "$mch" == "3" ]]; then
-        exec_silent "Install Crowsnest" "git clone https://github.com/mainsail-crew/crowsnest.git ~/crowsnest && cd ~/crowsnest && sudo make install"
+        exec_silent "Install Crowsnest" "rm -rf ~/crowsnest && git clone https://github.com/mainsail-crew/crowsnest.git ~/crowsnest && cd ~/crowsnest && sudo make install"
     fi
     if [[ "$mch" == "2" || "$mch" == "3" ]]; then
-        exec_silent "Install KlipperScreen" "git clone https://github.com/KlipperScreen/KlipperScreen.git ~/KlipperScreen && ~/KlipperScreen/scripts/KlipperScreen-install.sh"
+        exec_silent "Install KlipperScreen" "rm -rf ~/KlipperScreen && git clone https://github.com/KlipperScreen/KlipperScreen.git ~/KlipperScreen && ~/KlipperScreen/scripts/KlipperScreen-install.sh"
     fi
     read -p "  Press Enter..."
 }
@@ -327,7 +327,14 @@ do_forge() {
             sudo systemctl daemon-reload && sudo systemctl enable klipper-mcu.service
             ;;
         3) do_can_setup ;;
-        4) ls -l /dev/serial/by-id/* ;;
+        4)
+            DEVICES=$(ls /dev/serial/by-id/* 2>/dev/null)
+            if [ -z "$DEVICES" ]; then
+                echo -e "${C_RED}  [!!] NO SERIAL DEVICES FOUND in /dev/serial/by-id/.${NC}"
+            else
+                ls -l /dev/serial/by-id/*
+            fi
+            ;;
     esac
     read -p "  Press Enter..."
 }
@@ -340,6 +347,10 @@ do_extras() {
     read -p "  >> " exch
     
     if [[ "$exch" == "b" || "$exch" == "B" ]]; then return; fi
+
+    is_yes() {
+        [[ "$1" =~ ^([YyJj]|[Yy][Ee][Ss]|[Jj][Aa])$ ]]
+    }
 
     # Logik für Option 1 (ALLES installieren)
     if [[ "$exch" == "1" ]]; then
@@ -360,14 +371,14 @@ do_extras() {
         echo -e "${C_CYAN}  >> Custom Selection Mode${NC}"
         
         # 1. KAMP Abfrage
-        read -p "  Install KAMP (Adaptive Meshing)? (y/n): " kamp_choice
-        if [[ "$kamp_choice" =~ ^[Yy]$ ]]; then
+        read -p "  Install KAMP (Adaptive Meshing)? (y/n, j/n): " kamp_choice
+        if is_yes "$kamp_choice"; then
             exec_silent "KAMP" "rm -rf ~/Klipper-Adaptive-Meshing-Purging && git clone https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging.git ~/Klipper-Adaptive-Meshing-Purging && cp ~/Klipper-Adaptive-Meshing-Purging/Configuration/KAMP_Settings.cfg $CONFIG_DIR/"
         fi
 
         # 2. ShakeTune Abfrage
-        read -p "  Install ShakeTune (Input Shaper Tools)? (y/n): " st_choice
-        if [[ "$st_choice" =~ ^[Yy]$ ]]; then
+        read -p "  Install ShakeTune (Input Shaper Tools)? (y/n, j/n): " st_choice
+        if is_yes "$st_choice"; then
             exec_silent "ShakeTune" "rm -rf ~/klippain_shaketune && git clone https://github.com/Frix-x/klippain-shaketune.git ~/klippain_shaketune && ~/klippain_shaketune/install.sh"
         fi
 
@@ -380,17 +391,28 @@ do_extras() {
         elif [ "$probech" == "2" ]; then
              exec_silent "Cartographer3D" "rm -rf ~/cartographer-klipper && git clone https://github.com/Cartographer3D/cartographer-klipper.git ~/cartographer-klipper && ~/cartographer-klipper/install.sh"
         fi
+    else
+        echo -e "${C_RED}  Invalid selection.${NC}"
     fi
 
-    sudo systemctl restart moonraker
+    if systemctl list-unit-files | grep -q '^moonraker\.service'; then
+        sudo systemctl restart moonraker
+    fi
     read -p "  Press Enter..."
 }
 
 do_get_config() {
     if [ ! -d ~/klipper/config ]; then echo -e "${C_RED}  Klipper not found. Install Core first.${NC}"; return; fi
+
+    mapfile -t generic_cfgs < <(find ~/klipper/config -maxdepth 1 -type f -name 'generic-*.cfg' -printf '%f\n' | sort)
+    if [ ${#generic_cfgs[@]} -eq 0 ]; then
+        echo -e "${C_RED}  [!!] No generic config templates found in ~/klipper/config.${NC}"
+        return
+    fi
+
     echo -e "${C_CYAN}  >> Select a config template to copy to printer.cfg:${NC}"
     PS3="  Enter number (q to quit): "
-    select filename in $(ls ~/klipper/config/generic-*.cfg | xargs -n 1 basename); do
+    select filename in "${generic_cfgs[@]}"; do
         if [ -n "$filename" ]; then
             cp ~/klipper/config/$filename "$CONFIG_DIR/printer.cfg"
             echo -e "${C_GREEN}  [OK] Copied $filename to $CONFIG_DIR/printer.cfg${NC}"
@@ -527,4 +549,3 @@ EOF
         *) echo -e "${C_RED}  Invalid Option!${NC}"; sleep 1 ;;
     esac
 done
-
