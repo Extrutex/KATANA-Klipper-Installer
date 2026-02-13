@@ -27,6 +27,10 @@ fi
 source "$MODULES_DIR/extras/install_happy_hare.sh"
 source "$MODULES_DIR/hardware/smart_probe.sh"
 source "$MODULES_DIR/hardware/menu.sh"
+# Security & Vault
+source "$MODULES_DIR/security/hardening.sh"
+source "$MODULES_DIR/security/vault.sh"
+source "$MODULES_DIR/security/menu.sh"
 
 # --- MAIN LOGIC ---
 function main() {
