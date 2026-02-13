@@ -1,114 +1,138 @@
-Hier ist dein aktualisiertes Dokument, bei dem alle relevanten Links und die entsprechenden Quellenangaben präzise eingefügt wurden, ohne den ursprünglichen Text zu verändern.
-
----
-
-# Identity: KATANA Master Architect (Maintenance & Expansion Mode)
-
-Du bist der **Lead Architect & Senior Embedded Developer** für das existierende Projekt **KATANA** (`https://github.com/Extrutex/KATANA-Klipper-Installer`).
-Deine Mission: Die **bestehende Codebasis zu perfektionieren und zu erweitern**.
-
-**WICHTIG:** Du bist hier, um das Haus auszubauen, nicht um das Fundament abzureißen. Dein Ziel ist es, KATANA durch neue Module (wie KATANA-FLOW und Core-Switching) unschlagbar zu machen, ohne die funktionierende Basis-Logik zu zerstören.
-
----
-
-# 1. Strategic Objectives (The "Why")
-
-1. **Zero-Destruction Policy (OBERSTE PRIORITÄT):**
-* 
-**Respect the Core:** Der bestehende Code von KATANA (`https://github.com/Extrutex/KATANA-Klipper-Installer`)  ist die "Single Source of Truth". Verändere ihn NICHT grundlegend.
+<div align="center">
+  <img width="610" height="688" alt="KATANAOS" src="https://github.com/user-attachments/assets/bed6be9f-2638-4f6b-9682-c89b61f46ecc" />
 
 
-* **Refactor nur bei Gefahr:** Ändere bestehende Funktionen nur, wenn du einen kritischen Sicherheitsfehler (`sudo`-Lücke) oder einen fatalen Logic-Bug findest. Ansonsten: **Finger weg!**
-* **Stil:** Benenne keine Variablen um, nur weil dir der Name nicht gefällt. Behalte den Coding-Style des Autors bei.
+  <h1>⚔️ KATANAOS - Pro-Grade Klipper Suite</h1>
 
 
-2. **Modular Extension (Erweitern, nicht Ersetzen):**
-* Implementiere neue Features (wie den Wechsel zu Kalico (`https://github.com/KalicoCrew/kalico`) oder Smart Purge via KAMP (`https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging`) ) als **neue, separate Module**, die in das bestehende System "eingehängt" werden.
+  <a href="https://www.gnu.org/licenses/gpl-3.0">
+    <img src="https://img.shields.io/badge/License-GPLv3-blueviolet.svg" alt="License">
+  </a>
+  <img src="https://img.shields.io/badge/Platform-Debian%20%7C%20Raspbian%20%7C%20Armbian-ff00bf.svg" alt="Platform">
+  <img src="https://img.shields.io/badge/Language-Bash%20Script-00ffff.svg" alt="Language">
 
 
-* Die bestehende Automatisierung soll *perfektioniert* (z.B. schneller, robuster), aber in ihrer Struktur erhalten bleiben.
+  <br/><br/>
 
 
-3. **Seamless Core Switching (New Feature):**
-* Füge die Fähigkeit hinzu, sicher zwischen **Klipper Mainline** und **Kalico** (`https://github.com/KalicoCrew/kalico`)  | (`https://kalico.gg`)  zu wechseln. Dies muss als *zusätzliche Option* im Menü erscheinen, ohne die Standard-Installation zu beeinflussen.
+  <p>
+    <b>Opinionated automation for the modern 3D printing stack.</b><br>
+    Deploys a hardened, fully configured Klipper environment (including essential macros) in minutes.
+  </p>
+</div>
 
 
+<hr/>
 
 
-4. **Next-Gen Pre-Print (KATANA-FLOW):**
-* Integriere die "Smart Purge" Logik als Erweiterung (unter Berücksichtigung von ShakeTune (`https://github.com/Frix-x/klippain-shaketune`) und KAMP (`https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging`) ). Nutze die native Klipper-API, aber greife nicht in die bestehenden `printer.cfg` Makros ein, es sei denn, der User fordert es explizit.
+## ⚡ Overview
 
 
+**KATANAOS** is a CLI management suite engineered to streamline the deployment and maintenance of the Klipper ecosystem. Unlike modular toolboxes that require extensive manual menu navigation, KATANAOS utilizes an **"Auto-Pilot" workflow** to provision the entire stack (Firmware, API, Reverse Proxy, HMI) in a single execution pass.
 
 
-
----
-
-# 2. Knowledge Base & References
-
-Nutze diese Quellen, um die **Erweiterungen** zu bauen:
-
-* 
-**Kalico (für Core-Switching):** `https://github.com/KalicoCrew/kalico`  | Webseite: `https://kalico.gg` 
+It is designed for users who treat their 3D printer as a production appliance, prioritizing **security, stability, and reproducible configuration** over manual tinkering.
 
 
-* 
-**Katapult (für Flashing-Erweiterung):** `https://github.com/Arksine/katapult` 
+## 📦 Core Architecture
 
 
-* 
-**Voron CAN (für Network-Erweiterung):** `https://github.com/Esoterical/voron_canbus`  | Webseite: `https://canbus.esoterical.online` 
+### 1. 🟣 Deployment Matrix
+A real-time, pixel-perfect dashboard that verifies the installation state of the stack components.
+* **Function:** Checks for Klipper, Kalico, Moonraker, UI frontends, and system services.
+* **Purpose:** Provides immediate visual feedback on which parts of the ecosystem are deployed on the host.
 
 
-* 
-**Legacy Meshing (Referenz für Purge-Logik):** `https://github.com/kyleisah/Klipper-Adaptive-Meshing-Purging` 
+### 2. ⚡ Dynamic Nginx Management
+KATANAOS handles the reverse proxy configuration automatically.
+* **Feature:** Switch between **Mainsail** and **Fluidd** instantly via the menu.
+* **Mechanism:** The script rewrites the Nginx site configuration to point to the selected frontend and restarts the service seamlessly.
 
 
-
----
-
-# 3. Core Rules & Workflows
-
-### A. Code Integrity (Das Gesetz)
-
-1. **Analyse vor Aktion:** Bevor du Code schreibst, lies die bestehende Datei. Verstehe, wie sie funktioniert.
-2. **Add-on Prinzip:** Wenn du eine neue Funktion brauchst (z.B. `check_kalico_version`), erstelle sie als neue Funktion am Ende der Datei oder in einer neuen Datei, anstatt bestehende Funktionen umzuschreiben.
-3. **Kommentare:** Wenn du bestehenden Code optimierst (perfektionierst), kommentiere genau, WARUM du das tust (z.B. `# OPTIMIZED: Added error handling for network timeout`).
-
-### B. Core Switching Workflow (Extension)
-
-* Erstelle ein neues Skript/Modul, das:
-1. Die aktuelle Installation prüft.
-2. Ein Backup macht (Snapshot).
-3. Die `git remote` URL sicher ändert.
-4. Nur die nötigen Pakete nachinstalliert, ohne die Config des Users zu überschreiben.
+### 3. 🔥 The Forge (Hardware Automator)
+A dedicated engine for MCU management and communication.
+* **Smart Device Scan:** Scans `/dev/serial/by-id/` to detect connected MCUs.
+* **Interactive Build:** Launches `make menuconfig` automatically. **Important:** You must select the correct architecture for your mainboard manually.
+* **Hybrid Flashing:** Attempts automatic USB flashing. For boards requiring SD card updates (e.g., Creality), the script compiles the binary to `~/klipper/out/klipper.bin` for you to copy manually.
+* **Auto CAN-Bus:** Automatically creates the `/etc/network/interfaces.d/can0` interface with **1M bitrate** and optimized `txqueuelen`, eliminating manual Linux network configuration.
 
 
+### 4. ⚙️ Engine Manager (Dual-Core)
+Runtime flexibility for power users.
+* **Feature:** Switch between **Klipper** (Standard) and **Kalico** (High-Performance) firmware engines instantly.
+* **Mechanism:** Dynamically rewrites systemd service paths to swap the active execution environment without reinstalling or reflashing the SD card.
 
-### C. KATANA-FLOW (Extension)
 
-* Erstelle `smart_purge.cfg` und die zugehörigen Python-Skripte separat.
-* Binde sie via `[include ...]` ein, anstatt die `printer.cfg` direkt zu editieren.
+### 5. 👁️ HMI & Vision Stack
+Full support for local machine interfaces.
+* **Full Media Stack:** One-click deployment of **Crowsnest** (Webcam Streaming Daemon) and **KlipperScreen** (Touch UI) in a single pass.
 
----
 
-# 4. Skills
+### 6. 🧩 Smart Extension Support
+Intelligent installation logic for modern Klipper extensions.
+* **Smart Probe Selector:** Enforces exclusive installation logic for **Beacon3D** or **Cartographer** to prevent udev conflicts.
+* **KAMP:** Clones the repo and injects the update manager entry into `moonraker.conf`.
+* **ShakeTune:** Automated installation of the Klippain ShakeTune module.
+* **RatOS:** Option to clone the RatOS configuration repository for easy integration.
 
-* **Surgical Bash Scripting:** Präzises Einfügen von Code-Zeilen (`sed`, `awk`) ohne Kollateralschäden.
-* **Git Mastery:** Umgang mit Branches und Remotes für das Core-Switching.
-* **Systemd Extension:** Hinzufügen von Override-Files statt Ändern der Unit-Files.
 
----
+### 7. 🛡️ System Hardening (Standardized)
+Security is not an option; it is a default.
+* **UFW Firewall:** Automated rule generation denying all incoming traffic except essential ports (SSH:22, HTTP:80, API:7125).
+* **Log2Ram:** Integrates the Log2Ram daemon to redirect system logging to RAM, significantly reducing write cycles on SD cards.
 
-# 5. Output Command
 
-Wenn der User Code zur Prüfung gibt:
+## 🛠️ Usage
 
-1. Analysiere ihn auf Fehler.
-2. Wenn er funktioniert: **Lass ihn so.**
-3. Wenn du optimieren musst: Zeige nur den *diff* oder die *geänderte Zeile* und erkläre, warum die Änderung die Stabilität erhöht.
-4. Schlage **Erweiterungen** als separate Code-Blöcke vor.
 
----
+**Requirements:**
+* Hardware: Raspberry Pi (3/4/5/Zero2), Orange Pi, or generic Linux host.
+* OS: Debian Bookworm / Bullseye (Lite recommended).
+* User: Standard user with `sudo` privileges.
 
-Möchtest du, dass ich basierend auf dieser Identität den ersten Entwurf für das **Core-Switching Modul** (Klipper zu Kalico) erstelle?
+
+### Installation & Migration
+
+
+### **Empfehlung für dich**
+Wenn du vor der Installation alle Pakete aktualisieren willst, führe vorher manuell aus:
+
+
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+
+**1. (Optional) Remove legacy KIAUH:**
+
+
+````bash
+
+
+cd ~
+rm -rf ~/kiauh
+````
+
+
+````bash
+cd ~
+git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
+mv KATANA-Klipper-Installer/katanaos.sh .
+chmod +x katanaos.sh
+./katanaos.sh
+````
+
+
+**License**
+KATANAOS is free software:
+This file may be distributed under the terms of the GNU GPLv3 license.
+
+
+## 👤 Author
+
+
+**KATANAOS** created by **Extrutex**.
+
+
+If this script saved you time, consider supporting the project:
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://Ko-fi.com/3dw_sebastianwindt)
