@@ -1,7 +1,7 @@
-# --- VISUAL ENGINE (PRO) ---
-C_PC='\033[38;5;81m'  # Primary Cyan
-C_SC='\033[38;5;245m' # Secondary Grey
-C_HL='\033[38;5;208m' # Highlight Orange
+# --- VISUAL ENGINE (PRO - LILA EDITION) ---
+C_PC='\033[38;5;93m'  # Primary Purple (Lila)
+C_SC='\033[38;5;201m' # Secondary Pink
+C_HL='\033[38;5;51m'  # Highlight Cyan
 C_OK='\033[38;5;46m'  # Success Green
 C_ER='\033[38;5;196m' # Error Red
 C_BG='\033[48;5;234m' # Dark BG
@@ -22,6 +22,13 @@ function header() {
                                                          v2.0 MASTER
 EOF
     echo -e "${NC}"
+}
+
+function draw_header() {
+    local title="$1"
+    header
+    echo -e "  ${C_HL}:: $title ::${NC}"
+    echo ""
 }
 
 function status_dot() {
