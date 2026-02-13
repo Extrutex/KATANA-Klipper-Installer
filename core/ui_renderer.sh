@@ -106,6 +106,10 @@ function draw_main_menu() {
     printf "  ${C_PURPLE}║${NC} ${C_NEON}[9] SEC & BACKUP${NC}     ${C_GREY}Firewall & Backup Vault${NC}            ${C_PURPLE}║${NC}\n"
     draw_mid
     printf "  ${C_PURPLE}║${NC} ${C_RED}[X] EXIT${NC}             ${C_GREY}Close KATANAOS${NC}                     ${C_PURPLE}║${NC}\n"
+    draw_bot
+    echo ""
+}
+
 function draw_exit_screen() {
     clear
     echo -e "${C_PURPLE}"
