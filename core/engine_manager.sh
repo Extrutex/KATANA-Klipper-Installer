@@ -14,11 +14,23 @@ function run_engine_manager() {
     read -p "  >> " ech
     
     case $ech in
-        1) switch_core "klipper" ;;
-        2) switch_core "kalico" ;;
-        3) switch_core "ratos" ;;
+        1) switch_core_router "klipper" ;;
+        2) switch_core_router "kalico" ;;
+        3) switch_core_router "ratos" ;;
         [bB]) return ;;
     esac
+}
+
+function switch_core_router() {
+    local target="$1"
+    # Check for PRO module
+    if [ -f "$MODULES_DIR/engine/core_switcher_pro.sh" ]; then
+        source "$MODULES_DIR/engine/core_switcher_pro.sh"
+        switch_core_pro "$target"
+    else
+        # Fallback to Legacy
+        switch_core "$target"
+    fi
 }
 
 function get_current_engine() {
