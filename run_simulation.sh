@@ -1,5 +1,14 @@
-#!/bin/bash
 # Simulates KATANAOS in a Docker container
+
+# 0. Check for Docker
+if ! command -v docker &> /dev/null; then
+    echo "ERROR: Docker is not installed or not running."
+    echo "To simulate a Raspberry Pi on your Mac, you need 'Docker Desktop'."
+    echo "Download it here: https://www.docker.com/products/docker-desktop/"
+    echo ""
+    echo "Once installed and running, try this script again."
+    exit 1
+fi
 
 echo "building simulation container..."
 docker build -t katanaos-sim -f tests/Dockerfile .
