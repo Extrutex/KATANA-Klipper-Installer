@@ -82,8 +82,13 @@ Security is not an option; it is a default.
 * **Log2Ram:** Integrates the Log2Ram daemon to redirect system logging to RAM, significantly reducing write cycles on SD cards.
 
 
-## 🛠️ Usage
+### 8. 🚑 Dr. Katana (System Diagnostics)
+Safety net for your printer.
+*   **Log Analyzer:** Scans `klippy.log` and `moonraker.log` for common errors.
+*   **Permission Fixer:** Auto-corrects `chown pi:pi` issues in `~/printer_data` that often cause "Permission Denied" errors.
+*   **Dependency Repair:** Re-installs missing system packages if an update fails.
 
+## 🛠️ Usage
 
 **Requirements:**
 * Hardware: Raspberry Pi (3/4/5/Zero2), Orange Pi, or generic Linux host.
@@ -107,8 +112,6 @@ sudo apt update && sudo apt upgrade -y
 
 
 ````bash
-
-
 cd ~
 rm -rf ~/kiauh
 ````
@@ -117,7 +120,7 @@ rm -rf ~/kiauh
 ````bash
 cd ~
 git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
-mv KATANA-Klipper-Installer/katanaos.sh .
+cd KATANA-Klipper-Installer
 chmod +x katanaos.sh
 ./katanaos.sh
 ````
