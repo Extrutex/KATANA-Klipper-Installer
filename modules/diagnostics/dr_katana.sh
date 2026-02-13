@@ -61,7 +61,11 @@ function service_control_menu() {
 }
 
 function view_logs() {
-    echo "  >> Log Viewer not implemented yet."
+    if [ -f "$KATANA_ROOT/scripts/log_analyzer.sh" ]; then
+        source "$KATANA_ROOT/scripts/log_analyzer.sh"
+    else
+        echo "  [!] Analyzer script missing."
+    fi
     read -p "  Press Enter..."
 }
 
