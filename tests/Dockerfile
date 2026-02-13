@@ -7,6 +7,28 @@ RUN apt-get update && apt-get install -y \
     bash \
     git \
     curl \
+    build-essential \
+    python3-dev \
+    python3-venv \
+    virtualenv \
+    libffi-dev \
+    libncurses-dev \
+    libusb-dev \
+    avrdude \
+    gcc-avr \
+    binutils-avr \
+    avr-libc \
+    stm32flash \
+    libnewlib-arm-none-eabi \
+    libusb-1.0-0-dev \
+    liblmdb-dev \
+    libopenjp2-7 \
+    libsodium-dev \
+    libjpeg-dev \
+    packagekit \
+    python3-wheel \
+    nginx \
+    systemd-sysv \
     nano \
     systemd \
     && rm -rf /var/lib/apt/lists/*
