@@ -75,23 +75,14 @@ function run_forge() {
     fi
 }
 
-# 8. MAINTENANCE (System Prep)
-function run_system_prep() {
-    draw_header "SYSTEM MAINTENANCE"
-    echo "  This will update your system packages (apt-get)."
-    echo ""
-    read -p "  Proceed? [Y/n] " yn
-    if [[ "$yn" =~ ^[nN] ]]; then return; fi
-    
-    log_info "Updating System..."
-    if sudo -n true 2>/dev/null; then
-        sudo apt-get update && sudo apt-get upgrade -y
-        log_success "System Updated."
+# 8. KATANA FLOW (Smart Purge)
+function run_katana_flow() {
+    if [ -f "$MODULES_DIR/extras/katana_flow.sh" ]; then
+        source "$MODULES_DIR/extras/katana_flow.sh"
+        install_katana_flow
     else
-        echo "  [!] Sudo required for system update."
-        sudo apt-get update && sudo apt-get upgrade -y
+         log_error "Module missing: extras/katana_flow.sh"
     fi
-    read -p "  Press Enter..."
 }
 
 # 9. SECURITY & BACKUP

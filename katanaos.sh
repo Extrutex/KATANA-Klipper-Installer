@@ -44,7 +44,7 @@ function main() {
             5) run_forge ;;
             6) run_engine_manager ;;
             7) run_dr_katana ;;
-            8) run_system_prep ;;
+            8) run_katana_flow ;;
             9) run_security_menu ;;
             [qQxX]) 
                 draw_exit_screen

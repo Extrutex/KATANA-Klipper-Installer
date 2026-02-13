@@ -183,7 +183,7 @@ function draw_main_menu() {
     echo -e "${C_PURPLE}║${NC}"
     
     print_line "[7] DR. KATANA" "Log Diagnostics & Repair"
-    print_line "[8] SYSTEM PREP" "Updates & Dependencies"
+    print_line "[8] KATANA FLOW" "Smart Purge & Adaptive Mesh"
     print_line "[9] SEC & BACKUP" "Firewall & Backup Vault"
     
     draw_mid

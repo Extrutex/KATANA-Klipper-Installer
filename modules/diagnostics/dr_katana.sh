@@ -66,6 +66,35 @@ function view_logs() {
 }
 
 function repair_system() {
-    echo "  >> Repair function not implemented yet."
+    draw_header "SYSTEM REPAIR & UPDATE"
+    echo "  1) Fix Permissions (chown pi:pi)"
+    echo "  2) System Update (apt-get update & upgrade)"
+    echo "  B) Back"
+    read -p "  >> " ch
+    
+    case $ch in
+        1)
+            log_info "Fixing Permissions..."
+            if sudo -n true 2>/dev/null; then
+                sudo chown -R $USER:$USER $HOME/printer_data
+                sudo chown -R $USER:$USER $HOME/klipper
+                sudo chown -R $USER:$USER $HOME/moonraker
+                log_success "Permissions fixed."
+            else
+                echo "  [!] Sudo required."
+            fi
+            ;;
+        2)
+            log_info "Updating System..."
+            if sudo -n true 2>/dev/null; then
+                sudo apt-get update && sudo apt-get upgrade -y
+            else
+                echo "  [!] Sudo required."
+                sudo apt-get update && sudo apt-get upgrade -y
+            fi
+            log_success "System Updated."
+            ;;
+        [bB]) return ;;
+    esac
     read -p "  Press Enter..."
 }
