@@ -15,12 +15,18 @@ type DiagnosticsListener = (alerts: DiagnosticAlert[]) => void;
 export class DiagnosticsStore {
     private alerts: DiagnosticAlert[] = [];
     private listeners: Set<DiagnosticsListener> = new Set();
+    private supervisor: WebsocketSupervisor;
+    private printer: PrinterStateMachine;
+    private health: ServiceHealthStore;
 
     constructor(
-        private supervisor: WebsocketSupervisor,
-        private printer: PrinterStateMachine,
-        private health: ServiceHealthStore
+        supervisor: WebsocketSupervisor,
+        printer: PrinterStateMachine,
+        health: ServiceHealthStore
     ) {
+        this.supervisor = supervisor;
+        this.printer = printer;
+        this.health = health;
         this.init();
     }
 

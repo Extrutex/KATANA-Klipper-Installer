@@ -1,8 +1,9 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import GridLayout from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
+import { useKatanaLink, client } from '../lib/moonraker';
 
 // --- ROBUST IMPORT LOGIC FOR VITE/CJS ---
 // The structure of 'GridLayout' varies depending on build (dev/prod) and bundler (Vite/Rollup)
@@ -98,24 +99,100 @@ const DEFAULT_LAYOUT: Layout[] = [
     { i: 'job_status', x: 4, y: 10, w: 8, h: 4 },
 ];
 
-// --- Mock Widgets ---
-// (We will replace these with real components later)
-const ToolheadWidget = () => (
-    <div style={{ padding: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span>X: 150.0</span><span>Y: 150.0</span><span>Z: 10.0</span>
+// --- Real Widgets ---
+const ToolheadWidget = ({ printer }: { printer: any }) => {
+    const toolhead = printer?.objects?.toolhead || {};
+    const pos = toolhead.position || [0, 0, 0];
+    
+    const handleHome = () => {
+        client.sendGCode("G28");
+    };
+
+    return (
+        <div style={{ padding: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontFamily: 'monospace', fontSize: '1.1rem' }}>
+                <span>X: {pos[0]?.toFixed(1) || 0}</span>
+                <span>Y: {pos[1]?.toFixed(1) || 0}</span>
+                <span>Z: {pos[2]?.toFixed(1) || 0}</span>
+            </div>
+            <div style={{ marginBottom: '0.5rem', fontSize: '0.8rem', color: '#888' }}>
+                Status: {toolhead.status || 'unknown'}
+            </div>
+            <button className="btn-primary" style={{ width: '100%' }} onClick={handleHome}>HOME ALL</button>
         </div>
-        <button className="btn-primary" style={{ width: '100%' }}>HOME ALL</button>
-    </div>
-);
+    );
+};
+
+const ThermalsWidget = ({ printer }: { printer: any }) => {
+    const heater_bed = printer?.objects?.heater_bed || {};
+    const extruder = printer?.objects?.extruder || {};
+
+    return (
+        <div style={{ padding: '1rem', fontFamily: 'monospace' }}>
+            <div style={{ marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Nozzle</span>
+                    <span>{extruder.temperature?.toFixed(0) || 0}°C / {extruder.target?.toFixed(0) || 0}°C</span>
+                </div>
+                <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '4px' }}>
+                    <div style={{ 
+                        height: '100%', 
+                        width: `${Math.min(100, (extruder.temperature / extruder.target) * 100)}%`,
+                        background: 'var(--color-primary)',
+                        borderRadius: '2px',
+                        transition: 'width 0.3s'
+                    }} />
+                </div>
+            </div>
+            <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Bed</span>
+                    <span>{heater_bed.temperature?.toFixed(0) || 0}°C / {heater_bed.target?.toFixed(0) || 0}°C</span>
+                </div>
+                <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '4px' }}>
+                    <div style={{ 
+                        height: '100%', 
+                        width: `${Math.min(100, (heater_bed.temperature / heater_bed.target) * 100)}%`,
+                        background: '#f90',
+                        borderRadius: '2px',
+                        transition: 'width 0.3s'
+                    }} />
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const ViewportWidget = () => (
     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-        <span>LIVE FEED [OFFLINE]</span>
+        <span style={{ color: '#444' }}>LIVE FEED [OFFLINE]</span>
     </div>
 );
 
+const JobStatusWidget = ({ printer }: { printer: any }) => {
+    const status = printer?.status || 'offline';
+    const webhooks = printer?.webhooks || {};
+    
+    return (
+        <div style={{ padding: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ 
+                    width: '12px', 
+                    height: '12px', 
+                    borderRadius: '50%', 
+                    background: status === 'ready' ? '#5f5' : status === 'printing' ? '#fc0' : '#f55' 
+                }} />
+                <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{status.toUpperCase()}</span>
+            </div>
+            <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#888' }}>
+                {webhooks.state_message || 'System ready'}
+            </div>
+        </div>
+    );
+};
+
 export default function DashboardLayout() {
+    const printer = useKatanaLink();
     const [layout, setLayout] = useState<Layout[]>(() => {
         const saved = localStorage.getItem('horizon_layout_v1');
         return saved ? JSON.parse(saved) : DEFAULT_LAYOUT;
@@ -159,16 +236,13 @@ export default function DashboardLayout() {
                 >
                     <div key="toolhead">
                         <Widget title="TOOLHEAD">
-                            <ToolheadWidget />
+                            <ToolheadWidget printer={printer} />
                         </Widget>
                     </div>
 
                     <div key="thermals">
                         <Widget title="THERMALS">
-                            <div style={{ padding: '1rem' }}>
-                                <p>Nozzle: 200°C</p>
-                                <p>Bed: 60°C</p>
-                            </div>
+                            <ThermalsWidget printer={printer} />
                         </Widget>
                     </div>
 
@@ -180,9 +254,7 @@ export default function DashboardLayout() {
 
                     <div key="job_status">
                         <Widget title="JOB STATUS">
-                            <div style={{ padding: '1rem' }}>
-                                <strong>No active job</strong>
-                            </div>
+                            <JobStatusWidget printer={printer} />
                         </Widget>
                     </div>
 

@@ -1,22 +1,68 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { client } from '../lib/moonraker';
 
-// Mock File Data for development
-const MOCK_FILES = [
-    { name: "benchy_pla.gcode", size: 540231, modified: 1709234567, status: "ready" },
-    { name: "calibration_cube.gcode", size: 12405, modified: 1708123456, status: "ready" },
-    { name: "voron_part_fan.gcode", size: 892341, modified: 1707012345, status: "printed" },
-];
+interface FileItem {
+    path: string;
+    size: number;
+    modified: number;
+}
 
 export default function FileManager() {
-    const [files, setFiles] = useState(MOCK_FILES);
+    const [files, setFiles] = useState<FileItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleDelete = (name: string) => {
-        setFiles(prev => prev.filter(f => f.name !== name));
+    const fetchFiles = async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
+            const response = await fetch(`/api/files?path=gcodes`);
+            const data = await response.json();
+            
+            if (data.result) {
+                const gcodeFiles: FileItem[] = data.result
+                    .filter((f: any) => f.filename.endsWith('.gcode'))
+                    .map((f: any) => ({
+                        path: f.path,
+                        size: f.size,
+                        modified: f.modified
+                    }));
+                setFiles(gcodeFiles);
+            }
+        } catch (err) {
+            console.error('Failed to fetch files:', err);
+            setError('Failed to load files. Is Moonraker running?');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handlePrint = (name: string) => {
-        alert(`Starting print: ${name}`);
-        // Here we would call printer.printFile(name)
+    useEffect(() => {
+        fetchFiles();
+    }, []);
+
+    const handleDelete = async (path: string) => {
+        if (!confirm(`Delete ${path}?`)) return;
+        
+        try {
+            await fetch('/api/files/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path })
+            });
+            fetchFiles();
+        } catch (err) {
+            console.error('Delete failed:', err);
+        }
+    };
+
+    const handlePrint = async (path: string) => {
+        try {
+            client.sendGCode(`PRINT_FILE ${path}`);
+        } catch (err) {
+            console.error('Print failed:', err);
+        }
     };
 
     return (
@@ -25,28 +71,47 @@ export default function FileManager() {
                 <h2>G-CODE LIBRARY</h2>
                 <div className="actions">
                     <button className="btn-primary">UPLOAD</button>
-                    <button className="btn-small">REFRESH</button>
+                    <button className="btn-small" onClick={fetchFiles}>REFRESH</button>
                 </div>
             </div>
 
             <div className="file-list">
-                <div className="file-row header">
-                    <span className="col-name">Filename</span>
-                    <span className="col-size">Size</span>
-                    <span className="col-date">Date</span>
-                    <span className="col-actions">Actions</span>
-                </div>
-                {files.map(file => (
-                    <div key={file.name} className="file-row item">
-                        <span className="col-name file-icon">{file.name}</span>
-                        <span className="col-size">{(file.size / 1024).toFixed(1)} KB</span>
-                        <span className="col-date">{new Date(file.modified * 1000).toLocaleDateString()}</span>
-                        <div className="col-actions">
-                            <button className="btn-small action-print" onClick={() => handlePrint(file.name)}>PRINT</button>
-                            <button className="btn-small action-del" onClick={() => handleDelete(file.name)}>DEL</button>
-                        </div>
+                {loading && (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                        Loading files...
                     </div>
-                ))}
+                )}
+                {error && (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#f55' }}>
+                        {error}
+                    </div>
+                )}
+                {!loading && !error && files.length === 0 && (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                        No gcode files found.
+                    </div>
+                )}
+                {!loading && !error && files.length > 0 && (
+                    <>
+                        <div className="file-row header">
+                            <span className="col-name">Filename</span>
+                            <span className="col-size">Size</span>
+                            <span className="col-date">Date</span>
+                            <span className="col-actions">Actions</span>
+                        </div>
+                        {files.map(file => (
+                            <div key={file.path} className="file-row item">
+                                <span className="col-name file-icon">{file.path.split('/').pop()}</span>
+                                <span className="col-size">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+                                <span className="col-date">{new Date(file.modified * 1000).toLocaleDateString()}</span>
+                                <div className="col-actions">
+                                    <button className="btn-small action-print" onClick={() => handlePrint(file.path)}>PRINT</button>
+                                    <button className="btn-small action-del" onClick={() => handleDelete(file.path)}>DEL</button>
+                                </div>
+                            </div>
+                        ))}
+                    </>
+                )}
             </div>
 
             <style>{`

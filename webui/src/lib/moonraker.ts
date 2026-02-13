@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react';
 import { WebsocketSupervisor } from './core/websocket-supervisor';
 import { PrinterStateMachine } from './core/printer-state-machine';
 import type { ConnectionState, PrinterState } from './core/schema';
+import { ServiceHealthStore } from './core/service-health';
+import type { SystemHealthState } from './core/service-health';
+import { DiagnosticsStore } from './core/diagnostics-store';
+import type { DiagnosticAlert } from './core/diagnostics-store';
 
 // Re-export types for consumers
-export type { ConnectionState, PrinterState } from './core/schema';
+export type { ConnectionState, PrinterState, SystemHealthState, DiagnosticAlert };
 
 // --- Configuration ---
 const getMoonrakerUrl = () => {
@@ -24,12 +28,6 @@ const getMoonrakerUrl = () => {
         return `${protocol}//${hostname}:${window.location.port}/websocket`; // Prod
     }
 };
-
-// --- Singleton Core ---
-import { ServiceHealthStore } from './core/service-health';
-import { DiagnosticsStore } from './core/diagnostics-store';
-export type { SystemHealthState } from './core/service-health';
-export type { DiagnosticAlert } from './core/diagnostics-store';
 
 class HorizonClient {
     public supervisor: WebsocketSupervisor;
@@ -74,6 +72,14 @@ class HorizonClient {
 
     private handleConnectionChange(state: ConnectionState) {
         if (state === 'ONLINE') {
+            // Subscribe to GCode responses
+            this.supervisor.send({
+                jsonrpc: "2.0",
+                method: "printer.gcode.subscribe",
+                params: {},
+                id: 99
+            });
+
             // Subscribe to objects on connect
             this.supervisor.send({
                 jsonrpc: "2.0",
@@ -84,7 +90,6 @@ class HorizonClient {
                         heater_bed: ["temperature", "target", "power"],
                         extruder: ["temperature", "target", "power"],
                         webhooks: ["state", "state_message"],
-                        // System stats are not subscribable via objects in standard Klipper usually, handled via polling or separate info
                     }
                 },
                 id: 1
@@ -118,11 +123,15 @@ class HorizonClient {
             this.store.handleObjectsQuery(data.result);
         }
 
-        // 3. Delegate to Health Store for proc_stats
-        this.health.handleMessage(data);
+        // 3. GCode Response
+        if (data.method === "notify_gcode_response") {
+            const response = data.params[0];
+            const isError = response.startsWith("!!") || response.toLowerCase().includes("error");
+            addGCodeLog(response, isError ? 'error' : 'response');
+        }
 
-        // 4. GCode Response (logging)
-        // TODO: Implement LogStore logic here using data.method === 'notify_gcode_response'
+        // 4. Delegate to Health Store for proc_stats
+        this.health.handleMessage(data);
     }
 }
 
@@ -167,7 +176,8 @@ export const useKatanaLink = () => {
 export const useServiceHealth = () => {
     const [health, setHealth] = useState<SystemHealthState>(client.health.getState());
     useEffect(() => {
-        return client.health.subscribe(setHealth);
+        const unsub = client.health.subscribe(setHealth);
+        return () => { unsub(); };
     }, []);
     return health;
 };
@@ -175,13 +185,13 @@ export const useServiceHealth = () => {
 export const useDiagnostics = () => {
     const [alerts, setAlerts] = useState<DiagnosticAlert[]>(client.diagnostics.getAlerts());
     useEffect(() => {
-        return client.diagnostics.subscribe(setAlerts);
+        const unsub = client.diagnostics.subscribe(setAlerts);
+        return () => { unsub(); };
     }, []);
     return alerts;
 };
 
-// Log Store (Placeholder/Minimal for now to avoid breaking ConsolePanel)
-// TODO: Move to dedicated module
+// Log Store for GCode Console
 export interface GCodeLog {
     time: number;
     message: string;
@@ -191,21 +201,24 @@ export interface GCodeLog {
 let globalLogs: GCodeLog[] = [];
 let logListeners: ((logs: GCodeLog[]) => void)[] = [];
 
+function addGCodeLog(msg: string, type: 'command' | 'response' | 'error' = 'response') {
+    const newEntry: GCodeLog = { time: Date.now(), message: msg, type };
+    globalLogs = [...globalLogs.slice(-199), newEntry];
+    logListeners.forEach(l => l(globalLogs));
+}
+
 export const useGCodeStore = () => {
     const [logs, setLogs] = useState<GCodeLog[]>(globalLogs);
 
     useEffect(() => {
         const handler = (newLogs: GCodeLog[]) => setLogs(newLogs);
         logListeners.push(handler);
-        // Initial sync
         handler(globalLogs);
         return () => { logListeners = logListeners.filter(l => l !== handler); };
     }, []);
 
     const addLog = (msg: string, type: 'command' | 'response' | 'error' = 'command') => {
-        const newEntry: GCodeLog = { time: Date.now(), message: msg, type };
-        globalLogs = [...globalLogs.slice(-99), newEntry];
-        logListeners.forEach(l => l(globalLogs));
+        addGCodeLog(msg, type);
     };
 
     return { logs, addLog };

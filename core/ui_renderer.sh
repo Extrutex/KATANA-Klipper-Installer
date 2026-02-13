@@ -182,9 +182,10 @@ function draw_main_menu() {
     for ((i=0; i<66; i++)); do echo -ne " "; done
     echo -e "${C_PURPLE}║${NC}"
     
-    print_line "[7] DR. KATANA" "Log Diagnostics & Repair"
-    print_line "[8] KATANA FLOW" "Smart Purge & Adaptive Mesh"
-    print_line "[9] SEC & BACKUP" "Firewall & Backup Vault"
+    print_line "[7] UPDATE" "Update Klipper & Moonraker"
+    print_line "[8] DR. KATANA" "Log Diagnostics & Repair"
+    print_line "[9] KATANA FLOW" "Smart Purge & Adaptive Mesh"
+    print_line "[10] SEC & BACKUP" "Firewall & Backup Vault"
     print_line "[H] HARDWARE VR." "Happy Hare & Smart Probes"
     
     draw_mid

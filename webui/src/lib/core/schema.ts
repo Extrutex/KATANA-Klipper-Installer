@@ -72,6 +72,6 @@ export const JsonRpcResponseSchema = z.object({
 export const NotifyStatusUpdateSchema = z.object({
     jsonrpc: z.literal('2.0'),
     method: z.literal('notify_status_update'),
-    params: z.array(z.record(z.any())) // Dynamic partial object array
+    params: z.tuple([z.record(z.string(), z.any())]) // Dynamic partial object
 });
 

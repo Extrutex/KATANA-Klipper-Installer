@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useGCodeStore, useKatanaLink, KatanaLink, useDiagnostics, DiagnosticAlert } from '../lib/moonraker';
+import { useGCodeStore, KatanaLink, useDiagnostics } from '../lib/moonraker';
 
 export default function DiagnosticsPanel() {
-    const printer = useKatanaLink();
-    const alerts = useDiagnostics(); // Real aggregated alerts
+    const alerts = useDiagnostics();
     const { addLog } = useGCodeStore();
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -15,29 +14,15 @@ export default function DiagnosticsPanel() {
         }
     };
 
-    // If we have selected an alert that no longer exists, deserialize selection
     if (selectedId && !alerts.find(a => a.id === selectedId)) {
         setSelectedId(null);
     }
 
-    // Map alerts to display format
     const displayErrors = alerts.map(alert => ({
         ...alert,
         type: alert.level === 'ERROR' ? 'CRITICAL' : 'WARNING',
-        action: alert.source === 'PRINTER' ? 'FIRMWARE_RESTART' : undefined // Simple logic for now
+        action: alert.source === 'PRINTER' ? 'FIRMWARE_RESTART' : undefined
     }));
-
-    // Offline check just for header status, but alerts handle the "Network Lost" message now.
-    // However, if we want to blocking-overlay on total loss, we can checks alerts for 'net_loss'
-    const isOffline = alerts.some(a => a.id === 'net_loss');
-
-    // If completely offline, maybe we still show the panel but with big warning?
-    // The previous design had an overlay.
-    // Spec says: "Error Center aggregates alerts".
-    // If net_loss is present, it's just an alert in the list, unless we want to block.
-    // Let's keep the dashboard usable but show the error prominent.
-    // Actually, if offline, we might have no data for other things, so overlay is safer for "Diagnostics" if it relies on fetching fresh data?
-    // But `alerts` contains the local error.
     // Let's use the list view, it's more robust.
 
     return (

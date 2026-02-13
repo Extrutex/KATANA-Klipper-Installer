@@ -1,13 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { useGCodeStore } from '../lib/moonraker';
+import { useGCodeStore, client } from '../lib/moonraker';
 
 export default function ConsolePanel() {
     const [input, setInput] = useState("");
     const { logs, addLog } = useGCodeStore();
     const bottomRef = useRef<HTMLDivElement>(null);
-    // Removed unused printer access for now 
 
-    // Auto-scroll
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [logs]);
@@ -15,19 +13,21 @@ export default function ConsolePanel() {
     const handleSend = () => {
         if (!input.trim()) return;
 
-        // In real implementations, we call printer.sendGCode
-        // For visual proto:
-        addLog(`> ${input}`, 'command');
-
-        // Simulate response for common commands
-        if (input.toUpperCase() === "G28") {
-            setTimeout(() => addLog("Homing...", "response"), 500);
-            setTimeout(() => addLog("Home OK", "response"), 2500);
-        } else {
-            setTimeout(() => addLog("ok", "response"), 200);
-        }
-
+        const cmd = input.trim();
+        addLog(`> ${cmd}`, 'command');
+        
+        client.sendGCode(cmd);
         setInput("");
+    };
+
+    const handleRestart = () => {
+        addLog(`> FIRMWARE_RESTART`, 'command');
+        client.sendGCode("FIRMWARE_RESTART");
+    };
+
+    const handleEmergency = () => {
+        addLog(`> M112 (EMERGENCY STOP)`, 'command');
+        client.sendGCode("M112");
     };
 
     return (
@@ -35,8 +35,8 @@ export default function ConsolePanel() {
             <div className="console-header">
                 <h2>G-CODE TERMINAL</h2>
                 <div className="console-actions">
-                    <button className="btn-small" onClick={() => addLog("FIRMWARE RESTART...", "command")}>RESTART</button>
-                    <button className="btn-small error" onClick={() => addLog("M112", "command")}>EMERGENCY</button>
+                    <button className="btn-small" onClick={handleRestart}>RESTART</button>
+                    <button className="btn-small error" onClick={handleEmergency}>EMERGENCY</button>
                 </div>
             </div>
 

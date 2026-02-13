@@ -198,3 +198,104 @@ EOF
     log_success "Moonraker installed and service started."
     read -p "  Press Enter..."
 }
+
+function update_core_stack() {
+    draw_header "UPDATE KLIPPER & MOONRAKER"
+    echo "  1) Update Klipper"
+    echo "  2) Update Moonraker"
+    echo "  3) Update Both"
+    echo "  B) Back"
+    read -p "  >> " ch
+
+    case $ch in
+        1) do_update_klipper ;;
+        2) do_update_moonraker ;;
+        3) do_update_klipper && do_update_moonraker ;;
+        [bB]) return ;;
+    esac
+}
+
+function do_update_klipper() {
+    local klipper_dir="$HOME/klipper"
+    
+    if [ ! -d "$klipper_dir" ]; then
+        log_error "Klipper not installed. Install it first."
+        read -p "  Press Enter..."
+        return 1
+    fi
+
+    log_info "Updating Klipper..."
+    
+    cd "$klipper_dir"
+    
+    # Check for updates
+    local current_sha=$(git rev-parse HEAD)
+    git fetch origin
+    local latest_sha=$(git rev-parse origin/main)
+    
+    if [ "$current_sha" == "$latest_sha" ]; then
+        log_success "Klipper is already up to date."
+    else
+        log_info "Updating from $(git rev-parse --short HEAD) to $(git rev-parse --short origin/main)..."
+        git pull origin main
+        
+        # Rebuild
+        log_info "Rebuilding Klipper..."
+        make clean
+        make -j$(nproc)
+        
+        # Restart service
+        sudo systemctl restart klipper
+        sleep 2
+        
+        if systemctl is-active --quiet klipper; then
+            log_success "Klipper updated and restarted."
+        else
+            log_error "Klipper failed to start after update!"
+        fi
+    fi
+    
+    read -p "  Press Enter..."
+}
+
+function do_update_moonraker() {
+    local moonraker_dir="$HOME/moonraker"
+    
+    if [ ! -d "$moonraker_dir" ]; then
+        log_error "Moonraker not installed. Install it first."
+        read -p "  Press Enter..."
+        return 1
+    fi
+
+    log_info "Updating Moonraker..."
+    
+    cd "$moonraker_dir"
+    
+    # Check for updates
+    local current_sha=$(git rev-parse HEAD)
+    git fetch origin
+    local latest_sha=$(git rev-parse origin/main)
+    
+    if [ "$current_sha" == "$latest_sha" ]; then
+        log_success "Moonraker is already up to date."
+    else
+        log_info "Updating from $(git rev-parse --short HEAD) to $(git rev-parse --short origin/main)..."
+        git pull origin main
+        
+        # Install requirements
+        log_info "Installing dependencies..."
+        pip install -r requirements.txt --upgrade
+        
+        # Restart service
+        sudo systemctl restart moonraker
+        sleep 2
+        
+        if systemctl is-active --quiet moonraker; then
+            log_success "Moonraker updated and restarted."
+        else
+            log_error "Moonraker failed to start after update!"
+        fi
+    fi
+    
+    read -p "  Press Enter..."
+}

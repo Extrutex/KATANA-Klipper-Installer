@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useGCodeStore } from '../lib/moonraker';
 
 // Mock data for prototype
 const MOCK_CONFIG = {
@@ -12,20 +11,8 @@ const MOCK_CONFIG = {
 };
 
 export default function ConfigEditor() {
-    const { addLog } = useGCodeStore();
-    const [config, setConfig] = useState(MOCK_CONFIG);
-    const [hasChanges, setHasChanges] = useState(false);
-
-    const handleChange = (key: keyof typeof MOCK_CONFIG, value: number) => {
-        setConfig(prev => ({ ...prev, [key]: value }));
-        setHasChanges(true);
-    };
-
-    const handleSave = () => {
-        // Disabled for Strict No-Assumption Rule
-        addLog("Save disabled in Prototype Mode.", "error");
-        addLog("Real implementation requires 'POST /printer/gcode/script' with SAVE_CONFIG.", "error");
-    };
+    const [config] = useState(MOCK_CONFIG);
+    const [hasChanges] = useState(false);
 
     return (
         <div className="glass-panel config-container" style={{ position: 'relative' }}>

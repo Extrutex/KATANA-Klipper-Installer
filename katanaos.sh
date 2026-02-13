@@ -20,6 +20,7 @@ source "$CORE_DIR/env_check.sh"
 source "$CORE_DIR/engine_manager.sh"
 source "$CORE_DIR/dispatchers.sh"
 source "$CORE_DIR/service_manager.sh"
+source "$MODULES_DIR/engine/install_klipper.sh"
 # source "$MODULES_DIR/hardware/canbus.sh" # Deprecated/Merged into Forge
 if [ -f "$MODULES_DIR/diagnostics/dr_katana.sh" ]; then
     source "$MODULES_DIR/diagnostics/dr_katana.sh"
@@ -53,9 +54,10 @@ function main() {
             4) run_vision_stack ;;
             5) run_forge ;;
             6) run_engine_manager ;;
-            7) run_dr_katana ;;
-            8) run_katana_flow ;;
-            9) run_security_menu ;;
+            7) update_core_stack ;;
+            8) run_dr_katana ;;
+            9) run_katana_flow ;;
+            10) run_security_menu ;;
             [hH]) run_hardware_menu ;;
             [qQxX]) 
                 draw_exit_screen
