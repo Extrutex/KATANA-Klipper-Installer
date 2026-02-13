@@ -52,18 +52,22 @@ function draw_main_menu() {
 EOF
     echo -e "${C_NEON}    >> SYSTEM OVERLORD // COMMAND INTERFACE${NC}"
     
+    # Get Statuses
+    local s_klipper=$(get_service_status "klipper")
+    local s_moonraker=$(get_service_status "moonraker")
+    
     draw_top
     print_box_line " ${C_TXT}COMMAND DECK${NC}"
     draw_line
     print_box_line " ${C_TXT}[ INSTALLATION ]${NC}"
     menu_item "1" "AUTO-PILOT" "Full Stack Install (God Mode)"
-    menu_item "2" "CORE ENGINE" "Klipper, Moonraker & Nginx"
+    menu_item "2" "CORE ENGINE" "Klipper $s_klipper & Moonraker $s_moonraker"
     menu_item "3" "WEB INTERFACE" "Mainsail / Fluidd"
     menu_item "4" "KATANA-FLOW" "Smart Park & Adaptive Purge"
     draw_line
     print_box_line " ${C_TXT}[ CONFIGURATION ]${NC}"
     menu_item "5" "THE FORGE" "Flash MCU & CAN-Bus"
-    menu_item "6" "ENGINE MANAGER" "Klipper <-> Kalico Switch"
+    menu_item "6" "ENGINE MANAGER" "Klipper <-> ${C_PURPLE}Kalico (Limitless)${NC}"
     draw_line
     print_box_line " ${C_TXT}[ MAINTENANCE ]${NC}"
     menu_item "7" "KATANA DOCTOR" "Diagnostic & Repair"
@@ -74,4 +78,5 @@ EOF
     draw_bot
     echo ""
 }
+
 

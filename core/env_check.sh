@@ -1,6 +1,16 @@
 #!/bin/bash
 
+function get_service_status() {
+    local service=$1
+    if systemctl is-active --quiet "$service"; then
+        echo -e "${C_GREEN}[AKTIV]${NC}"
+    else
+        echo -e "${C_RED}[INAKTIV]${NC}"
+    fi
+}
+
 function check_environment() {
+
     # 1. Root Check
     if [ "$EUID" -eq 0 ]; then
         log_error "Do NOT run KATANA as root. Run as regular user (e.g., pi/biqu)."
