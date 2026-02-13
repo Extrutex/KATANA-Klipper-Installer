@@ -120,13 +120,13 @@ rm -rf ~/kiauh
 ````
 
 
-````bash
+```bash
 cd ~
 git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
-mv KATANA-Klipper-Installer/katanaos.sh .
+cd KATANA-Klipper-Installer
 chmod +x katanaos.sh
 ./katanaos.sh
-````
+```
 
 
 **License**
