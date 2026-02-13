@@ -22,4 +22,4 @@ echo "You are now inside a clean Debian container."
 echo "KATANAOS will start automatically."
 echo "------------------------------------------------"
 
-docker run -it --rm katanaos-sim
+docker run -it --rm --dns=8.8.8.8 --dns=8.8.4.4 katanaos-sim
