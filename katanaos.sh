@@ -23,6 +23,10 @@ source "$CORE_DIR/dispatchers.sh"
 if [ -f "$MODULES_DIR/diagnostics/dr_katana.sh" ]; then
     source "$MODULES_DIR/diagnostics/dr_katana.sh"
 fi
+# Hardware Extensions
+source "$MODULES_DIR/extras/install_happy_hare.sh"
+source "$MODULES_DIR/hardware/smart_probe.sh"
+source "$MODULES_DIR/hardware/menu.sh"
 
 # --- MAIN LOGIC ---
 function main() {
@@ -46,6 +50,7 @@ function main() {
             7) run_dr_katana ;;
             8) run_katana_flow ;;
             9) run_security_menu ;;
+            [hH]) run_hardware_menu ;;
             [qQxX]) 
                 draw_exit_screen
                 exit 0 

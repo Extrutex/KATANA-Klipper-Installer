@@ -185,6 +185,7 @@ function draw_main_menu() {
     print_line "[7] DR. KATANA" "Log Diagnostics & Repair"
     print_line "[8] KATANA FLOW" "Smart Purge & Adaptive Mesh"
     print_line "[9] SEC & BACKUP" "Firewall & Backup Vault"
+    print_line "[H] HARDWARE VR." "Happy Hare & Smart Probes"
     
     draw_mid
     print_line "[X] EXIT" "Close KATANAOS" "$C_RED"
