@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { client } from '../lib/moonraker';
 
 interface FileItem {
@@ -11,6 +11,9 @@ export default function FileManager() {
     const [files, setFiles] = useState<FileItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const fetchFiles = async () => {
         setLoading(true);
@@ -42,6 +45,59 @@ export default function FileManager() {
         fetchFiles();
     }, []);
 
+    const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.name.endsWith('.gcode')) {
+            setError('Only .gcode files are allowed.');
+            return;
+        }
+
+        setUploading(true);
+        setUploadProgress(0);
+        setError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('path', 'gcodes');
+
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const progress = Math.round((e.loaded / e.total) * 100);
+                    setUploadProgress(progress);
+                }
+            };
+
+            xhr.onload = () => {
+                setUploading(false);
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    fetchFiles();
+                    if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                    }
+                } else {
+                    setError(`Upload failed: ${xhr.statusText}`);
+                }
+            };
+
+            xhr.onerror = () => {
+                setUploading(false);
+                setError('Upload failed. Check network connection.');
+            };
+
+            xhr.open('POST', '/api/files/upload');
+            xhr.send(formData);
+
+        } catch (err) {
+            setUploading(false);
+            setError('Upload failed: ' + String(err));
+        }
+    };
+
     const handleDelete = async (path: string) => {
         if (!confirm(`Delete ${path}?`)) return;
         
@@ -70,10 +126,42 @@ export default function FileManager() {
             <div className="files-header">
                 <h2>G-CODE LIBRARY</h2>
                 <div className="actions">
-                    <button className="btn-primary">UPLOAD</button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".gcode"
+                        onChange={handleUpload}
+                        style={{ display: 'none' }}
+                        id="file-upload"
+                    />
+                    <label htmlFor="file-upload" className="btn-primary" style={{ 
+                        display: 'inline-block', 
+                        cursor: uploading ? 'not-allowed' : 'pointer',
+                        opacity: uploading ? 0.6 : 1
+                    }}>
+                        {uploading ? `UPLOADING ${uploadProgress}%` : 'UPLOAD'}
+                    </label>
                     <button className="btn-small" onClick={fetchFiles}>REFRESH</button>
                 </div>
             </div>
+
+            {uploading && (
+                <div style={{ padding: '0.5rem 1.5rem', background: 'rgba(0,255,100,0.1)', borderBottom: '1px solid rgba(0,255,100,0.2)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.3rem' }}>
+                        <span>Uploading...</span>
+                        <span>{uploadProgress}%</span>
+                    </div>
+                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px' }}>
+                        <div style={{ 
+                            height: '100%', 
+                            width: `${uploadProgress}%`, 
+                            background: 'var(--color-primary)',
+                            borderRadius: '2px',
+                            transition: 'width 0.2s'
+                        }} />
+                    </div>
+                </div>
+            )}
 
             <div className="file-list">
                 {loading && (
