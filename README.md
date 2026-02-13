@@ -70,13 +70,17 @@ Full support for local machine interfaces.
 
 ### 6. 🧩 Smart Extension Support
 Intelligent installation logic for modern Klipper extensions.
-* **Smart Probe Selector:** Enforces exclusive installation logic for **Beacon3D** or **Cartographer** to prevent udev conflicts.
 * **KAMP:** Clones the repo and injects the update manager entry into `moonraker.conf`.
 * **ShakeTune:** Automated installation of the Klippain ShakeTune module.
 * **RatOS:** Option to clone the RatOS configuration repository for easy integration.
 
+### 7. 🌊 KATANA-FLOW (Native Smart Park)
+Advanced pre-print macro suite (Option 8).
+* **Smart Park:** Proximity parking near the print object to prevent oozing.
+* **Blade Purge:** Custom "Blade" pattern purge line that follows the toolhead.
+* **Native Integration:** Uses Klipper's `exclude_object` API without bloated external scripts.
 
-### 7. 🛡️ System Hardening (Standardized)
+### 8. 🛡️ System Hardening (Standardized)
 Security is not an option; it is a default.
 * **UFW Firewall:** Automated rule generation denying all incoming traffic except essential ports (SSH:22, HTTP:80, API:7125).
 * **Log2Ram:** Integrates the Log2Ram daemon to redirect system logging to RAM, significantly reducing write cycles on SD cards.
