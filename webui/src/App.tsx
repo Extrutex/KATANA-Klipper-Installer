@@ -9,10 +9,12 @@ import JobHistory from './components/JobHistory';
 import Settings from './components/Settings';
 import ConfigDiff from './components/ConfigDiff';
 import Macros from './components/Macros';
+import Toolchanger from './components/Toolchanger';
+import TimelapseViewer from './components/TimelapseViewer';
 import { useState, useEffect } from 'react';
 import './index.css';
 
-type View = 'DASHBOARD' | 'CONSOLE' | 'FILES' | 'SYSTEM' | 'CONFIG' | 'DIAGNOSTICS' | 'JOBS' | 'SETTINGS' | 'CONFIGDIFF' | 'MACROS';
+type View = 'DASHBOARD' | 'CONSOLE' | 'FILES' | 'SYSTEM' | 'CONFIG' | 'DIAGNOSTICS' | 'JOBS' | 'SETTINGS' | 'CONFIGDIFF' | 'MACROS' | 'TOOLCHANGER' | 'TIMELAPSE';
 
 function App() {
   const printer = useKatanaLink();
@@ -50,6 +52,8 @@ function App() {
           <button className={`nav-item ${activeView === 'CONSOLE' ? 'active' : ''}`} onClick={() => setActiveView('CONSOLE')}>CONSOLE</button>
           <button className={`nav-item ${activeView === 'FILES' ? 'active' : ''}`} onClick={() => setActiveView('FILES')}>FILES</button>
           <button className={`nav-item ${activeView === 'MACROS' ? 'active' : ''}`} onClick={() => setActiveView('MACROS')}>MACROS</button>
+          <button className={`nav-item ${activeView === 'TOOLCHANGER' ? 'active' : ''}`} onClick={() => setActiveView('TOOLCHANGER')}>TOOLS</button>
+          <button className={`nav-item ${activeView === 'TIMELAPSE' ? 'active' : ''}`} onClick={() => setActiveView('TIMELAPSE')}>TIMELAPSE</button>
           <button className={`nav-item ${activeView === 'CONFIG' ? 'active' : ''}`} onClick={() => setActiveView('CONFIG')}>CONFIG</button>
           <button className={`nav-item ${activeView === 'CONFIGDIFF' ? 'active' : ''}`} onClick={() => setActiveView('CONFIGDIFF')}>CONFIG DIFF</button>
           <button className={`nav-item ${activeView === 'DIAGNOSTICS' ? 'active' : ''}`} onClick={() => setActiveView('DIAGNOSTICS')}>DIAGNOSTICS</button>
@@ -76,6 +80,12 @@ function App() {
 
         {/* MACROS VIEW */}
         {activeView === 'MACROS' && <Macros />}
+
+        {/* TOOLCHANGER VIEW */}
+        {activeView === 'TOOLCHANGER' && <Toolchanger />}
+
+        {/* TIMELAPSE VIEW */}
+        {activeView === 'TIMELAPSE' && <TimelapseViewer />}
 
         {/* CONFIG VIEW */}
         {activeView === 'CONFIG' && <ConfigEditor />}

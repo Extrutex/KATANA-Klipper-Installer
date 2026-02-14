@@ -145,7 +145,44 @@ If this script saved you time, consider supporting the project:
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://Ko-fi.com/3dw_sebastianwindt)
 
 
-## v1.0.0-rc1 Features
+## v1.0.0 Features (Release)
 - **HORIZON UI**: Modern React Interface
+  - Dashboard mit Live-Daten, Toolhead, Temps, Webcam
+  - Console mit echter GCode-Kommunikation
+  - FileManager mit Upload/Delete/Print
+  - Job History & Print Progress
+  - Macros Panel
+  - **Toolchanger Support** (Dual/Quad Extruder)
+  - **Timelapse Viewer**
+  - **Visual Layer Progress**
+  - **Config Diff Tool**
+  - Settings Panel mit Theme-Switcher (Dark/Light)
+  - Diagnostics mit Support Bundle
 - **Auto-Healer**: Self-repair system integration
 - **Visual Config**: Edit printer.cfg via GUI
+- **Backup/Restore**: Vollständige Datensicherung
+- **Uninstall**: Saubere Deinstallation
+- **Update**: Klipper/Moonraker via Git updaten
+
+## Compare to Mainsail/Fluidd
+| Feature | Mainsail | Fluidd | KATANA HORIZON |
+|---------|----------|--------|----------------|
+| Toolchanger Support | ❌ | ❌ | ✅ |
+| Timelapse Viewer | ✅ | ✅ | ✅ |
+| Config Diff | ❌ | ❌ | ✅ |
+| Visual Layer Progress | ✅ | ✅ | ✅ |
+| Support Bundle | ❌ | ❌ | ✅ |
+| Auto-Repair | ❌ | ❌ | ✅ |
+| Theme Switcher | ❌ | ❌ | ✅ |
+| Layout Customizable | Teilweise | Teilweise | ✅ Full |
+| Type-Safe UI | ❌ | ❌ | ✅ (TypeScript) |
+
+## Installation
+
+```bash
+cd ~
+git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
+cd KATANA-Klipper-Installer
+chmod +x katanaos.sh
+./katanaos.sh
+```

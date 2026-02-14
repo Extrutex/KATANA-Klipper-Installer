@@ -39,6 +39,10 @@ source "$MODULES_DIR/security/menu.sh"
 source "$MODULES_DIR/system/uninstaller.sh"
 source "$MODULES_DIR/system/backup_restore.sh"
 
+# Extras
+source "$MODULES_DIR/extras/toolchanger.sh"
+source "$MODULES_DIR/extras/timelapse.sh"
+
 # --- MAIN LOGIC ---
 function main() {
     # 1. Initialize System

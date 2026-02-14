@@ -8,7 +8,9 @@ export default function PrintProgress({ printer }: PrintProgressProps) {
     const [progress, setProgress] = useState(0);
     const [filename, setFilename] = useState('');
     const [eta, setEta] = useState<string | null>(null);
-    const [layer, setLayer] = useState<{ current: number; total: number } | null>(null);
+    const [layer, setLayer] = useState<{ current: number; total: number; height: number; progress_percent: number } | null>(null);
+    const [filament, setFilament] = useState<{ used: number; total: number } | null>(null);
+    const [speed, setSpeed] = useState<number>(100);
 
     const status = printer?.status || 'idle';
     
@@ -43,10 +45,24 @@ export default function PrintProgress({ printer }: PrintProgressProps) {
                 }
                 
                 if (info.current_layer && info.total_layers) {
+                    const layerProgress = (info.current_layer / info.total_layers) * 100;
                     setLayer({
                         current: info.current_layer,
-                        total: info.total_layers
+                        total: info.total_layers,
+                        height: info.layer_height || 0,
+                        progress_percent: layerProgress
                     });
+                }
+                
+                if (info.filament_used && info.filament_total) {
+                    setFilament({
+                        used: info.filament_used,
+                        total: info.filament_total
+                    });
+                }
+                
+                if (info.speed_factor) {
+                    setSpeed(Math.round(info.speed_factor * 100));
                 }
             }
         } catch (err) {
@@ -86,15 +102,39 @@ export default function PrintProgress({ printer }: PrintProgressProps) {
 
             {layer && (
                 <div className="layer-info">
-                    <span>Layer {layer.current} / {layer.total}</span>
-                    <div className="layer-bar">
+                    <div className="layer-header">
+                        <span>Layer {layer.current} / {layer.total}</span>
+                        <span>{layer.progress_percent.toFixed(0)}%</span>
+                    </div>
+                    <div className="layer-bar-visual">
                         <div 
-                            className="layer-fill" 
-                            style={{ width: `${(layer.current / layer.total) * 100}%` }}
-                        />
+                            className="layer-progress-visual" 
+                            style={{ width: `${layer.progress_percent}%` }}
+                        >
+                            {Array.from({ length: Math.min(layer.total, 20) }).map((_, i) => (
+                                <div 
+                                    key={i} 
+                                    className={`layer-marker ${i < (layer.current / layer.total) * Math.min(layer.total, 20) ? 'filled' : ''}`}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
+
+            {filament && (
+                <div className="filament-info">
+                    <span>Filament</span>
+                    <span>{(filament.used / 1000).toFixed(1)}m / {(filament.total / 1000).toFixed(1)}m</span>
+                </div>
+            )}
+
+            <div className="speed-info">
+                <span>Speed</span>
+                <span className={speed < 100 ? 'slow' : speed > 100 ? 'fast' : ''}>
+                    {speed}%
+                </span>
+            </div>
 
             <div className="print-status">
                 <span className={`status-badge ${isPaused ? 'paused' : 'printing'}`}>
@@ -137,21 +177,51 @@ export default function PrintProgress({ printer }: PrintProgressProps) {
                 }
                 .layer-info {
                     margin-bottom: 1rem;
+                }
+                .layer-header {
+                    display: flex;
+                    justify-content: space-between;
                     font-size: 0.8rem;
                     color: var(--text-secondary);
+                    margin-bottom: 0.3rem;
                 }
-                .layer-bar {
-                    height: 4px;
+                .layer-bar-visual {
+                    height: 16px;
                     background: rgba(255,255,255,0.1);
-                    border-radius: 2px;
-                    margin-top: 0.3rem;
+                    border-radius: 4px;
                     overflow: hidden;
+                    display: flex;
+                    align-items: flex-end;
                 }
-                .layer-fill {
+                .layer-progress-visual {
                     height: 100%;
-                    background: #fc0;
-                    border-radius: 2px;
+                    display: flex;
+                    align-items: flex-end;
+                    background: linear-gradient(90deg, var(--color-primary), #0af);
+                    transition: width 0.3s;
                 }
+                .layer-marker {
+                    width: 4%;
+                    height: 40%;
+                    background: rgba(255,255,255,0.15);
+                    margin: 0 1%;
+                    border-radius: 1px;
+                }
+                .layer-marker.filled {
+                    background: rgba(255,255,255,0.7);
+                    height: 80%;
+                }
+                .filament-info, .speed-info {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 0.8rem;
+                    color: var(--text-secondary);
+                    margin-top: 0.5rem;
+                    padding-top: 0.5rem;
+                    border-top: 1px solid var(--border-light);
+                }
+                .speed-info .slow { color: #fc0; }
+                .speed-info .fast { color: #0af; }
                 .print-status {
                     text-align: center;
                 }
