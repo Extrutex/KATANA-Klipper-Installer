@@ -6,6 +6,7 @@ import 'react-resizable/css/styles.css';
 import { useKatanaLink, client } from '../lib/moonraker';
 import ZOffsetTune from './ZOffsetTune';
 import PrintProgress from './PrintProgress';
+import TemperatureChart from './TemperatureChart';
 
 // --- ROBUST IMPORT LOGIC FOR VITE/CJS ---
 // The structure of 'GridLayout' varies depending on build (dev/prod) and bundler (Vite/Rollup)
@@ -95,9 +96,10 @@ function Widget({ title, children, style, ...props }: WidgetProps) {
 
 // Default Layout Config
 const DEFAULT_LAYOUT: Layout[] = [
-    { i: 'toolhead', x: 0, y: 0, w: 4, h: 6 },
-    { i: 'thermals', x: 0, y: 6, w: 4, h: 6 },
-    { i: 'print_progress', x: 0, y: 12, w: 4, h: 6 },
+    { i: 'toolhead', x: 0, y: 0, w: 4, h: 5 },
+    { i: 'thermals', x: 0, y: 5, w: 4, h: 5 },
+    { i: 'temp_chart', x: 0, y: 10, w: 4, h: 6 },
+    { i: 'print_progress', x: 0, y: 16, w: 4, h: 5 },
     { i: 'viewport', x: 4, y: 0, w: 8, h: 8 },
     { i: 'z_offset', x: 4, y: 8, w: 4, h: 6 },
     { i: 'job_status', x: 8, y: 8, w: 4, h: 6 },
@@ -387,6 +389,12 @@ export default function DashboardLayout() {
                     <div key="thermals">
                         <Widget title="THERMALS">
                             <ThermalsWidget printer={printer} />
+                        </Widget>
+                    </div>
+
+                    <div key="temp_chart">
+                        <Widget title="TEMP CHART">
+                            <TemperatureChart printer={printer} />
                         </Widget>
                     </div>
 

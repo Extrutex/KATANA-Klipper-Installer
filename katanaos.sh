@@ -35,6 +35,10 @@ source "$MODULES_DIR/security/hardening.sh"
 source "$MODULES_DIR/security/vault.sh"
 source "$MODULES_DIR/security/menu.sh"
 
+# System
+source "$MODULES_DIR/system/uninstaller.sh"
+source "$MODULES_DIR/system/backup_restore.sh"
+
 # --- MAIN LOGIC ---
 function main() {
     # 1. Initialize System
@@ -58,6 +62,8 @@ function main() {
             8) run_dr_katana ;;
             9) run_katana_flow ;;
             10) run_security_menu ;;
+            11) run_backup_restore ;;
+            12) run_uninstaller ;;
             [hH]) run_hardware_menu ;;
             [qQxX]) 
                 draw_exit_screen

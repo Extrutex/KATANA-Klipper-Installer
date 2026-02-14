@@ -186,6 +186,8 @@ function draw_main_menu() {
     print_line "[8] DR. KATANA" "Log Diagnostics & Repair"
     print_line "[9] KATANA FLOW" "Smart Purge & Adaptive Mesh"
     print_line "[10] SEC & BACKUP" "Firewall & Backup Vault"
+    print_line "[11] BACKUP/RESTORE" "Backup & Restore"
+    print_line "[12] UNINSTALL" "Remove Klipper Stack"
     print_line "[H] HARDWARE VR." "Happy Hare & Smart Probes"
     
     draw_mid

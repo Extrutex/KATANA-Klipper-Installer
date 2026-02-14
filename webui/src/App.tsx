@@ -8,10 +8,11 @@ import DashboardLayout from './components/DashboardLayout';
 import JobHistory from './components/JobHistory';
 import Settings from './components/Settings';
 import ConfigDiff from './components/ConfigDiff';
+import Macros from './components/Macros';
 import { useState, useEffect } from 'react';
 import './index.css';
 
-type View = 'DASHBOARD' | 'CONSOLE' | 'FILES' | 'SYSTEM' | 'CONFIG' | 'DIAGNOSTICS' | 'JOBS' | 'SETTINGS' | 'CONFIGDIFF';
+type View = 'DASHBOARD' | 'CONSOLE' | 'FILES' | 'SYSTEM' | 'CONFIG' | 'DIAGNOSTICS' | 'JOBS' | 'SETTINGS' | 'CONFIGDIFF' | 'MACROS';
 
 function App() {
   const printer = useKatanaLink();
@@ -48,6 +49,7 @@ function App() {
           <button className={`nav-item ${activeView === 'JOBS' ? 'active' : ''}`} onClick={() => setActiveView('JOBS')}>JOBS</button>
           <button className={`nav-item ${activeView === 'CONSOLE' ? 'active' : ''}`} onClick={() => setActiveView('CONSOLE')}>CONSOLE</button>
           <button className={`nav-item ${activeView === 'FILES' ? 'active' : ''}`} onClick={() => setActiveView('FILES')}>FILES</button>
+          <button className={`nav-item ${activeView === 'MACROS' ? 'active' : ''}`} onClick={() => setActiveView('MACROS')}>MACROS</button>
           <button className={`nav-item ${activeView === 'CONFIG' ? 'active' : ''}`} onClick={() => setActiveView('CONFIG')}>CONFIG</button>
           <button className={`nav-item ${activeView === 'CONFIGDIFF' ? 'active' : ''}`} onClick={() => setActiveView('CONFIGDIFF')}>CONFIG DIFF</button>
           <button className={`nav-item ${activeView === 'DIAGNOSTICS' ? 'active' : ''}`} onClick={() => setActiveView('DIAGNOSTICS')}>DIAGNOSTICS</button>
@@ -71,6 +73,9 @@ function App() {
 
         {/* FILES VIEW */}
         {activeView === 'FILES' && <FileManager />}
+
+        {/* MACROS VIEW */}
+        {activeView === 'MACROS' && <Macros />}
 
         {/* CONFIG VIEW */}
         {activeView === 'CONFIG' && <ConfigEditor />}
