@@ -1,5 +1,5 @@
 <div align="center">
-  <img width="521" height="555" alt="KATANAOS" src="https://github.com/user-attachments/assets/29bea3fd-2b84-47d7-a067-60f1c0dd0ba6" />
+<img width="904" height="1878" alt="KATANAOS (2)" src="https://github.com/user-attachments/assets/a6eaadc8-6642-4374-935b-57186cad3d5a" />
 
 
   <h1>⚔️ KATANAOS - Pro-Grade Klipper Suite</h1>
