@@ -44,6 +44,7 @@ source "$MODULES_DIR/system/backup_restore.sh"
 source "$MODULES_DIR/system/printer_config.sh"
 source "$MODULES_DIR/system/auto_restart.sh"
 source "$MODULES_DIR/system/mcu_builder.sh"
+source "$MODULES_DIR/system/moonraker_update_manager.sh"
 
 # Extras
 source "$MODULES_DIR/extras/toolchanger.sh"

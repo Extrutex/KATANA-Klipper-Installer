@@ -141,6 +141,70 @@ chmod +x katanaos.sh
 ```
 
 
+### 📋 Menu Reference
+
+After launching `./katanaos.sh`, the main menu appears with a structured interface. Use the number keys (1-15) to navigate and press Enter to execute. Press X to exit.
+
+```
+╔══════════════════════════════════════════════════════════════════════╗
+║ ⚡ INSTALLER                                                         ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ [1]  Full Install       Klipper + Moonraker + UI                    ║
+║ [2]  Core Firmware      Klipper / Kalico / RatOS                    ║
+║ [3]  Web UI             Mainsail / Fluidd                            ║
+║ [4]  Vision Stack      Crowsnest / KlipperScreen                    ║
+║ [5]  The Forge         MCU Flash / CAN-Bus / Katapult                ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ 🔧 SYSTEM                                                            ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ [6]  Engine Switch     Installed: KLIPPER                           ║
+║ [7]  Update            Klipper & Moonraker                           ║
+║ [8]  Diagnostics       Log Analysis & Repair                        ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ 🧩 EXTRAS                                                            ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ [9]  KATANA-FLOW      Smart Purge & ShakeTune                       ║
+║ [10] Hardware          Toolchanger / Probes                          ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ 🔒 MANAGEMENT                                                        ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ [11] Security          Firewall / SSH Hardening                     ║
+║ [12] Backup            Backup & Restore                             ║
+║ [13] Uninstall         Remove Klipper Stack                          ║
+║ [14] Printer Config    Create printer.cfg                           ║
+║ [15] Auto-Restart      Service Health Watch                         ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ [X]  Exit              Close KATANAOS                               ║
+╚══════════════════════════════════════════════════════════════════════╝
+```
+
+#### ⚡ INSTALLER
+- **[1] Full Install** - Deploys the complete Klipper stack (Klipper, Moonraker, and a web UI) in one go
+- **[2] Core Firmware** - Install Klipper, Kalico, or RatOS firmware only
+- **[3] Web UI** - Choose and install Mainsail or Fluidd web interface
+- **[4] Vision Stack** - Install Crowsnest (webcam streaming) and/or KlipperScreen (touch UI)
+- **[5] The Forge** - MCU firmware compilation, flashing, CAN-Bus setup, and Katapult bootloader management
+
+#### 🔧 SYSTEM
+- **[6] Engine Switch** - Switch between installed Klipper engines (Klipper, Kalico, RatOS)
+- **[7] Update** - Update Klipper and Moonraker to the latest versions
+- **[8] Diagnostics** - Run log analysis, fix permissions, and repair dependencies (Dr. Katana)
+
+#### 🧩 EXTRAS
+- **[9] KATANA-FLOW** - Install Smart Purge & Park macros and ShakeTune for input shaper analysis
+- **[10] Hardware** - Configure tool changers, probes (Cartographer, Beacon, BTT Eddy), and sensors
+
+#### 🔒 MANAGEMENT
+- **[11] Security** - Configure UFW firewall and SSH hardening
+- **[12] Backup** - Create and restore backups (tar.gz or Restic encrypted backups)
+- **[13] Uninstall** - Remove the entire Klipper stack from the system
+- **[14] Printer Config** - Generate a basic printer.cfg template
+- **[15] Auto-Restart** - Enable service health monitoring with automatic restart on failure
+
+#### Exit
+- **[X]** - Exit KATANAOS and return to the terminal
+
+
 ## License
 
 KATANAOS is free software distributed under the terms of the GNU GPLv3 license.

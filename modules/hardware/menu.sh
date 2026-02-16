@@ -114,6 +114,9 @@ EOF
         fi
     fi
     
+    # Register for Moonraker Update Manager
+    register_stealthchanger_updates
+    
     draw_success "StealthChanger config created!"
     echo "  Location: $tc_dir/tool.cfg"
     echo "  [i] Customize dock positions for your setup!"
@@ -188,6 +191,9 @@ EOF
         fi
     fi
     
+    # Register for Moonraker Update Manager
+    register_madmax_updates
+    
     draw_success "MADMAX config created!"
     echo "  Location: $mm_dir/madmax.cfg"
     echo "  [i] Customize dock positions for your setup!"
@@ -260,6 +266,9 @@ EOF
         fi
     fi
     
+    # Register for Moonraker Update Manager
+    register_cartographer_updates
+    
     draw_success "Cartographer config created!"
     echo "  Location: $probe_dir/cartographer.cfg"
     echo "  [i] Adjust pin, offsets, and mesh size for your setup!"
@@ -324,6 +333,9 @@ EOF
         fi
     fi
     
+    # Register for Moonraker Update Manager
+    register_beacon_updates
+    
     draw_success "Beacon config created!"
     echo "  Location: $beacon_dir/beacon.cfg"
     echo "  [i] Adjust pin and mesh size for your setup!"
@@ -387,6 +399,9 @@ EOF
             echo "[include btt_eddy/*.cfg]" >> "$pcfg"
         fi
     fi
+    
+    # Register for Moonraker Update Manager
+    register_btt_eddy_updates
     
     draw_success "BTT Eddy config created!"
     echo "  Location: $eddy_dir/eddy.cfg"
@@ -460,6 +475,9 @@ EOF
             echo "[include bed_distance_sensor/*.cfg]" >> "$pcfg"
         fi
     fi
+    
+    # Register for Moonraker Update Manager
+    register_bed_distance_sensor_updates
     
     draw_success "Bed Distance Sensor installed!"
     echo "  Location: $bds_dir/"

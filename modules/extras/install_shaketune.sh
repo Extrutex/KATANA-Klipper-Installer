@@ -22,16 +22,16 @@ function install_shaketune() {
     
     # 3. Klipper Macro Extension
     log_info "Running Installation Script..."
-    # ShakeTune has an install.sh usually
     if [ -f "$repo_dir/install.sh" ]; then
          "$repo_dir/install.sh"
     else
-         # Manual link
          log_warn "Manual Install (Install script not found/simulated)"
-         # Link the module
          ln -sf "$repo_dir/shaketune.py" "$HOME/klipper/klippy/extras/shaketune.py"
          log_success "Symlink created."
     fi
+
+    # 4. Add to Moonraker Update Manager
+    register_shaketune_updates
 
     log_success "ShakeTune Installed."
     read -p "  Press Enter..."

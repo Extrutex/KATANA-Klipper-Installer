@@ -2,6 +2,7 @@
 # modules/extras/katana_flow.sh
 
 source "$MODULES_DIR/extras/install_shaketune.sh"
+source "$MODULES_DIR/system/moonraker_update_manager.sh"
 
 function install_katana_flow() {
     while true; do
@@ -125,6 +126,9 @@ function do_install_flow() {
             echo "  [include katana_flow/smart_park.cfg]"
         fi
     fi
+    
+    # Register for Moonraker Update Manager
+    register_katana_flow_updates
     
     echo ""
     echo "  [i] IMPORTANT: Add to your START_PRINT macro:"
