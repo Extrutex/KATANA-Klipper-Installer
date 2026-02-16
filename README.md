@@ -69,6 +69,7 @@ Intelligent installation for modern Klipper hardware.
 - **Cartographer** - High-speed inductive Z-probe
 - **Beacon** - Eddy Current Probe for precision Z-mapping
 - **BTT Eddy** - BigTreeTech Eddy Current Probe
+- **Bed Distance Sensor** - Accelerometer-based Z calibration
 - **Happy Hare** - MMU V1/V2/ERCF support
 
 

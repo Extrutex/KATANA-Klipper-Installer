@@ -202,6 +202,14 @@ function check_btt_eddy_status() {
     fi
 }
 
+function check_bed_distance_sensor_status() {
+    if [ -d "$HOME/printer_data/config/bed_distance_sensor" ] || [ -d "$HOME/bed_distance_sensor" ]; then
+        echo "INSTALLED"
+    else
+        echo "NOT INSTALLED"
+    fi
+}
+
 # ============================================================
 # HEADER
 # ============================================================
@@ -291,6 +299,7 @@ function draw_main_menu() {
     local cartographer_status=$(check_cartographer_status)
     local beacon_status=$(check_beacon_status)
     local btt_eddy_status=$(check_btt_eddy_status)
+    local bed_distance_status=$(check_bed_distance_sensor_status)
     local katanaflow_status=$(check_katanaflow_status)
     local shaketune_status=$(check_shaketune_status)
     local octoprint_status=$(check_octoprint_status)
@@ -360,6 +369,12 @@ function draw_main_menu() {
         box_row "${C_GREEN}●${NC} BTT Eddy      : ${C_GREEN}INSTALLED${NC}"
     else
         box_row "${C_GREY}○${NC} BTT Eddy      : ${C_GREY}NOT INSTALLED${NC}"
+    fi
+    
+    if [ "$bed_distance_status" = "INSTALLED" ]; then
+        box_row "${C_GREEN}●${NC} Bed Dist Sens : ${C_GREEN}INSTALLED${NC}"
+    else
+        box_row "${C_GREY}○${NC} Bed Dist Sens : ${C_GREY}NOT INSTALLED${NC}"
     fi
     
     if [ "$octoprint_status" = "INSTALLED" ]; then

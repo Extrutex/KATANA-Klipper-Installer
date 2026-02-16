@@ -7,6 +7,7 @@
 # - Cartographer: https://github.com/Cartographer3D
 # - Beacon: https://github.com/beacon3d
 # - BTT Eddy: https://github.com/bigtreetech/Eddy
+# - Bed Distance Sensor: https://github.com/markniu/Bed_Distance_sensor
 # ==============================================================================
 
 function run_hardware_menu() {
@@ -23,6 +24,7 @@ function run_hardware_menu() {
         echo "  [5] Cartographer Probe"
         echo "  [6] Beacon Probe"
         echo "  [7] BTT Eddy Probe"
+        echo "  [8] Bed Distance Sensor"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -36,6 +38,7 @@ function run_hardware_menu() {
             5) install_cartographer ;;
             6) install_beacon ;;
             7) install_btt_eddy ;;
+            8) install_bed_distance_sensor ;;
             [bB]) return ;;
             *) log_error "Invalid Selection." ;;
         esac
@@ -389,5 +392,78 @@ EOF
     echo "  Location: $eddy_dir/eddy.cfg"
     echo "  [i] Adjust pin, offsets, and mesh size for your setup!"
     echo "  [i] Requires BTT Eddy sensor firmware!"
+    read -p "  Press Enter..."
+}
+
+# ============================================================
+# BED DISTANCE SENSOR (Reference: markniu/Bed_Distance_sensor)
+# ============================================================
+
+function install_bed_distance_sensor() {
+    draw_header "BED DISTANCE SENSOR"
+    echo ""
+    echo "  Reference: https://github.com/markniu/Bed_Distance_sensor"
+    echo ""
+    echo "  The Bed Distance Sensor (BDS) is an accelerometer-based"
+    echo "  probe for automatic Z-offset calibration."
+    echo ""
+    echo "  Features:"
+    echo "  • Accelerometer-based Z probing"
+    echo "  • Automatic mesh generation"
+    echo "  • No physical probe required"
+    echo ""
+    read -p "  Install Bed Distance Sensor? [y/N]: " yn
+    
+    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    
+    local cfg_dir="$HOME/printer_data/config"
+    local bds_dir="$cfg_dir/bed_distance_sensor"
+    
+    mkdir -p "$bds_dir"
+    
+    # Clone repository
+    if [ ! -d "$HOME/bed_distance_sensor" ]; then
+        log_info "Cloning Bed Distance Sensor..."
+        cd "$HOME"
+        git clone https://github.com/markniu/Bed_Distance_sensor.git
+    fi
+    
+    # Copy config
+    cp "$HOME/bed_distance_sensor/klipper_config/BDS.cfg" "$bds_dir/" 2>/dev/null || \
+    cat > "$bds_dir/bds.cfg" << 'EOF'
+# Bed Distance Sensor Configuration
+# Reference: https://github.com/markniu/Bed_Distance_sensor
+
+[bds_sensor]
+# Adjust pin to your setup
+pin: PB1
+# x_offset: 0
+# y_offset: 0
+
+[gcode_macro BDS_CALIBRATE]
+description: Calibrate BDS sensor
+gcode:
+    BDS_CALIBRATE
+
+[gcode_macro BDS_PROBE]
+description: Probe with BDS sensor
+gcode:
+    BDS_PROBE
+EOF
+
+    # Add include to printer.cfg
+    local pcfg="$cfg_dir/printer.cfg"
+    if [ -f "$pcfg" ]; then
+        if ! grep -q "bed_distance_sensor" "$pcfg"; then
+            echo "" >> "$pcfg"
+            echo "# --- Bed Distance Sensor ---" >> "$pcfg"
+            echo "[include bed_distance_sensor/*.cfg]" >> "$pcfg"
+        fi
+    fi
+    
+    draw_success "Bed Distance Sensor installed!"
+    echo "  Location: $bds_dir/"
+    echo "  [i] Adjust pin for your setup!"
+    echo "  [i] Requires ADXL345 accelerometer connected!"
     read -p "  Press Enter..."
 }
