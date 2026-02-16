@@ -102,8 +102,17 @@ function perform_atomic_switch() {
     
     log_info "Initiating Atomic Switch..."
     
-    # A. Stop Service
-    exec_silent "Stopping Klipper Service" "sudo systemctl stop klipper"
+    # A. Stop Service (only if exists and running)
+    if systemctl list-unit-files klipper.service &>/dev/null; then
+        if systemctl is-active --quiet klipper; then
+            exec_silent "Stopping Klipper Service" "sudo systemctl stop klipper"
+        else
+            log_info "Klipper service not running, skipping stop."
+        fi
+    else
+        log_warn "Klipper service not found. Attempting to stop manually..."
+        pkill -f "klippy" 2>/dev/null || true
+    fi
     
     # B. Swap Links
     log_info "Swapping Symlinks..."
@@ -113,14 +122,19 @@ function perform_atomic_switch() {
     rm -rf "$HOME/klippy-env"
     ln -s "$env" "$HOME/klippy-env"
     
-    # C. Start Service
-    exec_silent "Restarting Klipper ($name)" "sudo systemctl start klipper"
-    
-    # D. Verification
-    if systemctl is-active --quiet klipper; then
-        log_success "Switch to $name SUCCESSFUL."
+    # C. Start Service (only if service exists)
+    if systemctl list-unit-files klipper.service &>/dev/null; then
+        exec_silent "Restarting Klipper ($name)" "sudo systemctl start klipper"
+        
+        # D. Verification
+        if systemctl is-active --quiet klipper; then
+            log_success "Switch to $name SUCCESSFUL."
+        else
+            log_error "Service failed to start. Check logs."
+        fi
     else
-        log_error "Service failed to start. Check logs."
+        log_warn "No systemd service found. Manual start required:"
+        echo "  -> cd ~/klipper && ./scripts/klipper.sh start"
     fi
     
     read -p "  Press Enter..."

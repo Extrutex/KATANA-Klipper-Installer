@@ -169,7 +169,7 @@ function get_current_engine_short() {
 
 function check_service_status() {
     local service="$1"
-    if systemctl is-active --quiet "$service" 2>/dev/null; then
+    if systemctl is-active --quiet "${service}.service" 2>/dev/null; then
         echo "ONLINE"
     else
         echo "OFFLINE"
@@ -339,11 +339,16 @@ function draw_main_menu() {
     
     local klipper_status=$(check_service_status "klipper")
     local moonraker_status=$(check_service_status "moonraker")
+    local engine=$(get_current_engine_short)
     
-    if [ "$klipper_status" = "ONLINE" ]; then
-        box_row_left "${C_GREEN}●${NC} Klipper       : ${C_GREEN}ONLINE ${NC}   3D Printer Firmware"
+    if [ "$engine" != "NONE" ]; then
+        if [ "$klipper_status" = "ONLINE" ]; then
+            box_row_left "${C_GREEN}●${NC} Engine        : ${C_NEON}$engine${NC}    ${C_GREEN}ONLINE${NC}   3D Printer Firmware"
+        else
+            box_row_left "${C_GREY}○${NC} Engine        : ${C_NEON}$engine${NC}    ${C_GREY}OFFLINE${NC}  3D Printer Firmware"
+        fi
     else
-        box_row_left "${C_GREY}○${NC} Klipper       : ${C_GREY}OFFLINE${NC}   3D Printer Firmware"
+        box_row_left "${C_GREY}○${NC} Engine        : ${C_GREY}NOT INSTALLED${NC}"
     fi
     
     if [ "$moonraker_status" = "ONLINE" ]; then
