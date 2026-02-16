@@ -1,24 +1,36 @@
 #!/bin/bash
 # modules/vision/install_crowsnest.sh
 
+# Source KlipperScreen installer
+source "$MODULES_DIR/extras/install_klipperscreen.sh"
+
 function install_vision_stack() {
-    draw_header "HMI & VISION (CROWSNEST)"
-    echo "  1) Install Crowsnest (Webcam Streamer)"
-    echo "  2) Remove Crowsnest"
-    echo "  B) Back"
-    read -p "  >> " ch
-    
-    case $ch in
-        1) do_install_crowsnest ;;
-        2) do_remove_crowsnest ;;
-        [bB]) return ;;
-    esac
+    while true; do
+        draw_header "HMI & VISION STACK"
+        echo ""
+        echo "  [1] Crowsnest      - Webcam Streamer (Recommended)"
+        echo "  [2] KlipperScreen - Touch Display Interface"
+        echo ""
+        echo "  [R] Remove Crowsnest"
+        echo "  [K] Remove KlipperScreen"
+        echo ""
+        echo "  [B] Back"
+        echo ""
+        read -p "  >> " ch
+        
+        case $ch in
+            1) do_install_crowsnest ;;
+            2) install_klipperscreen ;;
+            r|R) do_remove_crowsnest ;;
+            k|K) do_remove_klipperscreen ;;
+            b|B) return ;;
+        esac
+    done
 }
 
 function do_install_crowsnest() {
     log_info "Installing Crowsnest..."
     
-    # 1. Clone
     local repo_dir="$HOME/crowsnest"
     if [ -d "$repo_dir" ]; then
         log_info "Crowsnest repo exists. Pulling..."
@@ -27,19 +39,14 @@ function do_install_crowsnest() {
         exec_silent "Cloning Crowsnest" "git clone https://github.com/mainsail-crew/crowsnest.git $repo_dir"
     fi
     
-    # 2. Installer
-    # Crowsnest has its own make install script, but usually we run the installer.
     cd "$repo_dir"
-    log_info "Running Crowsnest Installer (Makefile)..."
+    log_info "Running Crowsnest Installer..."
     
-    # Check dependencies
     if sudo -n true 2>/dev/null; then
-         # We can try running their make install
-         # But often it asks for input. Let's try silent assume-yes if possible or just run it.
-         make install
+        make install
     else
-         echo "  [!] Sudo required for Crowsnest."
-         make install
+        echo "  [!] Sudo required for Crowsnest."
+        make install
     fi
     
     log_success "Crowsnest Installed."
@@ -48,8 +55,18 @@ function do_install_crowsnest() {
 
 function do_remove_crowsnest() {
     log_info "Removing Crowsnest..."
-    cd "$HOME/crowsnest" && make uninstall
+    cd "$HOME/crowsnest" 2>/dev/null && make uninstall
     rm -rf "$HOME/crowsnest"
     log_success "Crowsnest Removed."
+    read -p "  Press Enter..."
+}
+
+function do_remove_klipperscreen() {
+    log_info "Removing KlipperScreen..."
+    cd "$HOME/KlipperScreen" 2>/dev/null && make uninstall
+    rm -rf "$HOME/KlipperScreen"
+    sudo rm -f /etc/systemd/system/KlipperScreen.service
+    sudo systemctl daemon-reload
+    log_success "KlipperScreen Removed."
     read -p "  Press Enter..."
 }

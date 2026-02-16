@@ -1,21 +1,26 @@
 #!/bin/bash
 
 function install_core_stack() {
-    draw_header "CORE ENGINE INSTALLER"
-    echo "  1) Install Klipper (Standard)"
-    echo "  2) Install Moonraker"
-    echo "  3) Install Kalico (High-Performance)"
-    echo "  4) Install RatOS (Klipper Fork)"
-    echo "  B) Back"
-    read -p "  >> " ch
+    while true; do
+        draw_header "CORE ENGINE INSTALLER"
+        echo "  [1] Install Klipper (Standard)"
+        echo "  [2] Install Moonraker"
+        echo "  [3] Install Kalico (High-Performance)"
+        echo "  [4] Install RatOS (Klipper Fork)"
+        echo "  [5] Build Firmware    (MCU Builder)"
+        echo ""
+        echo "  [B] Back"
+        read -p "  >> " ch
 
-    case $ch in
-        1) do_install_klipper "Standard" ;;
-        2) do_install_moonraker ;;
-        3) do_install_kalico ;;
-        4) do_install_ratos ;;
-        [bB]) return ;;
-    esac
+        case $ch in
+            1) do_install_klipper "Standard" ;;
+            2) do_install_moonraker ;;
+            3) do_install_kalico ;;
+            4) do_install_ratos ;;
+            5) run_mcu_builder ;;
+            [bB]) return ;;
+        esac
+    done
 }
 
 function do_install_ratos() {

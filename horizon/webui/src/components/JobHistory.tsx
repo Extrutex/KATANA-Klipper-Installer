@@ -27,11 +27,11 @@ export default function JobHistory() {
         setError(null);
         
         try {
-            const response = await fetch('/api/job_history?limit=50');
+            const response = await fetch('/server/history/list?limit=50');
             const data = await response.json();
             
-            if (data.result && Array.isArray(data.result)) {
-                setJobs(data.result);
+            if (data.result && data.result.jobs) {
+                setJobs(data.result.jobs);
             } else {
                 setJobs([]);
             }

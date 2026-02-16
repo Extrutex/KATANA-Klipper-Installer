@@ -22,7 +22,7 @@ export default function Toolchanger() {
     const fetchTools = async () => {
         setLoading(true);
         try {
-            const response = await fetch('/api/printer/objects/list');
+            const response = await fetch('/printer/objects/list');
             const data = await response.json();
             
             // Check for extruder objects (extruder, extruder1, extruder2, etc.)

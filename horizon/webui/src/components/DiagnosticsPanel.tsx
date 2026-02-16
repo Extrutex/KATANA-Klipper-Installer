@@ -18,7 +18,9 @@ export default function DiagnosticsPanel() {
     const handleDownloadBundle = async () => {
         setDownloading(true);
         try {
-            const response = await fetch('/api/system/diagnostics/bundle');
+            const response = await fetch('/machine/support_bundle', {
+                method: 'POST'
+            });
             if (response.ok) {
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);

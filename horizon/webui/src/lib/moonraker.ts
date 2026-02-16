@@ -11,7 +11,7 @@ import type { DiagnosticAlert } from './core/diagnostics-store';
 export type { ConnectionState, PrinterState, SystemHealthState, DiagnosticAlert };
 
 // --- Configuration ---
-const getMoonrakerUrl = () => {
+export const getMoonrakerUrl = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const hostname = window.location.hostname;
     const port = window.location.port ? window.location.port : '7125';
@@ -34,6 +34,20 @@ class HorizonClient {
     public store: PrinterStateMachine;
     public health: ServiceHealthStore;
     public diagnostics: DiagnosticsStore;
+    
+    // API Request Logging
+    public requestLog: Array<{
+        id: number;
+        method: string;
+        params: any;
+        timestamp: number;
+        status: 'pending' | 'success' | 'error';
+        duration?: number;
+        result?: any;
+        error?: string;
+    }> = [];
+    private requestId = 0;
+    private pendingRequests: Map<number, { resolve: Function; reject: Function; startTime: number }> = new Map();
 
     constructor() {
         this.store = new PrinterStateMachine();
@@ -53,6 +67,53 @@ class HorizonClient {
 
     public connect() {
         this.supervisor.connect();
+    }
+    
+    // API Request with logging
+    public async apiCall<T = any>(method: string, params: Record<string, any> = {}): Promise<T> {
+        const id = ++this.requestId;
+        const startTime = Date.now();
+        
+        const logEntry = {
+            id,
+            method,
+            params,
+            timestamp: startTime,
+            status: 'pending' as const
+        };
+        this.requestLog = [...this.requestLog.slice(-9), logEntry];
+        
+        return new Promise((resolve, reject) => {
+            this.pendingRequests.set(id, { resolve, reject, startTime });
+            
+            this.supervisor.send({
+                jsonrpc: "2.0",
+                method,
+                params,
+                id
+            });
+            
+            setTimeout(() => {
+                if (this.pendingRequests.has(id)) {
+                    this.pendingRequests.delete(id);
+                    const error = `Timeout: ${method}`;
+                    this.requestLog = this.requestLog.map(e => 
+                        e.id === id ? { ...e, status: 'error', error, duration: Date.now() - startTime } : e
+                    );
+                    reject(new Error(error));
+                }
+            }, 10000);
+        });
+    }
+    
+    // Get last N request log entries
+    public getRequestLog(count: number = 10) {
+        return this.requestLog.slice(-count);
+    }
+    
+    // Get current Moonraker URL
+    public getUrl() {
+        return getMoonrakerUrl();
     }
 
     public sendGCode(script: string) {
@@ -141,6 +202,26 @@ class HorizonClient {
     }
 
     private handleMessage(data: any) {
+        // Track API responses
+        if (data.id && this.pendingRequests.has(data.id)) {
+            const pending = this.pendingRequests.get(data.id)!;
+            this.pendingRequests.delete(data.id);
+            const duration = Date.now() - pending.startTime;
+            
+            if (data.result) {
+                this.requestLog = this.requestLog.map(e => 
+                    e.id === data.id ? { ...e, status: 'success' as const, result: data.result, duration } : e
+                );
+                pending.resolve(data.result);
+            } else if (data.error) {
+                this.requestLog = this.requestLog.map(e => 
+                    e.id === data.id ? { ...e, status: 'error' as const, error: data.error.message, duration } : e
+                );
+                pending.reject(new Error(data.error.message));
+            }
+            return;
+        }
+        
         // 1. Status Updates
         if (data.method === "notify_status_update") {
             this.store.handleStatusUpdate(data.params);
@@ -217,6 +298,33 @@ export const useDiagnostics = () => {
         return () => { unsub(); };
     }, []);
     return alerts;
+};
+
+export interface ApiRequestLog {
+    id: number;
+    method: string;
+    params: any;
+    timestamp: number;
+    status: 'pending' | 'success' | 'error';
+    duration?: number;
+    result?: any;
+    error?: string;
+}
+
+export const useConnectionDiagnostics = () => {
+    const [connState, setConnState] = useState<ConnectionState>(client.supervisor.getState());
+    const url = client.getUrl();
+    const [logs, setLogs] = useState<ApiRequestLog[]>([]);
+    
+    useEffect(() => {
+        const unsubConn = client.supervisor.onStateChange(setConnState);
+        const interval = setInterval(() => {
+            setLogs(client.getRequestLog(10));
+        }, 1000);
+        return () => { unsubConn(); clearInterval(interval); };
+    }, []);
+    
+    return { connState, url, logs };
 };
 
 // Log Store for GCode Console

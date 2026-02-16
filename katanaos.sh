@@ -1,10 +1,13 @@
 #!/bin/bash
 ################################################################################
-#  ⚔️  KATANAOS - THE KLIPPER BLADE v1.0.0-rc1
+#  ⚔️  KATANAOS - THE KLIPPER BLADE v2.2
 # ------------------------------------------------------------------------------
 #  PRO-GRADE KLIPPER INSTALLATION & MANAGEMENT SUITE
 #  Modular Architecture | Native Flow | Multi-Engine
 ################################################################################
+
+# Fix terminal for proper display
+export TERM=xterm-256color
 
 # --- CONSTANTS & PATHS ---
 KATANA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -38,16 +41,20 @@ source "$MODULES_DIR/security/menu.sh"
 # System
 source "$MODULES_DIR/system/uninstaller.sh"
 source "$MODULES_DIR/system/backup_restore.sh"
+source "$MODULES_DIR/system/printer_config.sh"
+source "$MODULES_DIR/system/auto_restart.sh"
+source "$MODULES_DIR/system/mcu_builder.sh"
 
 # Extras
 source "$MODULES_DIR/extras/toolchanger.sh"
 source "$MODULES_DIR/extras/timelapse.sh"
+source "$MODULES_DIR/extras/install_octoprint.sh"
 
 # --- MAIN LOGIC ---
 function main() {
     # 1. Initialize System
     # clear -> Moved to ui_renderer for cleaner flicker control
-    log_info "KATANA v1.0.0-rc1 initializing..."
+    log_info "KATANA v2.2 initializing..."
     check_environment  # Defined in core/env_check.sh
     
     # 2. Main Loop
@@ -65,9 +72,12 @@ function main() {
             7) update_core_stack ;;
             8) run_dr_katana ;;
             9) run_katana_flow ;;
-            10) run_security_menu ;;
-            11) run_backup_restore ;;
-            12) run_uninstaller ;;
+            10) run_hardware_menu ;;
+            11) run_security_menu ;;
+            12) run_backup_restore ;;
+            13) run_uninstaller ;;
+            14) run_printer_config_wizard ;;
+            15) run_service_manager_menu ;;
             [hH]) run_hardware_menu ;;
             [qQxX]) 
                 draw_exit_screen

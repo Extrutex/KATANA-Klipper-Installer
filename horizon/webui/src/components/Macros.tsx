@@ -21,7 +21,7 @@ export default function Macros() {
         setError(null);
         
         try {
-            const response = await fetch('/api/printer/objects/list');
+            const response = await fetch('/printer/objects/list');
             const data = await response.json();
             
             if (data.result && data.result.objects) {
@@ -42,7 +42,11 @@ export default function Macros() {
             }
             
             // Alternative: fetch from config
-            const configRes = await fetch('/api/config/printer');
+            const configRes = await fetch('/printer/objects/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ objects: { configfile: null } })
+            });
             if (configRes.ok) {
                 const configData = await configRes.json();
                 if (configData.result && configData.result.config) {

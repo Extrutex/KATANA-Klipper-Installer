@@ -6,19 +6,28 @@ source "$KATANA_ROOT/modules/system/deploy_webui.sh"
 
 function install_ui_stack() {
     while true; do
-        draw_header "WEB INTERFACE INSTALLER"
-        echo "  1) Mainsail (Standard)"
-        echo "  2) Fluidd (Alternative)"
-        echo "  3) HORIZON (Next-Gen UI)"
-        echo "  B) Back"
+        draw_header "🌐 WEB INTERFACE MANAGER"
         echo ""
-        read -p "  >> " ch
+        echo "  [1] Install Mainsail"
+        echo "  [2] Install Fluidd"
+        echo ""
+        echo "  --- Uninstall / Reinstall ---"
+        echo "  [3] Uninstall Mainsail"
+        echo "  [4] Uninstall Fluidd"
+        echo "  [5] Uninstall ALL UIs"
+        echo ""
+        echo "  [B] Back"
+        echo ""
+        read -p "  >> COMMAND: " ch
         
         case $ch in
             1) do_install_mainsail ;;
             2) do_install_fluidd ;;
-            3) do_install_horizon ;;
+            3) uninstall_mainsail ;;
+            4) uninstall_fluidd ;;
+            5) uninstall_all_ui ;;
             [bB]) return ;;
+            *) log_error "Invalid Selection" ;;
         esac
     done
 }
@@ -71,8 +80,49 @@ function do_install_fluidd() {
     read -p "  Press Enter..."
 }
 
-function do_install_horizon() {
-    deploy_katana_webui
+
+
+function uninstall_mainsail() {
+    draw_header "UNINSTALL MAINSAIL"
+    echo ""
+    read -p "  Uninstall Mainsail? [y/N]: " yn
+    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    
+    log_info "Removing Mainsail..."
+    rm -rf "$HOME/mainsail"
+    sudo rm -f /etc/nginx/sites-enabled/mainsail /etc/nginx/sites-available/mainsail
+    sudo systemctl restart nginx
+    draw_success "Mainsail uninstalled."
+    read -p "  Press Enter..."
+}
+
+function uninstall_fluidd() {
+    draw_header "UNINSTALL FLUIDD"
+    echo ""
+    read -p "  Uninstall Fluidd? [y/N]: " yn
+    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    
+    log_info "Removing Fluidd..."
+    rm -rf "$HOME/fluidd"
+    sudo rm -f /etc/nginx/sites-enabled/fluidd /etc/nginx/sites-available/fluidd
+    sudo systemctl restart nginx
+    draw_success "Fluidd uninstalled."
+    read -p "  Press Enter..."
+}
+
+function uninstall_all_ui() {
+    draw_header "UNINSTALL ALL UIs"
+    echo ""
+    read -p "  Uninstall ALL web interfaces? [y/N]: " yn
+    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    
+    log_info "Removing all UIs..."
+    rm -rf "$HOME/mainsail" "$HOME/fluidd" "$HOME/horizon"
+    sudo rm -f /etc/nginx/sites-enabled/mainsail /etc/nginx/sites-available/mainsail
+    sudo rm -f /etc/nginx/sites-enabled/fluidd /etc/nginx/sites-available/fluidd
+    sudo systemctl restart nginx
+    draw_success "All UIs uninstalled."
+    read -p "  Press Enter..."
 }
 
 function do_remove_ui() {

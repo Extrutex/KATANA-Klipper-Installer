@@ -20,7 +20,7 @@ export default function FileManager() {
         setError(null);
         
         try {
-            const response = await fetch(`/api/files?path=gcodes`);
+            const response = await fetch('/server/files/list?path=gcodes');
             const data = await response.json();
             
             if (data.result) {
@@ -89,7 +89,7 @@ export default function FileManager() {
                 setError('Upload failed. Check network connection.');
             };
 
-            xhr.open('POST', '/api/files/upload');
+            xhr.open('POST', '/server/files/upload');
             xhr.send(formData);
 
         } catch (err) {
@@ -102,7 +102,7 @@ export default function FileManager() {
         if (!confirm(`Delete ${path}?`)) return;
         
         try {
-            await fetch('/api/files/delete', {
+            await fetch('/server/files/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ path })

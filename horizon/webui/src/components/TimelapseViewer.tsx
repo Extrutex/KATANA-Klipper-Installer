@@ -21,7 +21,7 @@ export default function TimelapseViewer() {
         setError(null);
         
         try {
-            const response = await fetch('/api/files/list?path=timelapse');
+            const response = await fetch('/server/files/list?path=timelapse');
             const data = await response.json();
             
             if (data.result) {
@@ -64,7 +64,7 @@ export default function TimelapseViewer() {
         if (!confirm(`Delete ${filename}?`)) return;
         
         try {
-            await fetch('/api/files/delete', {
+            await fetch('/server/files/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ path: `timelapse/${filename}` })

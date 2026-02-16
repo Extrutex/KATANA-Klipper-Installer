@@ -22,11 +22,15 @@ export default function PrintProgress({ printer }: PrintProgressProps) {
 
     const fetchPrintStatus = async () => {
         try {
-            const response = await fetch('/api/print_stats');
+            const response = await fetch('/printer/objects/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ objects: { print_stats: null } })
+            });
             const data = await response.json();
             
-            if (data.result) {
-                const info = data.result;
+            if (data.result && data.result.status && data.result.status.print_stats) {
+                const info = data.result.status.print_stats;
                 setFilename(info.filename || 'Unknown');
                 
                 if (info.progress !== undefined) {

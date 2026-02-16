@@ -34,155 +34,120 @@
 It is designed for users who treat their 3D printer as a production appliance, prioritizing **security, stability, and reproducible configuration** over manual tinkering.
 
 
-## 📦 Core Architecture
+## 📦 Features
 
 
-### 1. 🟣 Deployment Matrix
-A real-time, pixel-perfect dashboard that verifies the installation state of the stack components.
-* **Function:** Checks for Klipper, Kalico, Moonraker, UI frontends, and system services.
-* **Purpose:** Provides immediate visual feedback on which parts of the ecosystem are deployed on the host.
+### 🟣 Deployment Matrix
+A real-time dashboard that verifies the installation state of all stack components.
+- **Function:** Checks for Klipper, Moonraker, UI frontends, and system services.
+- **Purpose:** Provides immediate visual feedback on which parts of the ecosystem are deployed.
 
 
-### 2. ⚡ Dynamic Nginx Management
+### ⚡ Dynamic Nginx Management
 KATANAOS handles the reverse proxy configuration automatically.
-* **Feature:** Switch between **Mainsail** and **Fluidd** instantly via the menu.
-* **Mechanism:** The script rewrites the Nginx site configuration to point to the selected frontend and restarts the service seamlessly.
+- **Feature:** Switch between **Mainsail** and **Fluidd** instantly via the menu.
+- **Mechanism:** The script rewrites the Nginx site configuration and restarts the service seamlessly.
 
 
-### 3. 🔥 The Forge (Hardware Automator)
+### 🔥 THE FORGE - MCU Manager
 A dedicated engine for MCU management and communication.
-* **Smart Device Scan:** Scans `/dev/serial/by-id/` to detect connected MCUs.
-* **Interactive Build:** Launches `make menuconfig` automatically. **Important:** You must select the correct architecture for your mainboard manually.
-* **Hybrid Flashing:** Attempts automatic USB flashing. For boards requiring SD card updates (e.g., Creality), the script compiles the binary to `~/klipper/out/klipper.bin` for you to copy manually.
-* **Auto CAN-Bus:** Automatically creates the `/etc/network/interfaces.d/can0` interface with **1M bitrate** and optimized `txqueuelen`, eliminating manual Linux network configuration.
+- **Quick Build:** Preconfigured builds for 9 popular boards:
+  - BTT Octopus F446 v1.1, F429, H723
+  - Raspberry Pi RP2040 (Generic)
+  - BTT SKR E3 Turbo, SKR 3
+  - Fysetc Cheetah v2.0
+  - Fly Gemini S, BTT GTR, BTT E3 RRF
+- **Katapult Bootloader:** Install and flash via CAN-Bus
+- **CAN-Bus Network:** Auto-setup with 1M bitrate
+- **Flash Methods:** USB, SD Card, Katapult (CAN-Bus)
 
 
-### 4. ⚙️ Engine Manager (Dual-Core)
-Runtime flexibility for power users.
-* **Feature:** Switch between **Klipper** (Standard) and **Kalico** (High-Performance) firmware engines instantly.
-* **Mechanism:** Dynamically rewrites systemd service paths to swap the active execution environment without reinstalling or reflashing the SD card.
+### 🛠️ Hardware Extensions
+Intelligent installation for modern Klipper hardware.
+- **StealthChanger** - Toolchanging system for Voron printers
+- **MADMAX** - Mechanical tool lock system
+- **Cartographer** - High-speed inductive Z-probe
+- **Beacon** - Eddy Current Probe for precision Z-mapping
+- **BTT Eddy** - BigTreeTech Eddy Current Probe
+- **Happy Hare** - MMU V1/V2/ERCF support
 
 
-### 5. 👁️ HMI & Vision Stack
+### 👁️ Vision Stack
 Full support for local machine interfaces.
-* **Full Media Stack:** One-click deployment of **Crowsnest** (Webcam Streaming Daemon) and **KlipperScreen** (Touch UI) in a single pass.
+- **Crowsnest** - Webcam Streaming Daemon
+- **KlipperScreen** - Touch UI for direct printer control
 
 
-### 6. 🧩 Smart Extension Support
-Intelligent installation logic for modern Klipper extensions.
-* **KAMP:** Clones the repo and injects the update manager entry into `moonraker.conf`.
-* **ShakeTune:** Automated installation of the Klippain ShakeTune module.
-* **RatOS:** Option to clone the RatOS configuration repository for easy integration.
+### 🧩 EXTRAS
+Advanced printing features.
+- **KATANA-FLOW** - Smart Purge & Park (KAMP replacement)
+  - Smart Park: Proximity parking to prevent oozing
+  - Blade Purge: Pattern purge line following the toolhead
+  - Two install variants: Simple Include or Section Header
+- **ShakeTune** - Input Shaper analysis and tuning
+- **OctoPrint** - Optional remote monitoring support
 
-### 7. 🌊 KATANA-FLOW (Native Smart Park)
-Advanced pre-print macro suite (Option 8).
-* **Smart Park:** Proximity parking near the print object to prevent oozing.
-* **Blade Purge:** Custom "Blade" pattern purge line that follows the toolhead.
-* **Native Integration:** Uses Klipper's `exclude_object` API without bloated external scripts.
 
-### 8. 🛡️ System Hardening (Standardized)
+### 💾 Backup System
+Multiple backup strategies for data safety.
+- **tar.gz Backups** - Classic directory snapshots
+- **Restic** - Encrypted, deduplicated snapshots with verification
+
+
+### 🛡️ System Hardening
 Security is not an option; it is a default.
-* **UFW Firewall:** Automated rule generation denying all incoming traffic except essential ports (SSH:22, HTTP:80, API:7125).
-* **Log2Ram:** Integrates the Log2Ram daemon to redirect system logging to RAM, significantly reducing write cycles on SD cards.
+- **UFW Firewall:** Automated rule generation
+- **Log2Ram:** RAM-based logging to protect SD cards
 
 
-### 8. 🚑 Dr. Katana (System Diagnostics)
+### 🚑 Dr. Katana
 Safety net for your printer.
-*   **Log Analyzer:** Scans `klippy.log` and `moonraker.log` for common errors.
-*   **Permission Fixer:** Auto-corrects `chown pi:pi` issues in `~/printer_data` that often cause "Permission Denied" errors.
-*   **Dependency Repair:** Re-installs missing system packages if an update fails.
+- **Log Analyzer:** Scans logs for common errors
+- **Permission Fixer:** Auto-corrects ownership issues
+- **Dependency Repair:** Re-installs missing packages
+
 
 ## 🛠️ Usage
 
 **Requirements:**
-* Hardware: Raspberry Pi (3/4/5/Zero2), Orange Pi, or generic Linux host.
-* OS: Debian Bookworm / Bullseye (Lite recommended).
-* User: Standard user with `sudo` privileges.
+- Hardware: Raspberry Pi (3/4/5/Zero2), Orange Pi, or generic Linux host
+- OS: Debian Bookworm / Bullseye (Lite recommended)
+- User: Standard user with `sudo` privileges
+- **Git** (if not installed, see below)
 
 
-### Installation & Migration
+### Installation
 
-
-### **Empfehlung für dich**
-Wenn du vor der Installation alle Pakete aktualisieren willst, führe vorher manuell aus:
-
-
+**Important: Install Git first**
 ```bash
-sudo apt update && sudo apt upgrade -y
+sudo apt update
+sudo apt install git -y
 ```
 
-
-**1. (Optional) Remove legacy KIAUH:**
-
-
-````bash
+**Optional: Remove legacy KIAUH**
+```bash
 cd ~
 rm -rf ~/kiauh
-````
+```
 
-
-````bash
+**Install KATANAOS**
+```bash
 cd ~
 git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
 cd KATANA-Klipper-Installer
 chmod +x katanaos.sh
 ./katanaos.sh
-````
+```
 
 
-**License**
-KATANAOS is free software:
-This file may be distributed under the terms of the GNU GPLv3 license.
+## License
+
+KATANAOS is free software distributed under the terms of the GNU GPLv3 license.
 
 
-## 👤 Author
-
+## Author
 
 **KATANAOS** created by **Extrutex**.
 
-
 If this script saved you time, consider supporting the project:
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://Ko-fi.com/3dw_sebastianwindt)
-
-
-## v1.0.0 Features (Release)
-- **HORIZON UI**: Modern React Interface
-  - Dashboard mit Live-Daten, Toolhead, Temps, Webcam
-  - Console mit echter GCode-Kommunikation
-  - FileManager mit Upload/Delete/Print
-  - Job History & Print Progress
-  - Macros Panel
-  - **Toolchanger Support** (Dual/Quad Extruder)
-  - **Timelapse Viewer**
-  - **Visual Layer Progress**
-  - **Config Diff Tool**
-  - Settings Panel mit Theme-Switcher (Dark/Light)
-  - Diagnostics mit Support Bundle
-- **Auto-Healer**: Self-repair system integration
-- **Visual Config**: Edit printer.cfg via GUI
-- **Backup/Restore**: Vollständige Datensicherung
-- **Uninstall**: Saubere Deinstallation
-- **Update**: Klipper/Moonraker via Git updaten
-
-## Compare to Mainsail/Fluidd
-| Feature | Mainsail | Fluidd | KATANA HORIZON |
-|---------|----------|--------|----------------|
-| Toolchanger Support | ❌ | ❌ | ✅ |
-| Timelapse Viewer | ✅ | ✅ | ✅ |
-| Config Diff | ❌ | ❌ | ✅ |
-| Visual Layer Progress | ✅ | ✅ | ✅ |
-| Support Bundle | ❌ | ❌ | ✅ |
-| Auto-Repair | ❌ | ❌ | ✅ |
-| Theme Switcher | ❌ | ❌ | ✅ |
-| Layout Customizable | Teilweise | Teilweise | ✅ Full |
-| Type-Safe UI | ❌ | ❌ | ✅ (TypeScript) |
-
-## Installation
-
-```bash
-cd ~
-git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
-cd KATANA-Klipper-Installer
-chmod +x katanaos.sh
-./katanaos.sh
-```

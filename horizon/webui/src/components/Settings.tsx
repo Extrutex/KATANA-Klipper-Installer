@@ -23,6 +23,7 @@ interface UISettings {
     dashboard_layout: string;
     show_webcam: boolean;
     console_auto_scroll: boolean;
+    toolsEnabled: boolean;
 }
 
 export default function Settings() {
@@ -37,7 +38,8 @@ export default function Settings() {
         temperature_format: 'C',
         dashboard_layout: 'default',
         show_webcam: true,
-        console_auto_scroll: true
+        console_auto_scroll: true,
+        toolsEnabled: false
     });
 
     useEffect(() => {
@@ -48,7 +50,7 @@ export default function Settings() {
         setLoading(true);
         try {
             // Load Moonraker config
-            const configRes = await fetch('/api/config/moonraker');
+            const configRes = await fetch('/server/config/moonraker');
             if (configRes.ok) {
                 const configData = await configRes.json();
                 if (configData.result) {
@@ -95,7 +97,11 @@ export default function Settings() {
     const handleRestartService = async (service: string) => {
         try {
             setMessage({ type: 'success', text: `Restarting ${service}...` });
-            await fetch(`/api/service/${service}/restart`, { method: 'POST' });
+            await fetch(`/machine/services/restart`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service })
+            });
             setTimeout(() => setMessage(null), 3000);
         } catch (err) {
             setMessage({ type: 'error', text: `Failed to restart ${service}` });
@@ -294,6 +300,15 @@ export default function Settings() {
                                 type="checkbox"
                                 checked={uiSettings.console_auto_scroll}
                                 onChange={(e) => setUiSettings(prev => ({ ...prev, console_auto_scroll: e.target.checked }))}
+                            />
+                        </div>
+
+                        <div className="setting-row">
+                            <label>Enable Tools/Toolchanger (requires KATANAOS selection)</label>
+                            <input 
+                                type="checkbox"
+                                checked={uiSettings.toolsEnabled}
+                                onChange={(e) => setUiSettings(prev => ({ ...prev, toolsEnabled: e.target.checked }))}
                             />
                         </div>
 
