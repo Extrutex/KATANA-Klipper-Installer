@@ -122,7 +122,7 @@ Safety net for your printer.
 **Important: Install Git first**
 ```bash
 sudo apt update
-sudo apt install git -y
+sudo apt install git
 ```
 
 **Optional: Remove legacy KIAUH**
