@@ -172,20 +172,48 @@ function setup_nginx() {
         fi
     fi
     
-    # Create nginx config
+    # Determine port - first UI gets 80, second gets 81
+    local port=80
+    local default_flag="default_server"
+    
+    # Check if another UI is already using port 80
+    if [ -f /etc/nginx/sites-available/mainsail ] && [ "$ui_type" != "mainsail" ]; then
+        port=81
+        default_flag=""
+    elif [ -f /etc/nginx/sites-available/fluidd ] && [ "$ui_type" != "fluidd" ]; then
+        port=81
+        default_flag=""
+    fi
+    
+    # Check nginx ports already configured
+    local existing_ports=$(grep -r "listen" /etc/nginx/sites-enabled/ 2>/dev/null | grep -oP '\d+' | sort -u || true)
+    while echo "$existing_ports" | grep -q "^${port}$"; do
+        port=$((port + 1))
+    done
+    
+    log_info "Using port: $port"
+    
     local cfg_file="/etc/nginx/sites-available/$ui_type"
     local root_dir="$HOME/$ui_type"
     
-    # Create proper nginx config with all needed locations
+    # Backup existing config if exists
+    if [ -f "$cfg_file" ]; then
+        sudo cp "$cfg_file" "$cfg_file.bak"
+    fi
+    
+    # Remove old symlink if exists
+    sudo rm -f /etc/nginx/sites-enabled/$ui_type
+    
+    # Create nginx config with determined port
     sudo tee "$cfg_file" > /dev/null <<EOF
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
+    listen $port $default_flag;
+    listen [::]:$port $default_flag;
     
     server_name _;
     
-    access_log /var/log/nginx/klipper_access.log;
-    error_log /var/log/nginx/klipper_error.log;
+    access_log /var/log/nginx/${ui_type}_access.log;
+    error_log /var/log/nginx/${ui_type}_error.log;
 
     client_max_body_size 100M;
 
@@ -220,7 +248,7 @@ server {
     }
 
     location /websocket {
-        proxy_pass http://localhost:7125;
+        proxy_pass http://localhost:7125/websocket;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -231,13 +259,15 @@ server {
         proxy_read_timeout 86400;
     }
 
-    location /webcam {
-        proxy_pass http://127.0.0.1:8080;
+    location /printer {
+        proxy_pass http://localhost:7125;
         proxy_set_header Host \$http_host;
         proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
-    location ~ ^/(printer|gcodes|timelapse) {
+    location /machine {
         proxy_pass http://localhost:7125;
         proxy_set_header Host \$http_host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -247,12 +277,20 @@ server {
 }
 EOF
     
-    # Remove old default and link new
-    sudo rm -f /etc/nginx/sites-enabled/default
+    # Enable site
     sudo ln -sf "$cfg_file" /etc/nginx/sites-enabled/
     
-    # Test & Reload
-    sudo nginx -t && sudo systemctl reload nginx
+    # Disable default if exists and this is first UI
+    if [ "$port" = "80" ] && [ -L /etc/nginx/sites-enabled/default ]; then
+        sudo rm -f /etc/nginx/sites-enabled/default
+    fi
     
-    log_success "Nginx configured for $ui_type."
+    # Test and restart
+    if sudo nginx -t; then
+        sudo systemctl reload nginx
+        log_success "Nginx configured for $ui_type on port $port"
+    else
+        log_error "Nginx config test failed!"
+        sudo nginx -t 2>&1 | head -20
+    fi
 }
