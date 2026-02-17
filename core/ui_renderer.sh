@@ -805,8 +805,12 @@ function run_extras_security() {
 # ============================================================
 
 function run_forge_menu() {
-    source "$MODULES_DIR/hardware/flash_registry.sh"
-    run_flash_menu
+    if [ -f "$MODULES_DIR/hardware/flash_engine.sh" ]; then
+        source "$MODULES_DIR/hardware/flash_engine.sh"
+        run_hal_flasher
+    else
+        log_error "Module missing: hardware/flash_engine.sh"
+    fi
 }
 
 # ============================================================
