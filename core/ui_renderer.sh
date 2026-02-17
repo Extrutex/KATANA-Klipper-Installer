@@ -401,9 +401,9 @@ function draw_main_menu() {
     box_row_left "${C_WHITE}⚡ MAIN MENU${NC}"
     draw_box_mid
     box_row_left "${C_GREEN}[1]${NC}  ⚡ QUICK START     Full Install Wizard"
-    box_row_left "${C_NEON}[2]${NC}  🔄 UPDATE         Update All Components"
+    box_row_left "${C_NEON}[2]${NC}  🔧 FORGE          Build & Flash Firmware"
     box_row_left "${C_NEON}[3]${NC}  📦 EXTRAS         Install Extensions"
-    box_row_left "${C_NEON}[4]${NC}  🔧 FORGE          MCU / Firmware / CAN-Bus"
+    box_row_left "${C_NEON}[4]${NC}  🔄 UPDATE         Update All Components"
     box_row_left "${C_NEON}[5]${NC}  🩺 DIAGNOSE       Service / Logs / Repair"
     box_row_left "${C_NEON}[6]${NC}  ⚙️  SETTINGS       Profile / Theme / Network"
     

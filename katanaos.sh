@@ -119,9 +119,9 @@ function main() {
         
         case $choice in
             1) run_quick_start ;;
-            2) run_update_menu ;;
+            2) run_forge_menu ;;
             3) run_extras_menu ;;
-            4) run_forge_menu ;;
+            4) run_update_menu ;;
             5) run_diagnose_menu ;;
             6) run_settings_menu ;;
             [hH]) run_extras_menu ;;
