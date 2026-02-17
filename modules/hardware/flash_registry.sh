@@ -32,66 +32,75 @@ function run_flash_menu() {
 function auto_flash_mcu() {
     draw_header "⚡ AUTO-FLASH MCU"
     
-    echo "  Scanning for connected MCUs..."
+    echo "  Suche nach verbundenen MCUs..."
     echo ""
     
     # Detect USB devices
     local usb_devices=$(lsusb 2>/dev/null)
     
     if [ -z "$usb_devices" ]; then
-        log_error "No USB devices found!"
-        read -p "  Press Enter..."
+        log_error "Keine USB-Geräte gefunden!"
+        read -p "  Enter drücken..."
         return
     fi
     
-    echo "  ${C_GREEN}Found USB devices:${NC}"
+    echo "  ${C_GREEN} Gefundene USB-Geräte:${NC}"
     echo "$usb_devices" | sed 's/^/    /'
     echo ""
     
-    # Common MCU IDs
+    local detected_mcus=()
     local detected=""
     
-    # RP2040 (Raspberry Pi Pico)
     if echo "$usb_devices" | grep -qi "2e8a:0003"; then
-        detected="rp2040"
-        log_info "Detected: RP2040 (Raspberry Pi Pico)"
+        detected_mcus+=("rp2040")
+        log_info "Erkannt: RP2040 (Raspberry Pi Pico)"
     fi
     
-    # STM32F103 (BluePill, etc)
     if echo "$usb_devices" | grep -qi "0483:df11"; then
-        detected="stm32f103"
-        log_info "Detected: STM32F103 (DFU Mode)"
+        detected_mcus+=("stm32_dfu")
+        log_info "Erkannt: STM32 im DFU-Modus (0483:df11)"
     fi
     
-    # STM32G0B1 (EBB36/42, SB2209)
-    if echo "$usb_devices" | grep -qi "0483:df11"; then
-        detected="stm32g0b1"
-        log_info "Detected: STM32G0B1 (EBB36/42)"
+    if echo "$usb_devices" | grep -qi "1d50:614e"; then
+        detected_mcus+=("stm32_can")
+        log_info "Erkannt: STM32 (CAN-Modus)"
     fi
     
-    # STM32F446 (Octopus Pro)
-    if echo "$usb_devices" | grep -qi "0483:df11"; then
-        detected="stm32f446"
-        log_info "Detected: STM32F446 (Octopus Pro)"
-    fi
-    
-    if [ -z "$detected" ]; then
-        log_error "No supported MCU detected!"
+    if [ ${#detected_mcus[@]} -eq 0 ]; then
+        log_error "Kein unterstützter MCU erkannt!"
         echo ""
-        echo "  Supported devices:"
+        echo "  Unterstützte Geräte:"
         echo "  - Raspberry Pi Pico (RP2040)"
-        echo "  - STM32F103 (BluePill)"
-        echo "  - STM32G0B1 (EBB36/42)"
-        echo "  - STM32F446 (Octopus Pro)"
+        echo "  - STM32 (verschiedene - DFU-Modus)"
+        echo "  - STM32 (CAN-Bus)"
         echo ""
-        echo "  Make sure your device is in DFU mode!"
-        read -p "  Press Enter..."
+        echo "  Stellen Sie sicher, dass Ihr Gerät im DFU-Modus ist!"
+        read -p "  Enter drücken..."
         return
     fi
     
     echo ""
-    read -p "  Flash $detected? [y/N] " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then
+    if [ ${#detected_mcus[@]} -eq 1 ]; then
+        detected="${detected_mcus[0]}"
+        echo "  Einzelner MCU erkannt: $detected"
+    else
+        echo "  Mehrere MCUs erkannt:"
+        for i in "${!detected_mcus[@]}"; do
+            echo "    $((i+1)) ${detected_mcus[$i]}"
+        done
+        echo ""
+        read -p "  MCU zum Flashen wählen [1-${#detected_mcus[@]}]: " sel
+        if [[ "$sel" =~ ^[0-9]+$ ]] && [ "$sel" -ge 1 ] && [ "$sel" -le ${#detected_mcus[@]} ]; then
+            detected="${detected_mcus[$((sel-1))]}"
+        else
+            log_error "Ungültige Auswahl"
+            return
+        fi
+    fi
+    
+    echo ""
+    read -p "  $detected flashen? [j/N] " yn
+    if [[ ! "$yn" =~ ^[jJ]$ ]]; then
         return
     fi
     
@@ -99,47 +108,63 @@ function auto_flash_mcu() {
     case "$detected" in
         rp2040)
             build_and_flash_rp2040 ;;
-        stm32f103|stm32g0b1|stm32f446)
+        stm32_dfu)
             build_and_flash_stm32 ;;
+        stm32_can)
+            log_info "STM32 im CAN-Modus erkannt - Quick CAN Setup zum Flashen verwenden"
+            read -p "  Enter drücken..." ;;
     esac
 }
 
 function build_and_flash_rp2040() {
-    log_info "Building firmware for RP2040..."
+    log_info "Baue Firmware für RP2040..."
     
     cd "$HOME/klipper"
     make clean >/dev/null 2>&1
     
-    cat > .config <<'EOF'
+    cat > defconfig <<'EOF'
 CONFIG_MACH_RP2040=y
 CONFIG_MCU="rp2040"
+EOF
+    
+    make defconfig KCONFIG_CONFIG=defconfig >/dev/null 2>&1
+    
+    cat >> .config <<'EOF'
 CONFIG_BOARD_DIRECTORY="rp2040"
 CONFIG_FLASH_SIZE=0x200000
 CONFIG_RP2040_FLASH_START_2000=y
+CONFIG_RP2040_U2F_FIRMWARE=y
 EOF
     
     make olddefconfig >/dev/null 2>&1
     make -j$(nproc)
     
+    local firmware_file=""
     if [ -f "$HOME/klipper/out/klipper.uf2" ]; then
-        log_success "Firmware built: $HOME/klipper/out/klipper.uf2"
-        echo ""
-        echo "  Copy klipper.uf2 to your RP2040 (mount as USB drive)"
-        echo "  Or press Enter to flash via DFU..."
-        
-        read -p "  " yn
-        if [[ "$yn" =~ ^[yY]$ ]]; then
-            sudo dfu-util -d 2e8a:0003 -a 0 -D "$HOME/klipper/out/klipper.uf2" -s 0x8000000:leave
-        fi
-    else
-        log_error "Build failed!"
+        firmware_file="$HOME/klipper/out/klipper.uf2"
+    elif [ -f "$HOME/klipper/out/klipper.elf.hex" ]; then
+        firmware_file="$HOME/klipper/out/klipper.elf.hex"
     fi
     
-    read -p "  Press Enter..."
+    if [ -n "$firmware_file" ]; then
+        log_success "Firmware gebaut: $firmware_file"
+        echo ""
+        echo "  Firmware auf RP2040 kopieren (als USB-Laufwerk einhängen)"
+        echo "  Oder Enter drücken zum Flashen via DFU..."
+        
+        read -p "  " yn
+        if [[ "$yn" =~ ^[jJ]$ ]]; then
+            sudo dfu-util -d 2e8a:0003 -a 0 -D "$firmware_file" -s 0x8000000:leave
+        fi
+    else
+        log_error "Build fehlgeschlagen!"
+    fi
+    
+    read -p "  Enter drücken..."
 }
 
 function build_and_flash_stm32() {
-    log_info "Building firmware for STM32..."
+    log_info "Baue Firmware für STM32..."
     
     cd "$HOME/klipper"
     make clean >/dev/null 2>&1
@@ -158,16 +183,16 @@ EOF
     make -j$(nproc)
     
     if [ -f "$HOME/klipper/out/klipper.bin" ]; then
-        log_success "Firmware built!"
+        log_success "Firmware gebaut!"
         echo ""
-        echo "  Flashing via DFU..."
+        echo "  Flashe via DFU..."
         sudo dfu-util -d 0483:df11 -a 0 -D "$HOME/klipper/out/klipper.bin" -s 0x08000000:leave
-        log_success "Flash complete!"
+        log_success "Flash abgeschlossen!"
     else
-        log_error "Build failed!"
+        log_error "Build fehlgeschlagen!"
     fi
     
-    read -p "  Press Enter..."
+    read -p "  Enter drücken..."
 }
 
 function view_firmware_logs() {
