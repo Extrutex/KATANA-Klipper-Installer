@@ -21,7 +21,8 @@ function run_backup_menu() {
         echo ""
         echo "  [1] Erstelle Voll-Backup (Config + DB)"
         echo "  [2] Zeige Backups"
-        echo "  [3] GitHub Push (Config only)"
+        echo "  [3] Restore Backup from Archive"
+        echo "  [4] GitHub Push (Config only)"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -30,7 +31,8 @@ function run_backup_menu() {
         case $ch in
             1) create_backup ;;
             2) list_backups ;;
-            3) push_config_to_git ;;
+            3) restore_backup ;;
+            4) push_config_to_git ;;
             b|B) return ;;
             *) log_error "Invalid Selection" ;;
         esac
@@ -115,6 +117,110 @@ function push_config_to_git() {
         git push || log_error "Push failed. Check SSH keys/Auth."
     else
         log_warn "No remote 'origin' configured. Committed locally only."
+    fi
+    
+
+    read -p "  Press Enter..."
+}
+
+function restore_backup() {
+    draw_header "RESTORE BACKUP"
+    
+    # 1. List available backups
+    local backups=($(ls "$BACKUP_DIR"/*.zip 2>/dev/null))
+    
+    if [ ${#backups[@]} -eq 0 ]; then
+        log_warn "No backups found in $BACKUP_DIR."
+        read -p "  Press Enter..."
+        return
+    fi
+    
+    echo "  Available Backups:"
+    local i=1
+    for backup in "${backups[@]}"; do
+        echo "  [$i] $(basename "$backup")"
+        ((i++))
+    done
+    echo ""
+    echo "  [B] Back"
+    echo ""
+    
+    read -p "  >> SELECT BACKUP TO RESTORE: " choice
+    
+    if [[ "$choice" =~ ^[bB]$ ]]; then return; fi
+    
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#backups[@]}" ]; then
+        log_error "Invalid selection."
+        return
+    fi
+    
+    local target_backup="${backups[$((choice-1))]}"
+    local backup_name=$(basename "$target_backup")
+    
+    echo ""
+    log_warn "WARNING: This will OVERWRITE your current configuration!"
+    echo "  Restoring: $backup_name"
+    read -p "  Type 'RESTORE' to confirm: " confirm
+    
+    if [ "$confirm" != "RESTORE" ]; then
+        log_info "Restore cancelled."
+        return
+    fi
+    
+    log_info "Stopping services..."
+    sudo systemctl stop klipper moonraker 2>/dev/null
+    
+    log_info "Extracting backup..."
+    # Unzip to temp location first for safety
+    local temp_restore="/tmp/katana_restore_$(date +%s)"
+    mkdir -p "$temp_restore"
+    
+    if unzip -q "$target_backup" -d "$temp_restore"; then
+        # Check structure (we expect printer_data/config and maybe printer_data/database inside or just config)
+        # Our create_backup zips "$config_dir" and "$db_dir" directly.
+        # So inside zip we likely have full structure or flat files depending on zip command relative paths.
+        
+        # Adjust logic based on zip structure:
+        # Assuming zip -r "$target" "$config_dir" creates absolute path structure or relative from CWD.
+        # Let's inspect what we have.
+        
+        # Restore Config
+        if [ -d "$temp_restore/home/$USER/printer_data/config" ]; then
+             log_info "Restoring Config (Structure A)..."
+             cp -r "$temp_restore/home/$USER/printer_data/config/"* "$HOME/printer_data/config/"
+        elif [ -d "$temp_restore/config" ]; then
+             log_info "Restoring Config (Structure B)..."
+             cp -r "$temp_restore/config/"* "$HOME/printer_data/config/"
+        else
+             log_warn "Could not automatically detect config structure in zip. Attempting heuristic copy..."
+             # Try to find printer.cfg
+             local pcfg=$(find "$temp_restore" -name "printer.cfg")
+             if [ -n "$pcfg" ]; then
+                 local pcfg_dir=$(dirname "$pcfg")
+                 cp -r "$pcfg_dir/"* "$HOME/printer_data/config/"
+                 log_success "Config restored from $pcfg_dir"
+             else
+                 log_error "printer.cfg not found in backup!"
+             fi
+        fi
+        
+        # Restore Database (Moonraker)
+        if [ -d "$temp_restore/home/$USER/printer_data/database" ]; then
+             log_info "Restoring Database..."
+             cp -r "$temp_restore/home/$USER/printer_data/database/"* "$HOME/printer_data/database/"
+        fi
+        
+        # Cleanup
+        rm -rf "$temp_restore"
+        
+        # Fix Permissions
+        sudo chown -R $USER:$USER "$HOME/printer_data"
+        
+        log_success "Restore complete!"
+        log_info "Restarting services..."
+        sudo systemctl start klipper moonraker
+    else
+        log_error "Unzip failed."
     fi
     
     read -p "  Press Enter..."

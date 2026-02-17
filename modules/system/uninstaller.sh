@@ -130,7 +130,14 @@ function uninstall_nginx() {
 function remove_katana_files() {
     log_info "Removing all KATANA files..."
     
-    rm -rf "$HOME/KATANA-Klipper-Installer"
+
+    # Safety Check: Prevent deleting HOME if something is wrong
+    if [ "$KATANA_ROOT" == "$HOME" ] || [ -z "$KATANA_ROOT" ]; then
+         log_error "Safety Stop: KATANA_ROOT is set to HOME or empty. Aborting deletion."
+         return
+    fi
+
+    rm -rf "$KATANA_ROOT"
     rm -rf "$HOME/katana_diagnostics"
     rm -f "$HOME/katana.log"
     
