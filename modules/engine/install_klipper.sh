@@ -176,8 +176,12 @@ function do_install_moonraker() {
     if command -v install_service_from_template &> /dev/null; then
         install_service_from_template "moonraker"
     else
-         # Fallback
-        cat <<EOF | sudo tee /etc/systemd/system/moonraker.service >/dev/null
+         # Fallback - Create systemd env file first
+         mkdir -p "$HOME/printer_data/systemd"
+         echo "MOONRAKER_ARGS=--config $HOME/printer_data/config/moonraker.conf" > "$HOME/printer_data/systemd/moonraker.env"
+         
+         # Create moonraker.service
+         cat <<EOF | sudo tee /etc/systemd/system/moonraker.service >/dev/null
 [Unit]
 Description=Moonraker API Server for Klipper
 Requires=network-online.target
@@ -186,8 +190,9 @@ After=network-online.target
 [Service]
 Type=simple
 User=$USER
-SyslogIdentifier=moonraker
-ExecStart=$HOME/moonraker-env/bin/python $HOME/moonraker/moonraker/moonraker.py -d $HOME/printer_data
+WorkingDirectory=$HOME/moonraker
+EnvironmentFile=$HOME/printer_data/systemd/moonraker.env
+ExecStart=$HOME/moonraker-env/bin/python -m moonraker --config $HOME/printer_data/config/moonraker.conf
 Restart=always
 RestartSec=10
 
@@ -196,6 +201,77 @@ WantedBy=multi-user.target
 EOF
         sudo systemctl daemon-reload
         sudo systemctl enable moonraker
+    fi
+    
+    # Create basic moonraker.conf if not exists
+    if [ ! -f "$HOME/printer_data/config/moonraker.conf" ]; then
+        cat <<EOF > "$HOME/printer_data/config/moonraker.conf"
+[server]
+host = 0.0.0.0
+port = 7125
+enable_debug_logging = False
+
+[authorization]
+trusted_clients =
+    127.0.0.1
+    192.168.0.0/16
+    10.0.0.0/8
+
+[update_manager]
+enable_auto_refresh = True
+EOF
+    fi
+    
+    # Create basic printer.cfg if not exists
+    if [ ! -f "$HOME/printer_data/config/printer.cfg" ]; then
+        cat <<EOF > "$HOME/printer_data/config/printer.cfg"
+# Basic Klipper Config - Edit for your setup!
+[stepper_x]
+pin: PB0
+step_pin: PA2
+dir_pin: !PA1
+enable_pin: !PA3
+microsteps: 16
+rotation_distance: 40
+full_steps_per_rotation: 200
+
+[stepper_y]
+pin: PB1
+step_pin: PA4
+dir_pin: !PA5
+enable_pin: !PA6
+microsteps: 16
+rotation_distance: 40
+full_steps_per_rotation: 200
+
+[stepper_z]
+pin: PB2
+step_pin: PC14
+dir_pin: !PC15
+enable_pin: !PC13
+microsteps: 16
+rotation_distance: 8
+full_steps_per_rotation: 200
+
+[extruder]
+pin: PC3
+step_pin: PA7
+dir_pin: !PA8
+enable_pin: !PA9
+microsteps: 16
+rotation_distance: 33.5
+full_steps_per_rotation: 200
+heater_pin: PC2
+
+[heater_bed]
+pin: PC1
+
+[fan]
+pin: PC0
+
+[temperature_sensor raspberry_pi]
+sensor_type: temperature_host
+EOF
     fi
     
     sudo systemctl restart moonraker
