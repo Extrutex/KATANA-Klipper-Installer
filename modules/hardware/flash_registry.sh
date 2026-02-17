@@ -157,8 +157,21 @@ EOF
             cp "$firmware_file" "/media/$USER/RPI-RP2/" 2>/dev/null || \
             echo "  Bitte manuell kopieren: $firmware_file"
         else
-            log_info "Flash via DFU..."
-            sudo dfu-util -d 2e8a:0003 -a 0 -D "$firmware_file" -s 0x8000000:leave
+            log_info "Prüfe auf DFU-Gerät..."
+            if ! lsusb | grep -q "2e8a:0003"; then
+                log_error "RP2040 nicht im DFU-Modus!"
+                echo ""
+                echo "  So kommst du in den DFU-Modus:"
+                echo "  1. Halte den BOOT-Button gedrückt"
+                echo "  2. Drücke RESET (oder stecke USB ein)"
+                echo "  3. BOOT-Button loslassen"
+                echo ""
+                echo "  Das Gerät sollte jetzt als 'Raspberry Pi RP2' in lsusb erscheinen."
+            else
+                log_info "Flash via DFU..."
+                sudo dfu-util -d 2e8a:0003 -a 0 -D "$firmware_file" -s 0x8000000:leave
+                log_success "Flash abgeschlossen!"
+            fi
         fi
     else
         log_error "Build fehlgeschlagen!"
