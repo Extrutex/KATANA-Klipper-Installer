@@ -36,17 +36,13 @@ function do_install_mainsail() {
     log_info "Installing Mainsail..."
     
     # Logic to download/install mainsail
-    # Simplified placeholder logic as real logic was likely lost or needs to be robust
+    # Simplified placeholder logic as real logic was lost or needs to be robust
     local install_dir="$HOME/mainsail"
     if [ -d "$install_dir" ]; then
         log_warn "Mainsail already exists at $install_dir"
     else
         log_info "Cloning Mainsail..."
-        # In reality, mainsail is usually a zip release, not a clone for the build
-        # But for KIAUH replacement, we usually fetch the latest release.
-        # For now, I will use a standard creating directory method.
         mkdir -p "$install_dir"
-        # Download latest release (simulated for stability/explanation)
         wget -q -O mainsail.zip https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip
         unzip -q mainsail.zip -d "$install_dir"
         rm mainsail.zip
@@ -56,7 +52,37 @@ function do_install_mainsail() {
     # Configure Nginx
     setup_nginx "mainsail"
     
+    # Add to Moonraker Update Manager
+    if source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" 2>/dev/null; then
+        add_update_manager_entry "Mainsail" "web" "$HOME/mainsail" "" "stable" "mainsail-crew/mainsail"
+    fi
+    
     log_success "Mainsail Installed."
+    read -p "  Press Enter..."
+}
+
+function do_install_fluidd() {
+    log_info "Installing Fluidd..."
+    local install_dir="$HOME/fluidd"
+     if [ -d "$install_dir" ]; then
+        log_warn "Fluidd already exists at $install_dir"
+    else
+        mkdir -p "$install_dir"
+        wget -q -O fluidd.zip https://github.com/fluidd-core/fluidd/releases/latest/download/fluidd.zip
+        unzip -q fluidd.zip -d "$install_dir"
+        rm fluidd.zip
+        log_success "Fluidd downloaded."
+    fi
+    
+    # Configure Nginx
+    setup_nginx "fluidd"
+    
+    # Add to Moonraker Update Manager
+    if source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" 2>/dev/null; then
+        add_update_manager_entry "Fluidd" "web" "$HOME/fluidd" "" "stable" "fluidd-core/fluidd"
+    fi
+    
+    log_success "Fluidd Installed."
     read -p "  Press Enter..."
 }
 

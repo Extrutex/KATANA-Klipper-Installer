@@ -112,7 +112,13 @@ EOF
     fi
     
     sudo systemctl restart klipper
-
+    
+    # Add to Moonraker Update Manager
+    if [ -f "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" ]; then
+        source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh"
+        add_update_manager_entry "Klipper" "git_repo" "$HOME/klipper" "https://github.com/Klipper3d/klipper" "klipper"
+    fi
+    
     log_success "Klipper ($variant) installed and service started."
     read -p "  Press Enter..."
 }
@@ -200,8 +206,10 @@ EOF
     mkdir -p "$HOME/printer_data/gcodes"
     mkdir -p "$HOME/printer_data/systemd"
     
-    # ALWAYS create moonraker.conf fresh (overwrite if exists to fix broken configs)
-    cat > "$HOME/printer_data/config/moonraker.conf" <<EOF
+    # Create moonraker.conf only if it doesn't exist (preserve user changes)
+    local moonraker_conf="$HOME/printer_data/config/moonraker.conf"
+    if [ ! -f "$moonraker_conf" ]; then
+        cat > "$moonraker_conf" <<EOF
 [server]
 host = 0.0.0.0
 port = 7125
@@ -215,6 +223,14 @@ trusted_clients =
 [update_manager]
 enable_auto_refresh = True
 EOF
+    else
+        # Ensure update_manager section exists
+        if ! grep -q "\[update_manager\]" "$moonraker_conf"; then
+            echo "" >> "$moonraker_conf"
+            echo "[update_manager]" >> "$moonraker_conf"
+            echo "enable_auto_refresh = True" >> "$moonraker_conf"
+        fi
+    fi
 
     # Create env file for systemd
     echo "MOONRAKER_ARGS=--config $HOME/printer_data/config/moonraker.conf" > "$HOME/printer_data/systemd/moonraker.env"
@@ -272,41 +288,48 @@ EOF
     fi
     
     # Setup PolKit permissions for Moonraker (to avoid warnings)
+    local current_user=$(whoami)
     sudo mkdir -p /etc/polkit-1/localauthority/50-local.d
-    sudo tee /etc/polkit-1/localauthority/50-local.d/moonraker.pkla > /dev/null << 'POLLIT'
+    sudo tee /etc/polkit-1/localauthority/50-local.d/moonraker.pkla > /dev/null << POLLIT
 [Allow Moonraker Systemd]
-Identity=unix-user:pi
+Identity=unix-user:$current_user
 Action=org.freedesktop.systemd1.manage-units
 ResultActive=yes
 
 [Allow Moonraker Reboot]
-Identity=unix-user:pi
+Identity=unix-user:$current_user
 Action=org.freedesktop.login1.reboot
 ResultActive=yes
 
 [Allow Moonraker PowerOff]
-Identity=unix-user:pi
+Identity=unix-user:$current_user
 Action=org.freedesktop.login1.power-off
 ResultActive=yes
 
 [Allow Moonraker PowerOff Multi]
-Identity=unix-user:pi
+Identity=unix-user:$current_user
 Action=org.freedesktop.login1.power-off-multiple-sessions
 ResultActive=yes
 
 [Allow Moonraker Reboot Multi]
-Identity=unix-user:pi
+Identity=unix-user:$current_user
 Action=org.freedesktop.login1.reboot-multiple-sessions
 ResultActive=yes
 
 [Allow PackageKit]
-Identity=unix-user:pi
+Identity=unix-user:$current_user
 Action=org.freedesktop.packagekit.system-sources-refresh
 ResultActive=yes
 POLLIT
     
     sudo systemctl daemon-reload
     sudo systemctl restart moonraker klipper
+    
+    # Add to Moonraker Update Manager
+    if [ -f "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" ]; then
+        source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh"
+        add_update_manager_entry "Moonraker" "git_repo" "$HOME/moonraker" "https://github.com/Arksine/moonraker" "moonraker"
+    fi
     
     log_success "Moonraker installed and service started."
     read -p "  Press Enter..."
