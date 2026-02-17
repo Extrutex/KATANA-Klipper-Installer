@@ -119,41 +119,45 @@ function auto_flash_mcu() {
 function build_and_flash_rp2040() {
     log_info "Baue Firmware für RP2040..."
     
-    cd "$HOME/klipper"
+    local klipper_dir="$HOME/klipper"
+    cd "$klipper_dir"
     make clean >/dev/null 2>&1
     
-    cat > defconfig <<'EOF'
+    cat > .config <<'EOF'
+CONFIG_LOW_LEVEL_OPTIONS=y
 CONFIG_MACH_RP2040=y
-CONFIG_MCU="rp2040"
-EOF
-    
-    make defconfig KCONFIG_CONFIG=defconfig >/dev/null 2>&1
-    
-    cat >> .config <<'EOF'
 CONFIG_BOARD_DIRECTORY="rp2040"
+CONFIG_MCU="rp2040"
+CONFIG_FLASH_START=0x10000
 CONFIG_FLASH_SIZE=0x200000
 CONFIG_RP2040_FLASH_START_2000=y
 CONFIG_RP2040_U2F_FIRMWARE=y
+CONFIG_USB_SERIAL_NUMBER_CHIPID=y
 EOF
     
     make olddefconfig >/dev/null 2>&1
     make -j$(nproc)
     
     local firmware_file=""
-    if [ -f "$HOME/klipper/out/klipper.uf2" ]; then
-        firmware_file="$HOME/klipper/out/klipper.uf2"
-    elif [ -f "$HOME/klipper/out/klipper.elf.hex" ]; then
-        firmware_file="$HOME/klipper/out/klipper.elf.hex"
+    if [ -f "$klipper_dir/out/klipper.uf2" ]; then
+        firmware_file="$klipper_dir/out/klipper.uf2"
+    elif [ -f "$klipper_dir/out/klipper.elf.hex" ]; then
+        firmware_file="$klipper_dir/out/klipper.elf.hex"
     fi
     
     if [ -n "$firmware_file" ]; then
         log_success "Firmware gebaut: $firmware_file"
         echo ""
-        echo "  Firmware auf RP2040 kopieren (als USB-Laufwerk einhängen)"
-        echo "  Oder Enter drücken zum Flashen via DFU..."
-        
-        read -p "  " yn
-        if [[ "$yn" =~ ^[jJ]$ ]]; then
+        echo "  1) Datei auf RP2040 kopieren (als USB-Laufwerk)"
+        echo "  2) DFU-Flash"
+        echo ""
+        read -p "  Option [1/2/Enter für DFU]: " opt
+        if [ "$opt" = "1" ]; then
+            echo "  Kopiere $firmware_file nach /media/\$USER/RPI-RP2/"
+            cp "$firmware_file" "/media/$USER/RPI-RP2/" 2>/dev/null || \
+            echo "  Bitte manuell kopieren: $firmware_file"
+        else
+            log_info "Flash via DFU..."
             sudo dfu-util -d 2e8a:0003 -a 0 -D "$firmware_file" -s 0x8000000:leave
         fi
     else
