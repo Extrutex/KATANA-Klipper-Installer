@@ -13,3 +13,4 @@ configs/userspace/*.cfg
 
 # System
 .DS_Store.agent/
+.agent/
