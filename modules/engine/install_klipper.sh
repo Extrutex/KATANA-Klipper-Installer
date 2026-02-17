@@ -208,10 +208,10 @@ EOF
     mkdir -p "$HOME/printer_data/logs"
     mkdir -p "$HOME/printer_data/comms"
     mkdir -p "$HOME/printer_data/gcodes"
+    mkdir -p "$HOME/printer_data/systemd"
     
-    # ALWAYS create basic moonraker.conf if missing or broken
-    if [ ! -f "$HOME/printer_data/config/moonraker.conf" ]; then
-        cat <<EOF > "$HOME/printer_data/config/moonraker.conf"
+    # ALWAYS create moonraker.conf fresh (overwrite if exists to fix broken configs)
+    cat > "$HOME/printer_data/config/moonraker.conf" <<EOF
 [server]
 host = 0.0.0.0
 port = 7125
@@ -225,7 +225,9 @@ trusted_clients =
 [update_manager]
 enable_auto_refresh = True
 EOF
-    fi
+
+    # Create env file for systemd
+    echo "MOONRAKER_ARGS=--config $HOME/printer_data/config/moonraker.conf" > "$HOME/printer_data/systemd/moonraker.env"
     
     # ALWAYS create basic printer.cfg if missing
     if [ ! -f "$HOME/printer_data/config/printer.cfg" ]; then
