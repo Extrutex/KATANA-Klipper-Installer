@@ -209,25 +209,38 @@ EOF
         log_error "Service Manager missing! Moonraker service NOT installed."
     fi
     
-    # 6. PolKit Permissions
+    # 6. PolKit Permissions (Modern JS rules format)
     local current_user=$(whoami)
+    log_info "Setting up PolicyKit rules for Moonraker..."
+    
+    sudo mkdir -p /etc/polkit-1/rules.d
+    sudo tee /etc/polkit-1/rules.d/moonraker.rules > /dev/null << POLRULES
+// PolicyKit rules for Moonraker
+polkit.addRule(function(action, subject) {
+    if ((action.id == "org.freedesktop.systemd1.manage-units" ||
+         action.id == "org.freedesktop.login1.power-off" ||
+         action.id == "org.freedesktop.login1.power-off-multiple-sessions" ||
+         action.id == "org.freedesktop.login1.reboot" ||
+         action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+         action.id == "org.freedesktop.packagekit.system-sources-refresh" ||
+         action.id == "org.freedesktop.packagekit.package-install" ||
+         action.id == "org.freedesktop.packagekit.system-update") &&
+        subject.user == "$current_user") {
+        return polkit.Result.YES;
+    }
+});
+POLRULES
+
+    # Also add legacy .pkla format for older systems (Bullseye)
     sudo mkdir -p /etc/polkit-1/localauthority/50-local.d
     sudo tee /etc/polkit-1/localauthority/50-local.d/moonraker.pkla > /dev/null << POLLIT
-[Allow Moonraker Systemd]
+[Allow Moonraker All]
 Identity=unix-user:$current_user
-Action=org.freedesktop.systemd1.manage-units
-ResultActive=yes
-
-[Allow Moonraker Reboot]
-Identity=unix-user:$current_user
-Action=org.freedesktop.login1.reboot
-ResultActive=yes
-
-[Allow Moonraker PowerOff]
-Identity=unix-user:$current_user
-Action=org.freedesktop.login1.power-off
+Action=org.freedesktop.systemd1.manage-units;org.freedesktop.login1.reboot;org.freedesktop.login1.reboot-multiple-sessions;org.freedesktop.login1.power-off;org.freedesktop.login1.power-off-multiple-sessions;org.freedesktop.packagekit.system-sources-refresh;org.freedesktop.packagekit.package-install;org.freedesktop.packagekit.system-update
 ResultActive=yes
 POLLIT
+
+    log_success "PolicyKit rules installed."
 
     sudo systemctl restart "$service_name"
     log_success "Moonraker installed and service started."

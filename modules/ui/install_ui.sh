@@ -54,7 +54,7 @@ function do_install_mainsail() {
     
     # Add to Moonraker Update Manager
     if source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" 2>/dev/null; then
-        add_update_manager_entry "Mainsail" "web" "$HOME/mainsail" "" "stable" "mainsail-crew/mainsail"
+        add_update_manager_entry "Mainsail" "web" "$HOME/mainsail" "" "" "stable" "mainsail-crew/mainsail"
     fi
     
     log_success "Mainsail Installed."
@@ -79,7 +79,7 @@ function do_install_fluidd() {
     
     # Add to Moonraker Update Manager
     if source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" 2>/dev/null; then
-        add_update_manager_entry "Fluidd" "web" "$HOME/fluidd" "" "stable" "fluidd-core/fluidd"
+        add_update_manager_entry "Fluidd" "web" "$HOME/fluidd" "" "" "stable" "fluidd-core/fluidd"
     fi
     
     log_success "Fluidd Installed."
