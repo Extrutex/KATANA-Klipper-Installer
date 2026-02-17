@@ -131,7 +131,6 @@ cd ~
 rm -rf ~/kiauh
 ```
 
-**Install KATANAOS**
 ```bash
 cd ~
 git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
@@ -139,6 +138,24 @@ cd KATANA-Klipper-Installer
 chmod +x katanaos.sh
 ./katanaos.sh
 ```
+
+
+### 🚀 First Time Setup (Important!)
+
+If this is a **fresh installation**, follow this order:
+
+```
+Step 1:  [1] QUICK START → Full Install     (installs Klipper + Moonraker + Web UI)
+Step 2:  [4] FORGE → Build & Flash MCU      (compiles firmware for your board)
+Step 3:  [3] EXTRAS → Install extensions     (optional: Crowsnest, probes, etc.)
+```
+
+> ⚠️ **The FORGE (Menu 4) requires Klipper to be installed first!**
+> It compiles firmware from the Klipper source code (`~/klipper`).
+> If you skip Step 1 and go straight to the Forge, nothing will happen because
+> the source code doesn't exist yet.
+>
+> **TL;DR:** Always run **Quick Start** first on a fresh system.
 
 
 ### 🛡️ Firewall & Port Management
