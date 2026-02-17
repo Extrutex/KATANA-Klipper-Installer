@@ -154,33 +154,33 @@ EOF
     fi
     
     if [ -n "$firmware_file" ]; then
-        log_success "Firmware gebaut: $firmware_file ($firmware_type)"
+        log_success "Firmware built: $firmware_file ($firmware_type)"
         echo ""
-        echo "  Datei: $firmware_file"
+        echo "  File: $firmware_file"
         echo ""
-        echo "  Flash-Methoden:"
-        echo "  1) Kopieren (USB-Laufwerk) - NUR bei UF2"
+        echo "  Flash methods:"
+        echo "  1) Copy to USB Drive - ONLY for UF2"
         echo "  2) DFU-Flash (sudo)"
         echo ""
         read -p "  Option [1/2]: " opt
         if [ "$opt" = "1" ] && [ "$firmware_type" = "UF2" ]; then
-            echo "  Kopiere nach /media/\$USER/RPI-RP2/"
+            echo "  Copy to /media/\$USER/RPI-RP2/"
             cp "$firmware_file" "/media/$USER/RPI-RP2/" 2>/dev/null || \
-            echo "  Bitte manuell: cp $firmware_file /media/*/RPI-RP2/"
+            echo "  Manual: cp $firmware_file /media/*/RPI-RP2/"
         elif [ "$opt" = "2" ]; then
-            log_info "Prüfe DFU-Gerät..."
+            log_info "Checking for DFU device..."
             sleep 2
             if lsusb | grep -q "2e8a:0003"; then
-                log_info "Flash via DFU..."
+                log_info "Flashing via DFU..."
                 sudo dfu-util -d 2e8a:0003 -a 0 -D "$firmware_file" -s 0x8000000:leave
-                log_success "Fertig!"
+                log_success "Done!"
             else
-                log_error "RP2040 nicht gefunden!"
-                echo "  Bitte in DFU-Modus: BOOT + RESET"
+                log_error "RP2040 not found!"
+                echo "  Enter DFU mode: BOOT + RESET"
             fi
         fi
     else
-        log_error "Keine Firmware gefunden!"
+        log_error "No firmware found!"
     fi
     
     read -p "  Enter..."
