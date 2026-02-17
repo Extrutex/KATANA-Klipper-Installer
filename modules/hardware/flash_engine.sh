@@ -46,7 +46,14 @@ function run_linux_wizard() {
     echo ""
     read -p "  Press Enter to start..."
     
-    cd ~/klipper || { log_error "Klipper dir not found"; return; }
+    if [ ! -d "$HOME/klipper" ]; then
+        log_error "Klipper is not installed!"
+        echo "  You need to install Klipper first via Quick Start [1]."
+        echo ""
+        read -p "  Press Enter..."
+        return
+    fi
+    cd ~/klipper
     
     # Pre-seed config for Linux Process
     echo "CONFIG_LOW_LEVEL_OPTIONS=y" > .config
@@ -92,7 +99,14 @@ function run_wizard() {
     local arch_name="$1"
     draw_header "WIZARD: $arch_name"
     
-    cd ~/klipper || return
+    if [ ! -d "$HOME/klipper" ]; then
+        log_error "Klipper is not installed!"
+        echo "  You need to install Klipper first via Quick Start [1]."
+        echo ""
+        read -p "  Press Enter..."
+        return
+    fi
+    cd ~/klipper
     
     echo "  Step 1: Configuration"
     echo "  ---------------------------------------------------"
