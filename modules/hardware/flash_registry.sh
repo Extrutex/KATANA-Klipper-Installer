@@ -120,73 +120,49 @@ function build_and_flash_rp2040() {
     local klipper_dir="$HOME/klipper"
     cd "$klipper_dir"
     
-    echo "  This will open 'make menuconfig' for RP2040 selection."
-    echo "  Follow these steps:"
-    echo "    1. Select 'Raspberry Pi RP2040' from the list"
-    echo "    2. Navigate to 'Exit'"
-    echo "    3. Save configuration when asked"
-    echo ""
-    read -p "  Press Enter to continue..." 
-    
-    # Clean first
+    log_info "Cleaning..."
     make clean >/dev/null 2>&1
     
-    # Open menuconfig - user selects RP2040
-    make menuconfig
+    log_info "Generating RP2040 config (headless)..."
+    cat > .config <<'EOF'
+CONFIG_LOW_LEVEL_OPTIONS=y
+CONFIG_MACH_RP2040=y
+CONFIG_MCU="rp2040"
+EOF
     
-    # Build
-    log_info "Building firmware..."
+    make olddefconfig >/dev/null 2>&1
     make -j$(nproc)
     
-    # Check output
     echo ""
     echo "  Build output:"
     ls -la "$klipper_dir/out/" | grep -i klipper || true
     
-    local firmware_file=""
-    local firmware_type=""
-    
-    # Priority: BIN > UF2 > HEX
-    if [ -f "$klipper_dir/out/klipper.bin" ]; then
-        firmware_file="$klipper_dir/out/klipper.bin"
-        firmware_type="BIN"
-    elif [ -f "$klipper_dir/out/klipper.uf2" ]; then
-        firmware_file="$klipper_dir/out/klipper.uf2"
-        firmware_type="UF2"
-    elif [ -f "$klipper_dir/out/klipper.elf.hex" ]; then
-        firmware_file="$klipper_dir/out/klipper.elf.hex"
-        firmware_type="HEX"
-    fi
-    
-    if [ -n "$firmware_file" ]; then
-        log_success "Firmware built: $firmware_file ($firmware_type)"
+    # Determine flash method based on build artifact
+    if [ -f "$klipper_dir/out/klipper.uf2" ]; then
+        log_success "Firmware built: klipper.uf2"
         echo ""
-        echo "  File: $firmware_file"
+        echo "  Method: Mass Storage Copy (USB Drive)"
+        echo "  Copy to RPI-RP2 drive:"
+        echo "    cp $klipper_dir/out/klipper.uf2 /media/\$USER/RPI-RP2/"
         echo ""
-        echo "  Flash methods:"
-        echo "  1) Copy to USB Drive (UF2 only)"
-        echo "  2) DFU-Flash"
-        echo ""
-        read -p "  Option [1/2]: " opt
+        echo "  Or use file manager to copy."
+        read -p "  Press Enter when done..."
         
-        if [ "$opt" = "1" ] && [ "$firmware_type" = "UF2" ]; then
-            echo "  Copy to /media/\$USER/RPI-RP2/"
-            cp "$firmware_file" "/media/$USER/RPI-RP2/" 2>/dev/null || \
-            echo "  Manual: cp $firmware_file /media/*/RPI-RP2/"
-        elif [ "$opt" = "2" ]; then
-            log_info "Checking for DFU device..."
-            sleep 2
-            if lsusb | grep -q "2e8a:0003"; then
-                log_info "Flashing via DFU..."
-                sudo dfu-util -R -a 0 -s 0x08000000:mass-erase:force -D "$firmware_file"
-                log_success "Done!"
-            else
-                log_error "RP2040 not in DFU mode!"
-                echo "  Enter DFU mode: Hold BOOT + Press RESET"
-            fi
+    elif [ -f "$klipper_dir/out/klipper.bin" ]; then
+        log_success "Firmware built: klipper.bin"
+        echo ""
+        echo "  Method: DFU Flash"
+        
+        if lsusb | grep -q "2e8a:0003"; then
+            log_info "RP2040 detected in DFU mode!"
+            sudo dfu-util -R -a 0 -s 0x08000000:mass-erase:force -D "$klipper_dir/out/klipper.bin"
+            log_success "Flash complete!"
+        else
+            log_error "RP2040 not in DFU mode!"
+            echo "  Enter DFU mode: Hold BOOT + Press RESET"
         fi
     else
-        log_error "Build failed!"
+        log_error "Build failed - no firmware file!"
     fi
     
     read -p "  Press Enter..."
@@ -198,19 +174,23 @@ function build_and_flash_octopus() {
     local klipper_dir="$HOME/klipper"
     cd "$klipper_dir"
     
-    echo "  This will open 'make menuconfig' for STM32F446 selection."
-    echo "  Follow these steps:"
-    echo "    1. Select 'STMicroelectronics STM32'"
-    echo "    2. Select 'STM32F446' or 'Octopus Pro'"
-    echo "    3. Configure CAN bus if needed"
-    echo "    4. Exit and Save"
-    echo ""
-    read -p "  Press Enter to continue..." 
-    
+    log_info "Cleaning..."
     make clean >/dev/null 2>&1
-    make menuconfig
     
-    log_info "Building firmware..."
+    log_info "Generating STM32F446 config (headless)..."
+    cat > .config <<'EOF'
+CONFIG_LOW_LEVEL_OPTIONS=y
+CONFIG_MACH_STM32=y
+CONFIG_MCU="stm32f446"
+CONFIG_BOARD_DIRECTORY="stm32"
+CONFIG_STM32_CLOCK_REF_12M=y
+CONFIG_STM32F446_SELECT=y
+CONFIG_FLASH_START=0x8000000
+CONFIG_FLASH_SIZE=0x80000
+CONFIG_USB_SERIAL_NUMBER_CHIPID=y
+EOF
+    
+    make olddefconfig >/dev/null 2>&1
     make -j$(nproc)
     
     echo ""
@@ -218,14 +198,13 @@ function build_and_flash_octopus() {
     ls -la "$klipper_dir/out/" | grep -i klipper || true
     
     if [ -f "$klipper_dir/out/klipper.bin" ]; then
-        log_success "Firmware built: $klipper_dir/out/klipper.bin"
+        log_success "Firmware built: klipper.bin"
         echo ""
-        echo "  Checking for DFU device..."
-        sleep 2
+        
         if lsusb | grep -q "0483:df11"; then
-            log_info "Flashing via DFU..."
+            log_info "STM32 detected in DFU mode!"
             sudo dfu-util -R -a 0 -s 0x08000000:mass-erase:force -D "$klipper_dir/out/klipper.bin"
-            log_success "Done!"
+            log_success "Flash complete!"
         else
             log_error "STM32 not in DFU mode!"
             echo "  Enter DFU mode: Hold BOOT + Press RESET"
@@ -238,35 +217,7 @@ function build_and_flash_octopus() {
 }
 
 function build_and_flash_stm32() {
-    log_info "Baue Firmware für STM32..."
-    
-    cd "$HOME/klipper"
-    make clean >/dev/null 2>&1
-    
-    cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_MCU="stm32f103xe"
-CONFIG_CLOCK_FREQ=72000000
-CONFIG_FLASH_START=0x8000000
-CONFIG_FLASH_SIZE=0x80000
-CONFIG_USBSERIAL=y
-EOF
-    
-    make olddefconfig >/dev/null 2>&1
-    make -j$(nproc)
-    
-    if [ -f "$HOME/klipper/out/klipper.bin" ]; then
-        log_success "Firmware gebaut!"
-        echo ""
-        echo "  Flashe via DFU..."
-        sudo dfu-util -R -a 0 -s 0x08000000:mass-erase:force -D "$HOME/klipper/out/klipper.bin"
-        log_success "Flash abgeschlossen!"
-    else
-        log_error "Build fehlgeschlagen!"
-    fi
-    
-    read -p "  Enter drücken..."
+    build_and_flash_octopus
 }
 
 function view_firmware_logs() {
