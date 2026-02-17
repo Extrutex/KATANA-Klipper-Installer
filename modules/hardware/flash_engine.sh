@@ -190,29 +190,83 @@ function flash_bin_artifact() {
     echo ""
     echo "  ${C_GREEN}Detected: .bin firmware${NC}"
     echo "  ---------------------------------------------------"
+    echo ""
 
-    # Check for DFU device
+    # === USB DEVICE SCAN ===
+    echo "  Scanning USB devices..."
+    echo ""
+
     local dfu_found=0
-    if command -v dfu-util &> /dev/null; then
-        if dfu-util -l 2>/dev/null | grep -q "Found DFU"; then
+    local serial_device=""
+    local usb_devices=""
+
+    # Check lsusb for STM32 DFU mode (0483:df11)
+    if command -v lsusb &> /dev/null; then
+        usb_devices=$(lsusb 2>/dev/null)
+
+        if echo "$usb_devices" | grep -qi "0483:df11"; then
             dfu_found=1
+            echo -e "  ${C_GREEN}●${NC} STM32 DFU Device detected (0483:df11)"
+        fi
+
+        # Check for Katapult/CanBoot bootloader (1d50:6177)
+        if echo "$usb_devices" | grep -qi "1d50:6177"; then
+            echo -e "  ${C_GREEN}●${NC} Katapult (CanBoot) bootloader detected (1d50:6177)"
+        fi
+
+        # Check for Klipper USB device (1d50:614e)
+        if echo "$usb_devices" | grep -qi "1d50:614e"; then
+            echo -e "  ${C_YELLOW}●${NC} Klipper USB device detected (already running firmware)"
         fi
     fi
 
+    # Also check dfu-util for more detail
+    if [ $dfu_found -eq 0 ] && command -v dfu-util &> /dev/null; then
+        if dfu-util -l 2>/dev/null | grep -q "Found DFU"; then
+            dfu_found=1
+            echo -e "  ${C_GREEN}●${NC} DFU device detected via dfu-util"
+        fi
+    fi
+
+    # Find serial devices (common MCU paths)
+    for dev in /dev/serial/by-id/*; do
+        if [ -e "$dev" ]; then
+            serial_device="$dev"
+            echo -e "  ${C_GREEN}●${NC} USB Serial: $(basename $dev)"
+        fi
+    done
+
+    if [ $dfu_found -eq 0 ] && [ -z "$serial_device" ]; then
+        echo -e "  ${C_YELLOW}○${NC} No MCU devices detected via USB"
+    fi
+
+    echo ""
+    echo "  ---------------------------------------------------"
+
+    # === FLASH METHOD SELECTION ===
     if [ $dfu_found -eq 1 ]; then
-        echo "  ${C_GREEN}DFU device detected!${NC}"
+        echo -e "  ${C_GREEN}Recommended: DFU flash (device in bootloader mode)${NC}"
         echo ""
-        echo "  [1] Flash via DFU (USB)"
+        echo "  [1] Flash via DFU (USB)          ${C_GREEN}← recommended${NC}"
+        echo "  [2] SD Card (manual copy)"
+        echo "  [3] CAN Bus (Katapult)"
+        echo "  [S] Skip"
+    elif [ -n "$serial_device" ]; then
+        echo -e "  ${C_GREEN}Recommended: USB Serial flash${NC}"
+        echo ""
+        echo "  [1] Flash via USB Serial         ${C_GREEN}← recommended${NC}"
         echo "  [2] SD Card (manual copy)"
         echo "  [3] CAN Bus (Katapult)"
         echo "  [S] Skip"
     else
-        echo "  No DFU device detected."
+        echo "  No device auto-detected. Options:"
         echo ""
         echo "  [1] Flash via make flash (USB)"
         echo "  [2] SD Card (manual copy)"
         echo "  [3] CAN Bus (Katapult)"
         echo "  [S] Skip"
+        echo ""
+        echo "  ${C_YELLOW}TIP: Set boot jumper, connect USB, then try [1]${NC}"
     fi
 
     echo ""
@@ -220,21 +274,39 @@ function flash_bin_artifact() {
 
     case $method in
         1)
-            log_info "Flashing..."
-            echo "  Ensure device is in bootloader/DFU mode!"
-            read -p "  Press Enter when ready..."
-            make flash
+            if [ $dfu_found -eq 1 ]; then
+                log_info "Flashing via DFU..."
+                if make flash FLASH_DEVICE=0483:df11; then
+                    log_success "Flash complete!"
+                else
+                    log_error "Flash failed. Check USB connection."
+                fi
+            elif [ -n "$serial_device" ]; then
+                log_info "Flashing via USB Serial: $serial_device"
+                if make flash FLASH_DEVICE="$serial_device"; then
+                    log_success "Flash complete!"
+                else
+                    log_error "Flash failed."
+                fi
+            else
+                log_info "Flashing..."
+                echo "  Ensure device is in bootloader/DFU mode!"
+                read -p "  Press Enter when ready..."
+                make flash
+            fi
             ;;
         2)
             echo ""
             echo "  SD CARD INSTRUCTIONS:"
             echo "  1. Firmware is at: ~/klipper/out/klipper.bin"
-            echo "  2. Download via SCP to your computer"
-            echo "  3. Rename to 'firmware.bin' (check your board docs)"
-            echo "  4. Copy to FAT32 SD card"
-            echo "  5. Insert into board, power cycle"
+            echo "  2. Rename to 'firmware.bin' (check your board docs)"
+            echo "  3. Copy to FAT32 formatted SD card"
+            echo "  4. Insert into board, power cycle"
             echo ""
             echo "  ${C_YELLOW}[!] Some boards need a unique filename each flash.${NC}"
+            echo ""
+            echo "  Quick download via SCP:"
+            echo "  scp $(whoami)@$(hostname -I | awk '{print $1}'):~/klipper/out/klipper.bin ."
             ;;
         3) flash_via_can ;;
         [sS]) return ;;
