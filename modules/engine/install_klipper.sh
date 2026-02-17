@@ -172,16 +172,8 @@ function do_install_moonraker() {
     fi
 
     # 4. Service File
-    # Using KATANA Service Manager v2.0
-    if command -v install_service_from_template &> /dev/null; then
-        install_service_from_template "moonraker"
-    else
-         # Fallback - Create systemd env file first
-         mkdir -p "$HOME/printer_data/systemd"
-         echo "MOONRAKER_ARGS=--config $HOME/printer_data/config/moonraker.conf" > "$HOME/printer_data/systemd/moonraker.env"
-         
-         # Create moonraker.service
-         cat <<EOF | sudo tee /etc/systemd/system/moonraker.service >/dev/null
+    # ALWAYS recreate moonraker.service to ensure correct ExecStart
+    cat <<EOF | sudo tee /etc/systemd/system/moonraker.service >/dev/null
 [Unit]
 Description=Moonraker API Server for Klipper
 Requires=network-online.target
@@ -191,7 +183,6 @@ After=network-online.target
 Type=simple
 User=$USER
 WorkingDirectory=$HOME/moonraker
-EnvironmentFile=$HOME/printer_data/systemd/moonraker.env
 ExecStart=$HOME/moonraker-env/bin/python -m moonraker --config $HOME/printer_data/config/moonraker.conf
 Restart=always
 RestartSec=10
@@ -199,9 +190,8 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
-        sudo systemctl daemon-reload
-        sudo systemctl enable moonraker
-    fi
+    sudo systemctl daemon-reload
+    sudo systemctl enable moonraker
     
     # ALWAYS ensure printer_data directories exist (not just when configs are missing)
     mkdir -p "$HOME/printer_data/config"
