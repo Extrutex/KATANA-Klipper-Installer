@@ -34,10 +34,22 @@ function run_hardware_menu() {
             1) install_happy_hare ;;
             2) install_stealthchanger ;;
             3) install_madmax ;;
-            4) install_smart_probe ;;
-            5) install_cartographer ;;
-            6) install_beacon ;;
-            7) install_btt_eddy ;;
+            4) 
+                source "$MODULES_DIR/extras/smart_probes.sh"
+                run_smartprobe_menu
+                ;;
+            5)
+                source "$MODULES_DIR/extras/smart_probes.sh"
+                install_cartographer
+                ;;
+            6)
+                source "$MODULES_DIR/extras/smart_probes.sh"
+                install_beacon
+                ;;
+            7)
+                source "$MODULES_DIR/extras/smart_probes.sh"
+                install_btt_eddy
+                ;;
             8) install_bed_distance_sensor ;;
             [bB]) return ;;
             *) log_error "Invalid Selection." ;;
@@ -201,214 +213,23 @@ EOF
 }
 
 # ============================================================
-# CARTOGRAPHER PROBE (Reference: Cartographer3D)
+# CARTOGRAPHER PROBE - Redirects to smart_probes.sh
 # ============================================================
-
-function install_cartographer() {
-    draw_header "CARTOGRAPHER PROBE"
-    echo ""
-    echo "  Reference: https://github.com/Cartographer3D"
-    echo ""
-    echo "  Cartographer is an inductive/ eddy-based Z-probe."
-    echo ""
-    echo "  Features:"
-    echo "  • High-speed meshing"
-    echo "  • Induktive / Eddy-basierte Z-Messung"
-    echo "  • Sensor-Kalibrierung"
-    echo ""
-    read -p "  Install Cartographer config? [y/N]: " yn
-    
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
-    
-    local cfg_dir="$HOME/printer_data/config"
-    local probe_dir="$cfg_dir/cartographer"
-    
-    mkdir -p "$probe_dir"
-    
-    # Create Cartographer config
-    cat > "$probe_dir/cartographer.cfg" << 'EOF'
-# Cartographer Probe Configuration
-# Reference: https://github.com/Cartographer3D
-
-[probe]
-pin: PG12
-x_offset: 0
-y_offset: 0
-z_offset: 0
-speed: 10
-samples: 2
-sample_retract_dist: 3
-samples_tolerance: 0.006
-samples_tolerance_retries: 3
-
-[safe_z_home]
-home_xy_position: 150,150
-z_hop: 10
-z_hop_speed: 5
-
-[bed_mesh]
-speed: 50
-horizontal_move_z: 5
-mesh_min: 20,20
-mesh_max: 280,280
-probe_count: 5,5
-algorithm: bidirectional
-bicubic_tension: 0.2
-EOF
-
-    # Add include to printer.cfg
-    local pcfg="$cfg_dir/printer.cfg"
-    if [ -f "$pcfg" ]; then
-        if ! grep -q "cartographer" "$pcfg"; then
-            echo "" >> "$pcfg"
-            echo "# --- Cartographer Probe ---" >> "$pcfg"
-            echo "[include cartographer/*.cfg]" >> "$pcfg"
-        fi
-    fi
-    
-    # Register for Moonraker Update Manager
-    register_cartographer_updates
-    
-    draw_success "Cartographer config created!"
-    echo "  Location: $probe_dir/cartographer.cfg"
-    echo "  [i] Adjust pin, offsets, and mesh size for your setup!"
-    read -p "  Press Enter..."
-}
+# Real implementation is in modules/extras/smart_probes.sh
+# This module's install_cartographer has been removed to avoid
+# installing fake [probe] configs with invented pin numbers.
+# The smart_probes.sh version clones the official repo and runs
+# the upstream install script.
 
 # ============================================================
-# BEACON PROBE (Reference: beacon3d)
+# BEACON PROBE - Redirects to smart_probes.sh
 # ============================================================
-
-function install_beacon() {
-    draw_header "BEACON PROBE"
-    echo ""
-    echo "  Reference: https://github.com/beacon3d"
-    echo ""
-    echo "  Beacon is an Eddy Current Probe for high-precision Z-mapping."
-    echo ""
-    echo "  Features:"
-    echo "  • Echtzeit Z-Mapping"
-    echo "  • Eddy Current Technology"
-    echo "  • Mesh-Integration mit Klipper"
-    echo ""
-    read -p "  Install Beacon config? [y/N]: " yn
-    
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
-    
-    local cfg_dir="$HOME/printer_data/config"
-    local beacon_dir="$cfg_dir/beacon"
-    
-    mkdir -p "$beacon_dir"
-    
-    # Create Beacon config
-    cat > "$beacon_dir/beacon.cfg" << 'EOF'
-# Beacon Probe Configuration
-# Reference: https://github.com/beacon3d
-
-[probe]
-pin: PA4
-x_offset: 0
-y_offset: 0
-z_offset: 0
-speed: 20
-samples: 3
-sample_retract_dist: 2
-
-[bed_mesh]
-speed: 100
-horizontal_move_z: 5
-mesh_min: 25,25
-mesh_max: 275,275
-probe_count: 7,7
-algorithm: bidirectional
-EOF
-
-    # Add include to printer.cfg
-    local pcfg="$cfg_dir/printer.cfg"
-    if [ -f "$pcfg" ]; then
-        if ! grep -q "beacon" "$pcfg"; then
-            echo "" >> "$pcfg"
-            echo "# --- Beacon Probe ---" >> "$pcfg"
-            echo "[include beacon/*.cfg]" >> "$pcfg"
-        fi
-    fi
-    
-    # Register for Moonraker Update Manager
-    register_beacon_updates
-    
-    draw_success "Beacon config created!"
-    echo "  Location: $beacon_dir/beacon.cfg"
-    echo "  [i] Adjust pin and mesh size for your setup!"
-    read -p "  Press Enter..."
-}
+# Real implementation is in modules/extras/smart_probes.sh
 
 # ============================================================
-# BTT EDDY PROBE (Reference: bigtreetech/Eddy)
+# BTT EDDY PROBE - Redirects to smart_probes.sh
 # ============================================================
-
-function install_btt_eddy() {
-    draw_header "BTT EDDY PROBE"
-    echo ""
-    echo "  Reference: https://github.com/bigtreetech/Eddy"
-    echo ""
-    echo "  BTT Eddy is an Eddy Current Probe from BigTreeTech."
-    echo ""
-    echo "  Features:"
-    echo "  • Eddy Current Probe Implementation"
-    echo "  • Sensor Firmware"
-    echo "  • Klipper Integration"
-    echo ""
-    read -p "  Install BTT Eddy config? [y/N]: " yn
-    
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
-    
-    local cfg_dir="$HOME/printer_data/config"
-    local eddy_dir="$cfg_dir/btt_eddy"
-    
-    mkdir -p "$eddy_dir"
-    
-    # Create BTT Eddy config
-    cat > "$eddy_dir/eddy.cfg" << 'EOF'
-# BTT Eddy Probe Configuration
-# Reference: https://github.com/bigtreetech/Eddy
-
-[probe]
-pin: PC14
-x_offset: 0
-y_offset: 0
-z_offset: 0
-speed: 15
-samples: 3
-sample_retract_dist: 3
-
-[bed_mesh]
-speed: 50
-horizontal_move_z: 5
-mesh_min: 20,20
-mesh_max: 280,280
-probe_count: 5,5
-algorithm: bidirectional
-EOF
-
-    # Add include to printer.cfg
-    local pcfg="$cfg_dir/printer.cfg"
-    if [ -f "$pcfg" ]; then
-        if ! grep -q "btt_eddy" "$pcfg"; then
-            echo "" >> "$pcfg"
-            echo "# --- BTT Eddy Probe ---" >> "$pcfg"
-            echo "[include btt_eddy/*.cfg]" >> "$pcfg"
-        fi
-    fi
-    
-    # Register for Moonraker Update Manager
-    register_btt_eddy_updates
-    
-    draw_success "BTT Eddy config created!"
-    echo "  Location: $eddy_dir/eddy.cfg"
-    echo "  [i] Adjust pin, offsets, and mesh size for your setup!"
-    echo "  [i] Requires BTT Eddy sensor firmware!"
-    read -p "  Press Enter..."
-}
+# Real implementation is in modules/extras/smart_probes.sh
 
 # ============================================================
 # BED DISTANCE SENSOR (Reference: markniu/Bed_Distance_sensor)

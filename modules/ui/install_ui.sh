@@ -86,26 +86,6 @@ function do_install_fluidd() {
     read -p "  Press Enter..."
 }
 
-function do_install_fluidd() {
-    log_info "Installing Fluidd..."
-    local install_dir="$HOME/fluidd"
-     if [ -d "$install_dir" ]; then
-        log_warn "Fluidd already exists at $install_dir"
-    else
-        mkdir -p "$install_dir"
-        wget -q -O fluidd.zip https://github.com/fluidd-core/fluidd/releases/latest/download/fluidd.zip
-        unzip -q fluidd.zip -d "$install_dir"
-        rm fluidd.zip
-        log_success "Fluidd downloaded."
-    fi
-    
-    # Configure Nginx
-    setup_nginx "fluidd"
-    
-    log_success "Fluidd Installed."
-    read -p "  Press Enter..."
-}
-
 
 
 function uninstall_mainsail() {

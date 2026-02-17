@@ -508,16 +508,47 @@ function update_ui_only() {
 
 function update_extras_only() {
     draw_header "UPDATE - EXTRAS"
-    echo "  Updating all extras..."
-    # TODO: Implement
-    read -p "  Enter..."
+    log_info "Checking installed extras for updates..."
+    
+    local dirs=("$HOME/crowsnest" "$HOME/KlipperScreen" "$HOME/happy_hare" "$HOME/Cartographer" "$HOME/beacon" "$HOME/Eddy")
+    for d in "${dirs[@]}"; do
+        if [ -d "$d/.git" ]; then
+            local name=$(basename "$d")
+            echo -ne "  [..] Updating $name..."
+            if git -C "$d" pull --quiet 2>/dev/null; then
+                echo -e "\r${C_GREEN}  [OK] $name updated${NC}    "
+            else
+                echo -e "\r${C_YELLOW}  [--] $name: no changes or error${NC}    "
+            fi
+        fi
+    done
+    
+    log_success "Extras update check complete."
+    read -p "  Press Enter..."
 }
 
 function check_updates_only() {
     draw_header "CHECK FOR UPDATES"
-    echo "  Checking for updates..."
-    # TODO: Implement
-    read -p "  Enter..."
+    log_info "Checking for available updates (no changes will be made)..."
+    echo ""
+    
+    local dirs=("$HOME/klipper" "$HOME/moonraker" "$HOME/crowsnest" "$HOME/KlipperScreen")
+    for d in "${dirs[@]}"; do
+        if [ -d "$d/.git" ]; then
+            local name=$(basename "$d")
+            git -C "$d" fetch --quiet 2>/dev/null
+            local local_sha=$(git -C "$d" rev-parse HEAD 2>/dev/null)
+            local remote_sha=$(git -C "$d" rev-parse @{u} 2>/dev/null)
+            if [ "$local_sha" = "$remote_sha" ]; then
+                echo -e "  ${C_GREEN}●${NC} $name: up to date"
+            else
+                echo -e "  ${C_YELLOW}●${NC} $name: UPDATE AVAILABLE"
+            fi
+        fi
+    done
+    
+    echo ""
+    read -p "  Press Enter..."
 }
 
 # ============================================================
@@ -581,20 +612,21 @@ function run_extras_webui() {
 }
 
 function install_fluidd() {
-    draw_header "INSTALL FLUIDD"
-    echo "  Installing Fluidd..."
-    # TODO: Implement
-    read -p "  Enter..."
+    if [ -f "$MODULES_DIR/ui/install_ui.sh" ]; then
+        source "$MODULES_DIR/ui/install_ui.sh"
+        do_install_fluidd
+    else
+        log_error "Module missing: ui/install_ui.sh"
+    fi
 }
 
 function switch_ui() {
-    draw_header "SWITCH UI"
-    echo "  Which UI do you want to use?"
-    echo "  [1] Mainsail"
-    echo "  [2] Fluidd"
-    read -p "  >> " ch
-    # TODO: Implement
-    read -p "  Enter..."
+    if [ -f "$MODULES_DIR/ui/install_ui.sh" ]; then
+        source "$MODULES_DIR/ui/install_ui.sh"
+        install_ui_stack
+    else
+        log_error "Module missing: ui/install_ui.sh"
+    fi
 }
 
 function run_extras_vision() {
@@ -620,17 +652,21 @@ function run_extras_vision() {
 }
 
 function install_crowsnest() {
-    draw_header "INSTALL CROWSNEST"
-    echo "  Installing Crowsnest..."
-    # TODO: Implement
-    read -p "  Enter..."
+    if [ -f "$MODULES_DIR/vision/install_crowsnest.sh" ]; then
+        source "$MODULES_DIR/vision/install_crowsnest.sh"
+        do_install_crowsnest
+    else
+        log_error "Module missing: vision/install_crowsnest.sh"
+    fi
 }
 
 function install_klipperscreen() {
-    draw_header "INSTALL KLIPPERSCREEN"
-    echo "  Installing KlipperScreen..."
-    # TODO: Implement
-    read -p "  Enter..."
+    if [ -f "$MODULES_DIR/extras/install_klipperscreen.sh" ]; then
+        source "$MODULES_DIR/extras/install_klipperscreen.sh"
+        install_klipperscreen
+    else
+        log_error "Module missing: extras/install_klipperscreen.sh"
+    fi
 }
 
 function run_extras_smartprobes() {
@@ -661,10 +697,7 @@ function run_extras_smartprobes() {
     done
 }
 
-function install_smartprobe() { draw_header "SMART PROBE"; read -p "  Enter..."; }
-function install_cartographer() { draw_header "CARTOGRAPHER"; read -p "  Enter..."; }
-function install_beacon() { draw_header "BEACON PROBE"; read -p "  Enter..."; }
-function install_btt_eddy() { draw_header "BTT EDDY"; read -p "  Enter..."; }
+# Probe install functions are provided by modules/extras/smart_probes.sh (sourced at startup)
 
 function run_extras_beddistance() {
     draw_header "📏 BED DISTANCE SENSOR"
@@ -701,9 +734,7 @@ function run_extras_toolchanger() {
     done
 }
 
-function install_happyhare() { draw_header "HAPPY HARE"; read -p "  Enter..."; }
-function install_stealthchanger() { draw_header "STEALTHCHANGER"; read -p "  Enter..."; }
-function install_madmax() { draw_header "MADMAX"; read -p "  Enter..."; }
+# Toolchanger install functions are provided by modules/hardware/menu.sh (sourced at startup)
 
 function run_extras_tuning() {
     while true; do
@@ -730,7 +761,7 @@ function run_extras_tuning() {
     done
 }
 
-function install_shaketune() { draw_header "SHAKETUNE"; read -p "  Enter..."; }
+# ShakeTune install is provided by modules/extras/tuning.sh (sourced via dispatcher)
 function install_octoprint() { run_octoprint_install; }
 
 function run_extras_system() {
@@ -756,10 +787,8 @@ function run_extras_system() {
                     install_log2ram
                 fi 
                 ;;
-            2) run_security_menu ;; # Use security menu which has backup inside
-            3) run_security_menu ;;
-            b|B) return ;;
-            3) run_backup_restore ;;
+            2) run_backup_menu ;;
+            3) restore_backup ;;
             b|B) return ;;
         esac
     done

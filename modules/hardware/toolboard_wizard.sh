@@ -9,7 +9,7 @@ function run_toolboard_wizard() {
         draw_header "TOOLBOARD WIZARD"
         echo "  Specialized Flashing for CanBus Toolboards."
         echo ""
-        echo "  [1] LDO Nitehawk 36/42 (RP2040) - USB/UF2"
+        echo "  [1] LDO Nitehawk 36/42 (RP2040) - USB ONLY (Not CAN Flashing)"
         echo "  [2] BTT SB2209 / EBB36 (STM32G0B1) - DFU Mode"
         echo "  [3] Mellow Fly-SHT (STM32F072) - DFU Mode"
         echo ""
