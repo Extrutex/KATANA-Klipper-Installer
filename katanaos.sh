@@ -1,13 +1,13 @@
 #!/bin/bash
 ################################################################################
-#  ⚔️  KATANAOS - THE KLIPPER BLADE v2.2
+#  ⚔️  KATANAOS - THE KLIPPER BLADE v2.3
 # ------------------------------------------------------------------------------
 #  PRO-GRADE KLIPPER INSTALLATION & MANAGEMENT SUITE
 #  Modular Architecture | Native Flow | Multi-Engine
 ################################################################################
 
 # --- VERSION ---
-VERSION="v2.2"
+VERSION="v2.3"
 BUILD="2026-02-17"
 
 # Fix terminal for proper display
@@ -69,15 +69,16 @@ source "$CORE_DIR/engine_manager.sh"
 source "$CORE_DIR/dispatchers.sh"
 source "$CORE_DIR/service_manager.sh"
 source "$MODULES_DIR/engine/install_klipper.sh"
-# source "$MODULES_DIR/hardware/canbus.sh" # Deprecated/Merged into Forge
 if [ -f "$MODULES_DIR/diagnostics/dr_katana.sh" ]; then
     source "$MODULES_DIR/diagnostics/dr_katana.sh"
     source "$MODULES_DIR/diagnostics/medic.sh"
 fi
-# Hardware Extensions
+
+# Hardware & Extras
 source "$MODULES_DIR/extras/install_happy_hare.sh"
 source "$MODULES_DIR/hardware/smart_probe.sh"
 source "$MODULES_DIR/hardware/menu.sh"
+
 # Security & Vault
 source "$MODULES_DIR/security/hardening.sh"
 source "$MODULES_DIR/security/vault.sh"
@@ -105,7 +106,7 @@ function main() {
     
     # 1. Initialize System
     log_info "KATANA $VERSION initializing..."
-    check_environment  # Defined in core/env_check.sh
+    check_environment
     
     echo ""
     echo -e "  ${C_PURPLE}KATANAOS $VERSION${NC} | Profile: ${C_NEON}$INSTALL_PROFILE${NC}"
@@ -113,26 +114,17 @@ function main() {
     
     # 2. Main Loop
     while true; do
-        draw_main_menu  # Defined in core/ui_renderer.sh
+        draw_main_menu
         read -p "  >> COMMAND: " choice
         
         case $choice in
-            1) run_autopilot ;;
-            2) run_installer_menu ;;
-            3) run_ui_installer ;;
-            4) run_vision_stack ;;
-            5) run_forge ;;
-            6) run_engine_manager ;;
-            7) update_core_stack ;;
-            8) run_dr_katana ;;
-            9) run_katana_flow ;;
-            10) run_hardware_menu ;;
-            11) run_security_menu ;;
-            12) run_backup_restore ;;
-            13) run_uninstaller ;;
-            14) run_printer_config_wizard ;;
-            15) run_service_manager_menu ;;
-            [hH]) run_hardware_menu ;;
+            1) run_quick_start ;;
+            2) run_update_menu ;;
+            3) run_extras_menu ;;
+            4) run_forge_menu ;;
+            5) run_diagnose_menu ;;
+            6) run_settings_menu ;;
+            [hH]) run_extras_menu ;;
             [qQxX]) 
                 draw_exit_screen
                 exit 0 
