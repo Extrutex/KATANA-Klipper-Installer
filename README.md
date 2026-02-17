@@ -141,6 +141,47 @@ chmod +x katanaos.sh
 ```
 
 
+### 🛡️ Firewall & Port Management
+
+KATANAOS includes an optional UFW firewall. If enabled, certain ports are open by default:
+
+| Port | Service | Default |
+|------|---------|---------|
+| 22 | SSH | ✅ Open |
+| 80 | HTTP (Mainsail/Fluidd) | ✅ Open |
+| 443 | HTTPS | ✅ Open |
+| 7125 | Moonraker API | ✅ Open |
+| 8080 | Crowsnest/Webcam | ✅ Open |
+
+**Opening additional ports:**
+
+If you install additional services (like Spoolman on port 9000), you can open ports via the menu:
+
+```
+[11] Security → [6] Port Management
+```
+
+Or via command line:
+```bash
+sudo ufw allow 9000/tcp
+```
+
+**Closing ports:**
+```bash
+sudo ufw delete allow 9000/tcp
+```
+
+**View current rules:**
+```bash
+sudo ufw status numbered
+```
+
+**Disable firewall (if needed):**
+```bash
+sudo ufw disable
+```
+
+
 ### 📋 Menu Reference
 
 After launching `./katanaos.sh`, the main menu appears with a structured interface. Use the number keys (1-15) to navigate and press Enter to execute. Press X to exit.

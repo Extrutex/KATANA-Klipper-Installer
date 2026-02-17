@@ -12,6 +12,7 @@ function run_hardening_wizard() {
         echo "  [3] SSH Hardening Only"
         echo "  [4] Log2Ram (SD Card Protection)"
         echo "  [5] View Current Security Status"
+        echo "  [6] Port Management (Open/Close Ports)"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -23,6 +24,7 @@ function run_hardening_wizard() {
             3) ssh_hardening ;;
             4) install_log2ram ;;
             5) show_security_status ;;
+            6) port_management ;;
             b|B) return ;;
         esac
     done
@@ -244,5 +246,104 @@ function show_security_status() {
     fi
     echo ""
     
+    read -p "  Press Enter..."
+}
+
+function port_management() {
+    while true; do
+        draw_header "PORT MANAGEMENT"
+        
+        echo "  Current open ports:"
+        echo ""
+        sudo ufw status numbered | grep -E "^\[" | sed 's/^/  /'
+        echo ""
+        echo "  ${C_NEON}[1]${NC}  Open Port (e.g., 8080, 9000)"
+        echo "  ${C_RED}[2]${NC}  Close Port"
+        echo "  ${C_YELLOW}[3]${NC}  Common Ports Quick Add"
+        echo ""
+        echo "  [B] Back"
+        echo ""
+        read -p "  >> " ch
+        
+        case $ch in
+            1) open_port ;;
+            2) close_port ;;
+            3) quick_ports ;;
+            b|B) return ;;
+        esac
+    done
+}
+
+function open_port() {
+    echo ""
+    read -p "  Enter port number: " port
+    read -p "  Enter service name (optional, e.g., Spoolman): " service
+    
+    if [ -z "$port" ]; then
+        log_error "No port specified."
+        return
+    fi
+    
+    sudo ufw allow $port/tcp
+    log_success "Port $port opened!"
+    echo ""
+    read -p "  Press Enter..."
+}
+
+function close_port() {
+    echo ""
+    sudo ufw status numbered | grep -E "^\["
+    echo ""
+    read -p "  Enter rule number to delete: " rule_num
+    
+    if [ -z "$rule_num" ]; then
+        log_error "No rule specified."
+        return
+    fi
+    
+    sudo ufw delete $rule_num
+    log_success "Rule deleted!"
+    echo ""
+    read -p "  Press Enter..."
+}
+
+function quick_ports() {
+    draw_header "QUICK PORT ADD"
+    
+    echo "  Common ports for 3D printing:"
+    echo ""
+    echo "  [1]  8080  - Crowsnest/Webcam"
+    echo "  [2]  8081  - Second Camera"
+    echo "  [3]  8888  - OctoPrint"
+    echo "  [4]  9000  - Spoolman"
+    echo "  [5]  3000  - Custom Web UI"
+    echo "  [6]  5432  - PostgreSQL"
+    echo "  [7]  3306  - MySQL/MariaDB"
+    echo ""
+    echo "  [A]  Add all common ports"
+    echo "  [B]  Back"
+    echo ""
+    read -p "  >> " ch
+    
+    case $ch in
+        1) sudo ufw allow 8080/tcp ;;
+        2) sudo ufw allow 8081/tcp ;;
+        3) sudo ufw allow 8888/tcp ;;
+        4) sudo ufw allow 9000/tcp ;;
+        5) sudo ufw allow 3000/tcp ;;
+        6) sudo ufw allow 5432/tcp ;;
+        7) sudo ufw allow 3306/tcp ;;
+        a|A) 
+            sudo ufw allow 8080/tcp
+            sudo ufw allow 8081/tcp
+            sudo ufw allow 8888/tcp
+            sudo ufw allow 9000/tcp
+            sudo ufw allow 3000/tcp
+            ;;
+        *) return ;;
+    esac
+    
+    log_success "Ports added!"
+    echo ""
     read -p "  Press Enter..."
 }
