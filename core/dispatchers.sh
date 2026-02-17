@@ -96,10 +96,9 @@ function run_vision_stack() {
 
 # 5. THE FORGE
 function run_forge() {
-    if [ -f "$MODULES_DIR/hardware/flash_registry.sh" ]; then
-        source "$MODULES_DIR/hardware/flash_registry.sh"
+    if [ -f "$MODULES_DIR/hardware/flash_engine.sh" ]; then
         source "$MODULES_DIR/hardware/flash_engine.sh"
-        run_flash_menu
+        run_hal_flasher
     else
         log_error "Module missing: hardware/flash_registry.sh"
     fi
@@ -131,9 +130,11 @@ function run_security_menu() {
             fi
             ;;
         2)
-            if [ -f "$CORE_DIR/backup_manager.sh" ]; then
-                source "$CORE_DIR/backup_manager.sh"
+            if [ -f "$MODULES_DIR/system/backup_restore.sh" ]; then
+                source "$MODULES_DIR/system/backup_restore.sh"
                 run_backup_menu
+            else
+                log_error "Module missing: system/backup_restore.sh"
             fi
             ;;
         [bB]) return ;;

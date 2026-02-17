@@ -25,9 +25,10 @@ function add_update_manager_entry() {
         touch "$moonraker_conf"
     fi
     
-    # Check if entry already exists
-    if grep -q "\[update_manager $name\]" "$moonraker_conf" 2>/dev/null; then
-        log_info "Update manager entry for '$name' already exists."
+    # Check if entry already exists (Strict Check)
+    # We check for the exact section header [update_manager name]
+    if grep -Fq "[update_manager $name]" "$moonraker_conf"; then
+        log_info "Update manager entry for '$name' already exists. Skipping."
         return 0
     fi
     

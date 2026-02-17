@@ -749,7 +749,10 @@ function run_extras_system() {
         
         case $ch in
             1) install_log2ram ;;
-            2) run_backup_restore ;;
+            1) install_log2ram ;;
+            2) run_security_menu ;; # Use security menu which has backup inside
+            3) run_security_menu ;;
+            b|B) return ;;
             3) run_backup_restore ;;
             b|B) return ;;
         esac

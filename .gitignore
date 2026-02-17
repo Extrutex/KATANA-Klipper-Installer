@@ -14,3 +14,11 @@ configs/userspace/*.cfg
 # System
 .DS_Store.agent/
 .agent/
+
+# System
+.DS_Store
+.agent/
+.gemini/
+deploy_update.sh
+verify_install.sh
+
