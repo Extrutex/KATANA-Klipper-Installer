@@ -122,62 +122,68 @@ function build_and_flash_rp2040() {
     local klipper_dir="$HOME/klipper"
     cd "$klipper_dir"
     
-    cat > .config <<'EOF'
-CONFIG_LOW_LEVEL_OPTIONS=y
-CONFIG_MACH_RP2040=y
-CONFIG_BOARD_DIRECTORY="rp2040"
-CONFIG_MCU="rp2040"
-CONFIG_FLASH_START=0x10000
-CONFIG_FLASH_SIZE=0x200000
+    # Erst defconfig mit defaults, dann unsere config
+    make rp2040_defconfig
+    
+    # Unsere zusätzlichen Optionen hinzufügen
+    cat >> .config <<'EOF'
 CONFIG_RP2040_FLASH_START_2000=y
 CONFIG_RP2040_U2F_FIRMWARE=y
 CONFIG_USB_SERIAL_NUMBER_CHIPID=y
 EOF
     
-    make clean >/dev/null 2>&1
     make olddefconfig >/dev/null 2>&1
     make -j$(nproc)
     
+    # Prüfe welche Dateien gebaut wurden
+    ls -la "$klipper_dir/out/" | grep -i klipper
+    
     local firmware_file=""
+    local firmware_type=""
+    
+    # Priorität: UF2 > BIN > HEX
     if [ -f "$klipper_dir/out/klipper.uf2" ]; then
         firmware_file="$klipper_dir/out/klipper.uf2"
+        firmware_type="UF2"
+    elif [ -f "$klipper_dir/out/klipper.bin" ]; then
+        firmware_file="$klipper_dir/out/klipper.bin"
+        firmware_type="BIN"
     elif [ -f "$klipper_dir/out/klipper.elf.hex" ]; then
         firmware_file="$klipper_dir/out/klipper.elf.hex"
+        firmware_type="HEX"
     fi
     
     if [ -n "$firmware_file" ]; then
-        log_success "Firmware gebaut: $firmware_file"
+        log_success "Firmware gebaut: $firmware_file ($firmware_type)"
         echo ""
-        echo "  1) Datei auf RP2040 kopieren (als USB-Laufwerk)"
-        echo "  2) DFU-Flash"
+        echo "  Datei: $firmware_file"
         echo ""
-        read -p "  Option [1/2/Enter für DFU]: " opt
-        if [ "$opt" = "1" ]; then
-            echo "  Kopiere $firmware_file nach /media/\$USER/RPI-RP2/"
+        echo "  Flash-Methoden:"
+        echo "  1) Kopieren (USB-Laufwerk) - NUR bei UF2"
+        echo "  2) DFU-Flash (sudo)"
+        echo ""
+        read -p "  Option [1/2]: " opt
+        if [ "$opt" = "1" ] && [ "$firmware_type" = "UF2" ]; then
+            echo "  Kopiere nach /media/\$USER/RPI-RP2/"
             cp "$firmware_file" "/media/$USER/RPI-RP2/" 2>/dev/null || \
-            echo "  Bitte manuell kopieren: $firmware_file"
-        else
-            log_info "Prüfe auf DFU-Gerät..."
-            if ! lsusb | grep -q "2e8a:0003"; then
-                log_error "RP2040 nicht im DFU-Modus!"
-                echo ""
-                echo "  So kommst du in den DFU-Modus:"
-                echo "  1. Halte den BOOT-Button gedrückt"
-                echo "  2. Drücke RESET (oder stecke USB ein)"
-                echo "  3. BOOT-Button loslassen"
-                echo ""
-                echo "  Das Gerät sollte jetzt als 'Raspberry Pi RP2' in lsusb erscheinen."
-            else
+            echo "  Bitte manuell: cp $firmware_file /media/*/RPI-RP2/"
+        elif [ "$opt" = "2" ]; then
+            log_info "Prüfe DFU-Gerät..."
+            sleep 2
+            if lsusb | grep -q "2e8a:0003"; then
                 log_info "Flash via DFU..."
                 sudo dfu-util -d 2e8a:0003 -a 0 -D "$firmware_file" -s 0x8000000:leave
-                log_success "Flash abgeschlossen!"
+                log_success "Fertig!"
+            else
+                log_error "RP2040 nicht gefunden!"
+                echo "  Bitte in DFU-Modus: BOOT + RESET"
             fi
         fi
     else
-        log_error "Build fehlgeschlagen!"
+        log_error "Keine Firmware gefunden!"
     fi
     
-    read -p "  Enter drücken..."
+    read -p "  Enter..."
 }
 
 function build_and_flash_stm32() {
@@ -222,7 +228,6 @@ function view_firmware_logs() {
     fi
     
     read -p "  Press Enter..."
-}
 }
 
 function detect_mcus() {
