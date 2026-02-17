@@ -32,7 +32,7 @@ function run_flash_menu() {
 function auto_flash_mcu() {
     draw_header "⚡ AUTO-FLASH MCU"
     
-    echo "  Suche nach verbundenen MCUs..."
+    echo "  Scanning for connected MCUs..."
     echo ""
     
     # Detect USB devices
@@ -40,53 +40,57 @@ function auto_flash_mcu() {
     
     if [ -z "$usb_devices" ]; then
         log_error "No USB devices found!"
-        read -p "  Enter drücken..."
+        read -p "  Press Enter..."
         return
     fi
     
-    echo "  ${C_GREEN} Gefundene USB-Geräte:${NC}"
+    echo "  ${C_GREEN}Found USB devices:${NC}"
     echo "$usb_devices" | sed 's/^/    /'
     echo ""
     
     local detected_mcus=()
+    local detected_names=()
     local detected=""
     
+    # RP2040 in DFU mode
     if echo "$usb_devices" | grep -qi "2e8a:0003"; then
         detected_mcus+=("rp2040")
-        log_info "Detected: RP2040 (Raspberry Pi Pico)"
+        detected_names+=("RP2040 (Raspberry Pi Pico) - DFU Mode")
     fi
     
+    # STM32 in DFU mode (0483:df11)
     if echo "$usb_devices" | grep -qi "0483:df11"; then
         detected_mcus+=("stm32_dfu")
-        log_info "Detected: STM32 in DFU Mode (0483:df11)"
+        detected_names+=("STM32 - DFU Mode")
     fi
     
+    # STM32F446 / Octopus Pro (1d50:614e) - USB Serial mode
     if echo "$usb_devices" | grep -qi "1d50:614e"; then
-        detected_mcus+=("stm32_can")
-        log_info "Detected: STM32 (CAN Mode)"
+        detected_mcus+=("octopus_pro")
+        detected_names+=("Octopus Pro (STM32F446) - USB Serial")
     fi
     
     if [ ${#detected_mcus[@]} -eq 0 ]; then
-        log_error "Kein unterstützter MCU erkannt!"
+        log_error "No supported MCU detected!"
         echo ""
-        echo "  Unterstützte Geräte:"
+        echo "  Supported devices:"
         echo "  - Raspberry Pi Pico (RP2040)"
-        echo "  - STM32 (verschiedene - DFU-Modus)"
-        echo "  - STM32 (CAN-Bus)"
+        echo "  - Octopus Pro (STM32F446)"
+        echo "  - Other STM32 boards in DFU mode"
         echo ""
-        echo "  Stellen Sie sicher, dass Ihr Gerät im DFU-Modus ist!"
-        read -p "  Enter drücken..."
+        echo "  Make sure your device is in DFU mode!"
+        read -p "  Press Enter..."
         return
     fi
     
     echo ""
     if [ ${#detected_mcus[@]} -eq 1 ]; then
         detected="${detected_mcus[0]}"
-        echo "  Single MCU detected: $detected"
+        echo "  Detected: ${detected_names[0]}"
     else
         echo "  Multiple MCUs detected:"
         for i in "${!detected_mcus[@]}"; do
-            echo "    $((i+1)) ${detected_mcus[$i]}"
+            echo "    $((i+1)) ${detected_names[$i]}"
         done
         echo ""
         read -p "  Select MCU to flash [1-${#detected_mcus[@]}]: " sel
@@ -99,42 +103,43 @@ function auto_flash_mcu() {
     fi
     
     echo ""
-    read -p "  Flash $detected? [y/N] " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then
-        return
-    fi
+    log_info "Flashing $detected..."
     
     # Build and flash based on detected device
     case "$detected" in
         rp2040)
             build_and_flash_rp2040 ;;
-        stm32_dfu)
+        octopus_pro|stm32_dfu)
             build_and_flash_stm32 ;;
-        stm32_can)
-            log_info "STM32 in CAN mode detected - use Quick CAN Setup to flash"
-            read -p "  Press Enter..." ;;
     esac
 }
 
 function build_and_flash_rp2040() {
-    log_info "Building firmware for RP2040..."
+    draw_header "BUILD RP2040 FIRMWARE"
     
     local klipper_dir="$HOME/klipper"
     cd "$klipper_dir"
     
-    # Use rp2040_defconfig as base
-    make rp2040_defconfig
+    echo "  This will open 'make menuconfig' for RP2040 selection."
+    echo "  Follow these steps:"
+    echo "    1. Select 'Raspberry Pi RP2040' from the list"
+    echo "    2. Navigate to 'Exit'"
+    echo "    3. Save configuration when asked"
+    echo ""
+    read -p "  Press Enter to continue..." 
     
-    # Add our config - NO U2F, use serial/dfu instead
-    cat >> .config <<'EOF'
-CONFIG_RP2040_FLASH_START_2000=y
-CONFIG_USB_SERIAL_NUMBER_CHIPID=y
-EOF
+    # Clean first
+    make clean >/dev/null 2>&1
     
-    make olddefconfig >/dev/null 2>&1
+    # Open menuconfig - user selects RP2040
+    make menuconfig
+    
+    # Build
+    log_info "Building firmware..."
     make -j$(nproc)
     
-    # Show what was built
+    # Check output
+    echo ""
     echo "  Build output:"
     ls -la "$klipper_dir/out/" | grep -i klipper || true
     
@@ -153,28 +158,17 @@ EOF
         firmware_type="HEX"
     fi
     
-    # Priorität: UF2 > BIN > HEX
-    if [ -f "$klipper_dir/out/klipper.uf2" ]; then
-        firmware_file="$klipper_dir/out/klipper.uf2"
-        firmware_type="UF2"
-    elif [ -f "$klipper_dir/out/klipper.bin" ]; then
-        firmware_file="$klipper_dir/out/klipper.bin"
-        firmware_type="BIN"
-    elif [ -f "$klipper_dir/out/klipper.elf.hex" ]; then
-        firmware_file="$klipper_dir/out/klipper.elf.hex"
-        firmware_type="HEX"
-    fi
-    
     if [ -n "$firmware_file" ]; then
         log_success "Firmware built: $firmware_file ($firmware_type)"
         echo ""
         echo "  File: $firmware_file"
         echo ""
         echo "  Flash methods:"
-        echo "  1) Copy to USB Drive - ONLY for UF2"
-        echo "  2) DFU-Flash (sudo)"
+        echo "  1) Copy to USB Drive (UF2 only)"
+        echo "  2) DFU-Flash"
         echo ""
         read -p "  Option [1/2]: " opt
+        
         if [ "$opt" = "1" ] && [ "$firmware_type" = "UF2" ]; then
             echo "  Copy to /media/\$USER/RPI-RP2/"
             cp "$firmware_file" "/media/$USER/RPI-RP2/" 2>/dev/null || \
@@ -187,15 +181,60 @@ EOF
                 sudo dfu-util -R -a 0 -s 0x08000000:mass-erase:force -D "$firmware_file"
                 log_success "Done!"
             else
-                log_error "RP2040 not found!"
-                echo "  Enter DFU mode: BOOT + RESET"
+                log_error "RP2040 not in DFU mode!"
+                echo "  Enter DFU mode: Hold BOOT + Press RESET"
             fi
         fi
     else
-        log_error "No firmware found!"
+        log_error "Build failed!"
     fi
     
-    read -p "  Enter..."
+    read -p "  Press Enter..."
+}
+
+function build_and_flash_octopus() {
+    draw_header "BUILD OCTOPUS PRO FIRMWARE"
+    
+    local klipper_dir="$HOME/klipper"
+    cd "$klipper_dir"
+    
+    echo "  This will open 'make menuconfig' for STM32F446 selection."
+    echo "  Follow these steps:"
+    echo "    1. Select 'STMicroelectronics STM32'"
+    echo "    2. Select 'STM32F446' or 'Octopus Pro'"
+    echo "    3. Configure CAN bus if needed"
+    echo "    4. Exit and Save"
+    echo ""
+    read -p "  Press Enter to continue..." 
+    
+    make clean >/dev/null 2>&1
+    make menuconfig
+    
+    log_info "Building firmware..."
+    make -j$(nproc)
+    
+    echo ""
+    echo "  Build output:"
+    ls -la "$klipper_dir/out/" | grep -i klipper || true
+    
+    if [ -f "$klipper_dir/out/klipper.bin" ]; then
+        log_success "Firmware built: $klipper_dir/out/klipper.bin"
+        echo ""
+        echo "  Checking for DFU device..."
+        sleep 2
+        if lsusb | grep -q "0483:df11"; then
+            log_info "Flashing via DFU..."
+            sudo dfu-util -R -a 0 -s 0x08000000:mass-erase:force -D "$klipper_dir/out/klipper.bin"
+            log_success "Done!"
+        else
+            log_error "STM32 not in DFU mode!"
+            echo "  Enter DFU mode: Hold BOOT + Press RESET"
+        fi
+    else
+        log_error "Build failed!"
+    fi
+    
+    read -p "  Press Enter..."
 }
 
 function build_and_flash_stm32() {
