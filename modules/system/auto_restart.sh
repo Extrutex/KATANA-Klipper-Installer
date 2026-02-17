@@ -107,46 +107,46 @@ function view_service_health() {
     # Klipper
     local klipper_status=$(systemctl is-active klipper 2>/dev/null || echo "not installed")
     if [ "$klipper_status" = "active" ]; then
-        box_row "${C_GREEN}●${NC} Klipper       : ${C_GREEN}ACTIVE${NC}"
+        box_row_left "${C_GREEN}●${NC} Klipper       : ${C_GREEN}ACTIVE${NC}"
     else
-        box_row "${C_RED}●${NC} Klipper       : ${C_RED}$klipper_status${NC}"
+        box_row_left "${C_RED}●${NC} Klipper       : ${C_RED}$klipper_status${NC}"
     fi
     
     # Moonraker
     local moonraker_status=$(systemctl is-active moonraker 2>/dev/null || echo "not installed")
     if [ "$moonraker_status" = "active" ]; then
-        box_row "${C_GREEN}●${NC} Moonraker     : ${C_GREEN}ACTIVE${NC}"
+        box_row_left "${C_GREEN}●${NC} Moonraker     : ${C_GREEN}ACTIVE${NC}"
     else
-        box_row "${C_RED}●${NC} Moonraker     : ${C_RED}$moonraker_status${NC}"
+        box_row_left "${C_RED}●${NC} Moonraker     : ${C_RED}$moonraker_status${NC}"
     fi
     
     # Crowsnest
     if systemctl is-active crowsnest &>/dev/null; then
-        box_row "${C_GREEN}●${NC} Crowsnest     : ${C_GREEN}ACTIVE${NC}"
+        box_row_left "${C_GREEN}●${NC} Crowsnest     : ${C_GREEN}ACTIVE${NC}"
     else
-        box_row "${C_GREY}○${NC} Crowsnest     : ${C_GREY}not running${NC}"
+        box_row_left "${C_GREY}○${NC} Crowsnest     : ${C_GREY}not running${NC}"
     fi
     
     # KlipperScreen
     if systemctl is-active KlipperScreen &>/dev/null; then
-        box_row "${C_GREEN}●${NC} KlipperScreen : ${C_GREEN}ACTIVE${NC}"
+        box_row_left "${C_GREEN}●${NC} KlipperScreen : ${C_GREEN}ACTIVE${NC}"
     else
-        box_row "${C_GREY}○${NC} KlipperScreen : ${C_GREY}not running${NC}"
+        box_row_left "${C_GREY}○${NC} KlipperScreen : ${C_GREY}not running${NC}"
     fi
     
     echo ""
     
     # Auto-restart status
-    box_row "${C_WHITE}Auto-Restart Status:${NC}"
+    box_row_left "${C_WHITE}Auto-Restart Status:${NC}"
     
     if [ -d /etc/systemd/system/klipper.service.d ]; then
-        box_row "${C_GREEN}✓${NC} Klipper auto-restart: ENABLED"
+        box_row_left "${C_GREEN}✓${NC} Klipper auto-restart: ENABLED"
     else
-        box_row "${C_GREY}○${NC} Klipper auto-restart: DISABLED"
+        box_row_left "${C_GREY}○${NC} Klipper auto-restart: DISABLED"
     fi
     
     if [ -d /etc/systemd/system/moonraker.service.d ]; then
-        box_row "${C_GREEN}✓${NC} Moonraker auto-restart: ENABLED"
+        box_row_left "${C_GREEN}✓${NC} Moonraker auto-restart: ENABLED"
     else
         box_row "${C_GREY}○${NC} Moonraker auto-restart: DISABLED"
     fi

@@ -205,11 +205,15 @@ EOF
     
     # Create basic moonraker.conf if not exists
     if [ ! -f "$HOME/printer_data/config/moonraker.conf" ]; then
+        # Ensure directories exist
+        mkdir -p "$HOME/printer_data/config"
+        mkdir -p "$HOME/printer_data/logs"
+        mkdir -p "$HOME/printer_data/comms"
+        
         cat <<EOF > "$HOME/printer_data/config/moonraker.conf"
 [server]
 host = 0.0.0.0
 port = 7125
-enable_debug_logging = False
 
 [authorization]
 trusted_clients =
@@ -221,6 +225,11 @@ trusted_clients =
 enable_auto_refresh = True
 EOF
     fi
+    
+    # Ensure printer_data directories exist
+    mkdir -p "$HOME/printer_data/config"
+    mkdir -p "$HOME/printer_data/logs"
+    mkdir -p "$HOME/printer_data/comms"
     
     # Create basic printer.cfg if not exists
     if [ ! -f "$HOME/printer_data/config/printer.cfg" ]; then
