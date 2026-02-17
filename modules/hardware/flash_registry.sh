@@ -184,7 +184,7 @@ EOF
             sleep 2
             if lsusb | grep -q "2e8a:0003"; then
                 log_info "Flashing via DFU..."
-                sudo dfu-util -d 2e8a:0003 -a 0 -D "$firmware_file" -s 0x8000000:leave
+                sudo dfu-util -R -a 0 -s 0x08000000:mass-erase:force -D "$firmware_file"
                 log_success "Done!"
             else
                 log_error "RP2040 not found!"
@@ -221,7 +221,7 @@ EOF
         log_success "Firmware gebaut!"
         echo ""
         echo "  Flashe via DFU..."
-        sudo dfu-util -d 0483:df11 -a 0 -D "$HOME/klipper/out/klipper.bin" -s 0x08000000:leave
+        sudo dfu-util -R -a 0 -s 0x08000000:mass-erase:force -D "$HOME/klipper/out/klipper.bin"
         log_success "Flash abgeschlossen!"
     else
         log_error "Build fehlgeschlagen!"
