@@ -226,8 +226,12 @@ EOF
 [mcu]
 serial: /tmp/klipper_mock
 
+[printer]
+kinematics: none
+max_velocity: 100
+max_accel: 1000
+
 [stepper_x]
-pin: PB0
 step_pin: PA2
 dir_pin: !PA1
 enable_pin: !PA3
@@ -236,7 +240,6 @@ rotation_distance: 40
 full_steps_per_rotation: 200
 
 [stepper_y]
-pin: PB1
 step_pin: PA4
 dir_pin: !PA5
 enable_pin: !PA6
@@ -245,7 +248,6 @@ rotation_distance: 40
 full_steps_per_rotation: 200
 
 [stepper_z]
-pin: PB2
 step_pin: PC14
 dir_pin: !PC15
 enable_pin: !PC13
@@ -254,23 +256,18 @@ rotation_distance: 8
 full_steps_per_rotation: 200
 
 [extruder]
-pin: PC3
 step_pin: PA7
 dir_pin: !PA8
 enable_pin: !PA9
 microsteps: 16
 rotation_distance: 33.5
 full_steps_per_rotation: 200
-heater_pin: PC2
 
 [heater_bed]
-pin: PC1
+heater_pin: PC1
 
 [fan]
 pin: PC0
-
-[temperature_sensor raspberry_pi]
-sensor_type: temperature_host
 EOF
     fi
     
