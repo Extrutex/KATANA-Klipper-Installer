@@ -123,15 +123,23 @@ function build_and_flash_rp2040() {
     log_info "Cleaning..."
     make clean >/dev/null 2>&1
     
+    # Create completely fresh config
+    rm -f .config
+    
     log_info "Generating RP2040 config (headless)..."
     cat > .config <<'EOF'
 CONFIG_LOW_LEVEL_OPTIONS=y
 CONFIG_MACH_RP2040=y
 CONFIG_MCU="rp2040"
+CONFIG_BOARD_DIRECTORY="rp2040"
+CONFIG_FLASH_SIZE=0x200000
+CONFIG_FLASH_START=0x10000
+CONFIG_RP2040_FLASH_START_2000=y
+CONFIG_USB_SERIAL_NUMBER_CHIPID=y
 EOF
     
-    make olddefconfig >/dev/null 2>&1
-    make -j$(nproc)
+    make olddefconfig 2>&1 | tail -5
+    make -j$(nproc) 2>&1 | tail -20
     
     echo ""
     echo "  Build output:"
@@ -177,6 +185,9 @@ function build_and_flash_octopus() {
     log_info "Cleaning..."
     make clean >/dev/null 2>&1
     
+    # Create completely fresh config
+    rm -f .config
+    
     log_info "Generating STM32F446 config (headless)..."
     cat > .config <<'EOF'
 CONFIG_LOW_LEVEL_OPTIONS=y
@@ -190,8 +201,8 @@ CONFIG_FLASH_SIZE=0x80000
 CONFIG_USB_SERIAL_NUMBER_CHIPID=y
 EOF
     
-    make olddefconfig >/dev/null 2>&1
-    make -j$(nproc)
+    make olddefconfig 2>&1 | tail -5
+    make -j$(nproc) 2>&1 | tail -20
     
     echo ""
     echo "  Build output:"
