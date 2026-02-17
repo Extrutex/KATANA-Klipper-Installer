@@ -276,10 +276,24 @@ function flash_bin_artifact() {
         1)
             if [ $dfu_found -eq 1 ]; then
                 log_info "Flashing via DFU..."
-                if make flash FLASH_DEVICE=0483:df11; then
-                    log_success "Flash complete!"
-                else
+                local flash_output
+                flash_output=$(make flash FLASH_DEVICE=0483:df11 2>&1)
+                local flash_exit=$?
+                echo "$flash_output"
+                
+                if echo "$flash_output" | grep -q "File downloaded successfully"; then
+                    echo ""
+                    log_success "Firmware flashed successfully!"
+                    echo "  (dfu-util detach warnings are normal and can be ignored)"
+                    echo ""
+                    echo "  ${C_NEON}Next steps:${NC}"
+                    echo "  1. Remove BOOT jumper"
+                    echo "  2. Press RESET button (or power cycle)"
+                    echo "  3. Board will boot with new firmware"
+                elif [ $flash_exit -ne 0 ]; then
                     log_error "Flash failed. Check USB connection."
+                else
+                    log_success "Flash complete!"
                 fi
             elif [ -n "$serial_device" ]; then
                 log_info "Flashing via USB Serial: $serial_device"
