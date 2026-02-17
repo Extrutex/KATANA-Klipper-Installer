@@ -2,7 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v1.0.0] - 2026-02-14
+## [v2.2] - 2026-02-17
+
+### Breaking Changes & Community Feedback
+- **Menu alignment completely rewritten** - Fixed right-side display issues
+- **ANSI color codes fixed** - No more visible escape sequences
+- **Service status check improved** - Proper .service suffix handling
+
+### Added
+- **Quick CAN Setup Wizard** - One-click CAN-Bus setup in ~2 minutes
+  - Auto-configures can0 (1M bitrate)
+  - Builds & flashes Katapult bootloader
+  - Builds & flashes Klipper via CAN
+  - Generates config snippet for printer.cfg
+- **Engine Display in System Status** - Shows current firmware (Klipper/Kalico/RatOS) + online/offline
+- **Moonraker Update Manager Integration** - Auto-registers:
+  - ShakeTune
+  - KATANA-FLOW
+  - StealthChanger, MADMAX
+  - Cartographer, Beacon, BTT Eddy, Bed Distance Sensor
+- **Profile Support** - `--profile minimal|standard|power`
+- **Safety Rails** - Backup before config writes
+
+### Changed
+- Professional boxed menu design with ╔═╗╚═╝ characters
+- Dynamic engine switching with atomic swap
+- Improved error handling with colored [OK]/[!!] feedback
+
+### Features (KATANAOS vs KIAUH)
+| Feature | Status |
+|---------|--------|
+| Engine Switch (Klipper/Kalico/RatOS) | ✅ |
+| UFW Firewall | ✅ |
+| SSH Hardening | ✅ |
+| Log2Ram | ✅ |
+| Auto-Restart | ✅ |
+| Quick CAN Setup | ✅ |
+| KATANA-FLOW | ✅ |
+| Happy Hare | ✅ |
+| Smart Probes | ✅ |
+| Printer Config Wizard | ✅ |
+
+## [v1.5-beta] - 2026-02-14
+
+### Added
+- **Initial beta release**
+- Basic Klipper/Moonraker installation
+- Mainsail/Fluidd deployment
+- Crowsnest webcam support
 
 ### Added
 - **HORIZON UI (Production Release)**:

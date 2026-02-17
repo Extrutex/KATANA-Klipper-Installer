@@ -4,34 +4,63 @@
 # 1. AUTO-PILOT
 function run_autopilot() {
     draw_header "AUTO-PILOT (GOD MODE)"
-    echo "  This will install everything:"
-    echo "  - Core: Klipper & Moonraker"
-    echo "  - UI: Mainsail"
-    echo "  - Extras: KATANA-FLOW"
+    echo "  Profile: $INSTALL_PROFILE"
     echo ""
-    read -p "  Start Auto-Pilot? [y/N] " yn
+    
+    case "$INSTALL_PROFILE" in
+        minimal)
+            echo "  Installing MINIMAL profile:"
+            echo "  - Core: Klipper & Moonraker only"
+            ;;
+        standard)
+            echo "  Installing STANDARD profile:"
+            echo "  - Core: Klipper & Moonraker"
+            echo "  - UI: Mainsail"
+            ;;
+        power)
+            echo "  Installing POWER profile:"
+            echo "  - Core: Klipper & Moonraker"
+            echo "  - UI: Mainsail + Crowsnest"
+            echo "  - Extras: KATANA-FLOW, Toolchanger"
+            ;;
+    esac
+    
+    echo ""
+    read -p "  Start? [y/N] " yn
     if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
     
-    # Core
+    # Core - always installed
     if [ -f "$MODULES_DIR/engine/install_klipper.sh" ]; then
         source "$MODULES_DIR/engine/install_klipper.sh"
         do_install_klipper "Standard"
         do_install_moonraker
     fi
     
-    # UI
-    if [ -f "$MODULES_DIR/ui/install_ui.sh" ]; then
-        source "$MODULES_DIR/ui/install_ui.sh"
-        do_install_mainsail
+    # UI - standard & power
+    if [[ "$INSTALL_PROFILE" == "standard" || "$INSTALL_PROFILE" == "power" ]]; then
+        if [ -f "$MODULES_DIR/ui/install_ui.sh" ]; then
+            source "$MODULES_DIR/ui/install_ui.sh"
+            do_install_mainsail
+        fi
     fi
     
-    # Extras
-    if [ -f "$MODULES_DIR/extras/katana_flow.sh" ]; then
-        source "$MODULES_DIR/extras/katana_flow.sh"
-        install_katana_flow
+    # Vision Stack - power only
+    if [[ "$INSTALL_PROFILE" == "power" ]]; then
+        if [ -f "$MODULES_DIR/vision/install_crowsnest.sh" ]; then
+            source "$MODULES_DIR/vision/install_crowsnest.sh"
+            install_vision_stack
+        fi
     fi
     
-    log_success "AUTO-PILOT COMPLETE."
+    # Extras - power only
+    if [[ "$INSTALL_PROFILE" == "power" ]]; then
+        if [ -f "$MODULES_DIR/extras/katana_flow.sh" ]; then
+            source "$MODULES_DIR/extras/katana_flow.sh"
+            install_katana_flow
+        fi
+    fi
+    
+    log_success "AUTO-PILOT COMPLETE (Profile: $INSTALL_PROFILE)."
     read -p "  Press Enter..."
 }
 
