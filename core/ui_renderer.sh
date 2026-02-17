@@ -159,12 +159,17 @@ function warn_row() {
 
 function get_current_engine_short() {
     if [ -L "$HOME/klipper" ]; then
+        # Symlink: check which engine it points to
         local target=$(readlink "$HOME/klipper")
-        if [[ "$target" == *"kalico"* ]]; then echo "KALICO"; 
+        if [[ "$target" == *"kalico"* ]]; then echo "KALICO";
         elif [[ "$target" == *"ratos"* ]]; then echo "RatOS";
-        elif [[ "$target" == *"klipper"* ]]; then echo "KLIPPER";
-        else echo "UNKNOWN"; fi
-    else echo "NONE"; fi
+        else echo "KLIPPER"; fi
+    elif [ -d "$HOME/klipper" ]; then
+        # Regular directory: standard Klipper install
+        echo "KLIPPER"
+    else
+        echo "NONE"
+    fi
 }
 
 function check_service_status() {
