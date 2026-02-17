@@ -203,13 +203,14 @@ EOF
         sudo systemctl enable moonraker
     fi
     
-    # Create basic moonraker.conf if not exists
+    # ALWAYS ensure printer_data directories exist (not just when configs are missing)
+    mkdir -p "$HOME/printer_data/config"
+    mkdir -p "$HOME/printer_data/logs"
+    mkdir -p "$HOME/printer_data/comms"
+    mkdir -p "$HOME/printer_data/gcodes"
+    
+    # ALWAYS create basic moonraker.conf if missing or broken
     if [ ! -f "$HOME/printer_data/config/moonraker.conf" ]; then
-        # Ensure directories exist
-        mkdir -p "$HOME/printer_data/config"
-        mkdir -p "$HOME/printer_data/logs"
-        mkdir -p "$HOME/printer_data/comms"
-        
         cat <<EOF > "$HOME/printer_data/config/moonraker.conf"
 [server]
 host = 0.0.0.0
@@ -226,12 +227,7 @@ enable_auto_refresh = True
 EOF
     fi
     
-    # Ensure printer_data directories exist
-    mkdir -p "$HOME/printer_data/config"
-    mkdir -p "$HOME/printer_data/logs"
-    mkdir -p "$HOME/printer_data/comms"
-    
-    # Create basic printer.cfg if not exists
+    # ALWAYS create basic printer.cfg if missing
     if [ ! -f "$HOME/printer_data/config/printer.cfg" ]; then
         cat <<EOF > "$HOME/printer_data/config/printer.cfg"
 # Basic Klipper Config - Edit for your setup!
