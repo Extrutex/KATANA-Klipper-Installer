@@ -160,7 +160,17 @@ function run_wizard() {
              if [ -f "$KATANA_ROOT/scripts/can_scanner.py" ]; then
                  python3 "$KATANA_ROOT/scripts/can_scanner.py"
                  read -p "  Enter UUID to flash: " uuid
-                 python3 lib/canboot/flash_can.py -u $uuid
+                 
+                 # Dynamic detection of flash tool
+                 if [ -f "lib/canboot/flash_can.py" ]; then
+                     python3 lib/canboot/flash_can.py -u $uuid
+                 elif [ -f "lib/katapult/flash_can.py" ]; then
+                     python3 lib/katapult/flash_can.py -u $uuid
+                 elif [ -f "../katapult/scripts/flashtool.py" ]; then
+                     python3 ../katapult/scripts/flashtool.py -u $uuid
+                 else
+                     log_error "Could not find flash_can.py or flashtool.py"
+                 fi
             else
                 echo "  Scanner module missing."
             fi
