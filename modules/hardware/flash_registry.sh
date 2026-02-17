@@ -122,24 +122,36 @@ function build_and_flash_rp2040() {
     local klipper_dir="$HOME/klipper"
     cd "$klipper_dir"
     
-    # Erst defconfig mit defaults, dann unsere config
+    # Use rp2040_defconfig as base
     make rp2040_defconfig
     
-    # Unsere zusätzlichen Optionen hinzufügen
+    # Add our config - NO U2F, use serial/dfu instead
     cat >> .config <<'EOF'
 CONFIG_RP2040_FLASH_START_2000=y
-CONFIG_RP2040_U2F_FIRMWARE=y
 CONFIG_USB_SERIAL_NUMBER_CHIPID=y
 EOF
     
     make olddefconfig >/dev/null 2>&1
     make -j$(nproc)
     
-    # Prüfe welche Dateien gebaut wurden
-    ls -la "$klipper_dir/out/" | grep -i klipper
+    # Show what was built
+    echo "  Build output:"
+    ls -la "$klipper_dir/out/" | grep -i klipper || true
     
     local firmware_file=""
     local firmware_type=""
+    
+    # Priority: BIN > UF2 > HEX
+    if [ -f "$klipper_dir/out/klipper.bin" ]; then
+        firmware_file="$klipper_dir/out/klipper.bin"
+        firmware_type="BIN"
+    elif [ -f "$klipper_dir/out/klipper.uf2" ]; then
+        firmware_file="$klipper_dir/out/klipper.uf2"
+        firmware_type="UF2"
+    elif [ -f "$klipper_dir/out/klipper.elf.hex" ]; then
+        firmware_file="$klipper_dir/out/klipper.elf.hex"
+        firmware_type="HEX"
+    fi
     
     # Priorität: UF2 > BIN > HEX
     if [ -f "$klipper_dir/out/klipper.uf2" ]; then
