@@ -86,8 +86,9 @@ function build_mcu() {
     
     log_info "Compiling firmware (this takes a moment)..."
     make -j$(nproc)
+    local build_result=$?
     
-    if [ -f "$KLIPPER_DIR/out/klipper.bin" ]; then
+    if [ $build_result -eq 0 ] && [ -f "$KLIPPER_DIR/out/klipper.bin" ]; then
         draw_success "Build SUCCESS!"
         echo ""
         echo "  Firmware: $KLIPPER_DIR/out/klipper.bin"
@@ -97,8 +98,18 @@ function build_mcu() {
         echo "  2. Rename to firmware.bin"
         echo "  3. Flash to MCU"
         echo ""
+    elif [ -f "$KLIPPER_DIR/out/klipper.elf.hex" ]; then
+        draw_success "Build SUCCESS!"
+        echo ""
+        echo "  Firmware: $KLIPPER_DIR/out/klipper.elf.hex"
+        echo ""
+        echo "  Next steps:"
+        echo "  1. Copy klipper.elf.hex to SD card"
+        echo "  2. Rename to firmware.bin"
+        echo "  3. Flash to MCU"
+        echo ""
     else
-        draw_error "Build FAILED! Check errors above."
+        draw_error "Build FAILED! Exit code: $build_result"
     fi
     
     read -p "  Press Enter..."
