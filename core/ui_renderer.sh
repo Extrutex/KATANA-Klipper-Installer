@@ -748,8 +748,14 @@ function run_extras_system() {
         read -p "  >> COMMAND: " ch
         
         case $ch in
-            1) install_log2ram ;;
-            1) install_log2ram ;;
+            1) 
+                if declare -f install_log2ram > /dev/null; then
+                    install_log2ram
+                else
+                    source "$MODULES_DIR/extras/tuning.sh"
+                    install_log2ram
+                fi 
+                ;;
             2) run_security_menu ;; # Use security menu which has backup inside
             3) run_security_menu ;;
             b|B) return ;;
@@ -759,7 +765,7 @@ function run_extras_system() {
     done
 }
 
-function install_log2ram() { draw_header "LOG2RAM"; read -p "  Enter..."; }
+
 
 function run_extras_security() {
     run_security_menu

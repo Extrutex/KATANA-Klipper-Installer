@@ -1,6 +1,12 @@
 #!/bin/bash
 # --- DR. KATANA: DIAGNOSTICS & REPAIR ---
 
+# Ensure Environment
+if [ -z "$KATANA_ROOT" ]; then
+    KATANA_ROOT="$(dirname "$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")")"
+    MODULES_DIR="$KATANA_ROOT/modules"
+fi
+
 # Source Healer Module if available
 if [ -f "$MODULES_DIR/diagnostics/healer.sh" ]; then
     source "$MODULES_DIR/diagnostics/healer.sh"
@@ -86,21 +92,20 @@ function view_logs() {
 
 function repair_system() {
     draw_header "SYSTEM REPAIR & UPDATE"
-    echo "  1) Fix Permissions (chown pi:pi)"
-    echo "  2) System Update (apt-get update & upgrade)"
+    echo "  1) Fix Permissions (Standard)"
+    echo "  2) System Update (APT)"
+    echo "  3) Fix Dependencies (Libraries)"
     echo "  B) Back"
     read -p "  >> " ch
     
     case $ch in
         1)
-            log_info "Fixing Permissions..."
-            if sudo -n true 2>/dev/null; then
-                sudo chown -R $USER:$USER $HOME/printer_data
-                sudo chown -R $USER:$USER $HOME/klipper
-                sudo chown -R $USER:$USER $HOME/moonraker
-                log_success "Permissions fixed."
+            if declare -f heal_permissions > /dev/null; then
+                heal_permissions
             else
-                echo "  [!] Sudo required."
+                log_info "Fixing Permissions (Manual Fallback)..."
+                sudo chown -R $USER:$USER $HOME/printer_data $HOME/klipper $HOME/moonraker 2>/dev/null
+                log_success "Permissions fixed."
             fi
             ;;
         2)
@@ -112,6 +117,13 @@ function repair_system() {
                 sudo apt-get update && sudo apt-get upgrade -y
             fi
             log_success "System Updated."
+            ;;
+        3)
+            if declare -f heal_dependencies > /dev/null; then
+                heal_dependencies
+            else
+                log_warn "Healer module not loaded. Cannot check dependencies."
+            fi
             ;;
         [bB]) return ;;
     esac

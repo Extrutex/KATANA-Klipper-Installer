@@ -80,21 +80,21 @@ function register_madmax_updates() {
 
 function register_cartographer_updates() {
     add_update_manager_entry "Cartographer" "git_repo" \
-        "$HOME/printer_data/config/cartographer" \
-        "https://github.com/Cartographer3D/CartographerKlipper.git" \
+        "$HOME/cartographer-klipper" \
+        "https://github.com/Cartographer3D/Cartographer-Klipper.git" \
         "klipper"
 }
 
 function register_beacon_updates() {
     add_update_manager_entry "Beacon" "git_repo" \
-        "$HOME/printer_data/config/beacon" \
+        "$HOME/beacon" \
         "https://github.com/beacon3d/BeaconKlipper.git" \
         "klipper"
 }
 
 function register_btt_eddy_updates() {
-    add_update_manager_entry "BTT Eddy" "git_repo" \
-        "$HOME/printer_data/config/btt_eddy" \
+    add_update_manager_entry "BTT_Eddy" "git_repo" \
+        "$HOME/Eddy" \
         "https://github.com/bigtreetech/Eddy.git" \
         "klipper"
 }

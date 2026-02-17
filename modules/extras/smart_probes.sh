@@ -41,11 +41,12 @@ function install_beacon() {
         }
     else
         log_error "install.sh not found in Beacon repo."
-        return 1
-    }
+    fi
     
     # Register update manager
-    if declare -f add_update_manager_entry > /dev/null; then
+    if declare -f register_beacon_updates > /dev/null; then
+        register_beacon_updates
+    else
         add_update_manager_entry "Beacon" "git_repo" "$install_dir" "https://github.com/beacon3d/BeaconKlipper.git" "klipper"
     fi
     
@@ -88,11 +89,12 @@ function install_cartographer() {
         }
     else
         log_error "install.sh missing."
-        return 1
-    }
+    fi
     
     # Register update
-    if declare -f add_update_manager_entry > /dev/null; then
+    if declare -f register_cartographer_updates > /dev/null; then
+         register_cartographer_updates
+    else
          add_update_manager_entry "Cartographer" "git_repo" "$install_dir" "https://github.com/Cartographer3D/Cartographer-Klipper.git" "klipper"
     fi
     
@@ -109,34 +111,54 @@ function install_btt_eddy() {
     echo "  BigTreeTech's Eddy Current Probe."
     echo ""
     echo "  NOTE: BTT Eddy is supported in mainline Klipper since recent versions."
-    echo "  We will verify your Klipper version and install the optional Klipper-module."
+    echo "  We will setup the official BTT Repo for examples/macros."
     echo ""
     
-    read -p "  Install BTT Eddy URL/Mainline helper? [y/N]: " yn
+    read -p "  Install/Update BTT Eddy Resources? [y/N]: " yn
     if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
     
-    local install_dir="$HOME/printer_data/config/btt_eddy"
+    local repo_dir="$HOME/Eddy"
+    local config_dir="$HOME/printer_data/config/btt_eddy"
     
-    # BTT often requires a specific branch or repo for their MCU code if not in mainline
-    # Assuming standard BTT Eddy repo for configs/macros
-    log_info "Cloning BTT Eddy Macros/Config..."
-    
-    if [ -d "$HOME/Eddy" ]; then rm -rf "$HOME/Eddy"; fi
-    
-    git clone https://github.com/bigtreetech/Eddy.git "$HOME/Eddy"
-    
-    # Copy examples to config
-    mkdir -p "$install_dir"
-    cp -r "$HOME/Eddy/Configs/"* "$install_dir/"
-    
-    log_success "BTT Eddy Configs copied to $install_dir"
-    log_info "Please copy the relevant .cfg content to your printer.cfg"
-    
-    # Register update? BTT Eddy repo is mostly configs/docs, but useful to keep updated
-    if declare -f add_update_manager_entry > /dev/null; then
-         add_update_manager_entry "BTT_Eddy" "git_repo" "$HOME/Eddy" "https://github.com/bigtreetech/Eddy.git" "klipper"
+    # 1. Clone Repo
+    if [ -d "$repo_dir" ]; then
+        log_info "Updating existing BTT Eddy repo..."
+        git -C "$repo_dir" pull || log_warn "Git pull failed. Proceeding with existing files."
+    else
+        log_info "Cloning BTT Eddy..."
+        git clone https://github.com/bigtreetech/Eddy.git "$repo_dir" || {
+            log_error "Failed to clone BTT Eddy repo."
+            return 1
+        }
     fi
     
+    # 2. Copy Configs
+    log_info "Copying configuration templates..."
+    mkdir -p "$config_dir"
+    
+    if [ -d "$repo_dir/Configs" ]; then
+        cp -r "$repo_dir/Configs/"* "$config_dir/"
+        log_success "Configs copied to $config_dir"
+    elif [ -d "$repo_dir/klipper_config" ]; then
+        # Fallback for potential repo structure changes
+        cp -r "$repo_dir/klipper_config/"* "$config_dir/"
+        log_success "Configs copied to $config_dir"
+    else
+        log_warn "Could not find 'Configs' folder in repo. You may need to copy files manually."
+    fi
+    
+    # 3. Register Updates
+    if declare -f register_btt_eddy_updates > /dev/null; then
+        register_btt_eddy_updates
+    else
+        # Fallback if helper missing
+        if declare -f add_update_manager_entry > /dev/null; then
+             add_update_manager_entry "BTT_Eddy" "git_repo" "$repo_dir" "https://github.com/bigtreetech/Eddy.git" "klipper"
+        fi
+    fi
+    
+    echo ""
+    echo "  [!] ACTION REQUIRED: Include the relevant .cfg in printer.cfg"
     read -p "  Press Enter..."
 }
 
