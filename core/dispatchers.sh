@@ -61,7 +61,94 @@ function run_autopilot() {
     fi
     
     log_success "AUTO-PILOT COMPLETE (Profile: $INSTALL_PROFILE)."
+    echo ""
+    post_install_verify
     read -p "  Press Enter..."
+}
+
+# POST-INSTALL VERIFICATION
+function post_install_verify() {
+    draw_header "INSTALLATION SUMMARY"
+    echo ""
+    
+    # Klipper
+    if [ -d "$HOME/klipper" ]; then
+        echo -e "  ${C_GREEN}✓${NC} Klipper          INSTALLED  ($HOME/klipper)"
+    else
+        echo -e "  ${C_RED}✗${NC} Klipper          NOT FOUND"
+    fi
+    
+    # Klippy Env
+    if [ -d "$HOME/klippy-env" ]; then
+        echo -e "  ${C_GREEN}✓${NC} Klippy Env       INSTALLED"
+    else
+        echo -e "  ${C_RED}✗${NC} Klippy Env       NOT FOUND"
+    fi
+    
+    # Moonraker
+    if [ -d "$HOME/moonraker" ]; then
+        echo -e "  ${C_GREEN}✓${NC} Moonraker        INSTALLED  ($HOME/moonraker)"
+    else
+        echo -e "  ${C_RED}✗${NC} Moonraker        NOT FOUND"
+    fi
+    
+    # Moonraker Env
+    if [ -d "$HOME/moonraker-env" ]; then
+        echo -e "  ${C_GREEN}✓${NC} Moonraker Env    INSTALLED"
+    else
+        echo -e "  ${C_RED}✗${NC} Moonraker Env    NOT FOUND"
+    fi
+    
+    # Web UI
+    if [ -d "$HOME/mainsail" ]; then
+        echo -e "  ${C_GREEN}✓${NC} Mainsail         INSTALLED"
+    elif [ -d "$HOME/fluidd" ]; then
+        echo -e "  ${C_GREEN}✓${NC} Fluidd           INSTALLED"
+    else
+        echo -e "  ${C_YELLOW}○${NC} Web UI           NOT INSTALLED"
+    fi
+    
+    # Printer Data
+    if [ -d "$HOME/printer_data" ]; then
+        echo -e "  ${C_GREEN}✓${NC} Printer Data     READY  ($HOME/printer_data)"
+    else
+        echo -e "  ${C_RED}✗${NC} Printer Data     MISSING"
+    fi
+    
+    echo ""
+    echo "  ─── Services ───"
+    echo ""
+    
+    # Service Status
+    if systemctl is-active --quiet klipper 2>/dev/null; then
+        echo -e "  ${C_GREEN}●${NC} klipper.service  RUNNING"
+    elif systemctl is-enabled --quiet klipper 2>/dev/null; then
+        echo -e "  ${C_YELLOW}●${NC} klipper.service  INSTALLED (not running - needs printer.cfg)"
+    else
+        echo -e "  ${C_RED}○${NC} klipper.service  NOT FOUND"
+    fi
+    
+    if systemctl is-active --quiet moonraker 2>/dev/null; then
+        echo -e "  ${C_GREEN}●${NC} moonraker        RUNNING"
+    elif systemctl is-enabled --quiet moonraker 2>/dev/null; then
+        echo -e "  ${C_YELLOW}●${NC} moonraker        INSTALLED (not running)"
+    else
+        echo -e "  ${C_RED}○${NC} moonraker        NOT FOUND"
+    fi
+    
+    if systemctl is-active --quiet nginx 2>/dev/null; then
+        echo -e "  ${C_GREEN}●${NC} nginx            RUNNING"
+    else
+        echo -e "  ${C_GREY}○${NC} nginx            NOT RUNNING"
+    fi
+    
+    echo ""
+    echo "  ─── Next Steps ───"
+    echo ""
+    echo "  ${C_NEON}1.${NC} Go to ${C_GREEN}[2] FORGE${NC} → Build & Flash firmware for your MCU"
+    echo "  ${C_NEON}2.${NC} Create/edit printer.cfg with your MCU serial"
+    echo "  ${C_NEON}3.${NC} Klipper will go ONLINE once MCU is connected"
+    echo ""
 }
 
 # 2. CORE INSTALLER
