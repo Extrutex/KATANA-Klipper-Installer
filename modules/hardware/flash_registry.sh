@@ -121,7 +121,6 @@ function build_and_flash_rp2040() {
     
     local klipper_dir="$HOME/klipper"
     cd "$klipper_dir"
-    make clean >/dev/null 2>&1
     
     cat > .config <<'EOF'
 CONFIG_LOW_LEVEL_OPTIONS=y
@@ -135,6 +134,7 @@ CONFIG_RP2040_U2F_FIRMWARE=y
 CONFIG_USB_SERIAL_NUMBER_CHIPID=y
 EOF
     
+    make clean >/dev/null 2>&1
     make olddefconfig >/dev/null 2>&1
     make -j$(nproc)
     
