@@ -223,6 +223,9 @@ EOF
     if [ ! -f "$HOME/printer_data/config/printer.cfg" ]; then
         cat <<EOF > "$HOME/printer_data/config/printer.cfg"
 # Basic Klipper Config - Edit for your setup!
+[mcu]
+serial: /tmp/klipper_mock
+
 [stepper_x]
 pin: PB0
 step_pin: PA2
@@ -271,7 +274,28 @@ sensor_type: temperature_host
 EOF
     fi
     
-    sudo systemctl restart moonraker
+    # Setup PolKit permissions for Moonraker (to avoid warnings)
+    if ! grep -q "moonraker" /etc/polkit-1/localauthority/50-local.d/moonraker.pkla 2>/dev/null; then
+        sudo mkdir -p /etc/polkit-1/localauthority/50-local.d
+        sudo tee /etc/polkit-1/localauthority/50-local.d/moonraker.pkla > /dev/null << 'POLLIT'
+[Allow Moonraker]
+Identity=unix-user:pi
+Action=org.freedesktop.systemd1.manage-units
+ResultActive=yes
+
+[Allow Moonraker Reboot]
+Identity=unix-user:pi
+Action=org.freedesktop.login1.reboot
+ResultActive=yes
+
+[Allow Moonraker PowerOff]
+Identity=unix-user:pi
+Action=org.freedesktop.login1.power-off
+ResultActive=yes
+POLLIT
+    fi
+    
+    sudo systemctl restart moonraker klipper
     
     log_success "Moonraker installed and service started."
     read -p "  Press Enter..."
