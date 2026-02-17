@@ -54,10 +54,17 @@ function do_install_klipper() {
     log_info "Installing Klipper ($variant) into $data_dir..."
     
     # 0. System Dependencies
-    log_info "Ensuring Klipper System Dependencies..."
+    log_info "Installing Klipper System Dependencies (sudo required)..."
     local k_deps=("virtualenv" "python3-dev" "libffi-dev" "build-essential" "libncurses-dev" "libusb-dev" "avrdude" "gcc-avr" "binutils-avr" "avr-libc" "stm32flash" "libnewlib-arm-none-eabi" "gcc-arm-none-eabi" "binutils-arm-none-eabi" "libusb-1.0-0-dev")
     
-    sudo apt-get install -y "${k_deps[@]}" >/dev/null 2>&1
+    sudo apt-get update -qq
+    if sudo apt-get install -y "${k_deps[@]}"; then
+        log_success "System dependencies installed."
+    else
+        log_error "Failed to install some dependencies. Check your internet connection."
+        read -p "  Continue anyway? [y/N]: " yn
+        if [[ ! "$yn" =~ ^[yY] ]]; then return 1; fi
+    fi
     
     # 1. Repo & Env (Shared across instances)
     local repo_dir="$HOME/klipper"
@@ -149,8 +156,16 @@ function do_install_moonraker() {
     log_info "Installing Moonraker into $data_dir (Port: $port)..."
     
     # 1. System Dependencies
+    log_info "Installing Moonraker System Dependencies (sudo required)..."
     local m_deps=("python3-virtualenv" "python3-dev" "liblmdb-dev" "libopenjp2-7" "libsodium-dev" "zlib1g-dev" "libjpeg-dev" "packagekit" "python3-wheel" "nginx")
-    sudo apt-get install -y "${m_deps[@]}" >/dev/null 2>&1
+    sudo apt-get update -qq
+    if sudo apt-get install -y "${m_deps[@]}"; then
+        log_success "Moonraker dependencies installed."
+    else
+        log_error "Failed to install some dependencies."
+        read -p "  Continue anyway? [y/N]: " yn
+        if [[ ! "$yn" =~ ^[yY] ]]; then return 1; fi
+    fi
 
     # 2. Repo & Env (Shared)
     local repo_dir="$HOME/moonraker"
