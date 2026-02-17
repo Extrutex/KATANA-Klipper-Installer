@@ -4,11 +4,13 @@
 # Professionalizes systemd unit creation.
 
 function install_service_from_template() {
-    local service_name="$1"
-    local template_path="$KATANA_ROOT/configs/templates/services/${service_name}.service.template"
-    local target_path="/etc/systemd/system/${service_name}.service"
+    local service_type="$1"
+    local target_service_name="${2:-$service_type}"
+    local target_data_dir="${3:-$HOME/printer_data}"
+    local template_path="$KATANA_ROOT/configs/templates/services/${service_type}.service.template"
+    local target_path="/etc/systemd/system/${target_service_name}.service"
     
-    log_info "Deploying Service Template: $service_name"
+    log_info "Deploying Service Template: $service_type -> $target_service_name"
     
     if [ ! -f "$template_path" ]; then
         log_error "Template not found: $template_path"
@@ -22,11 +24,13 @@ function install_service_from_template() {
     fi
     
     # Render Template
-    # We use sed to replace {{USER}} and {{HOME}}
+    # We use sed to replace {{USER}}, {{HOME}}, and {{SERVICE_NAME}}
     # Safe pattern: using | as delimiter to avoid path clashes
     local rendered_content=$(cat "$template_path" | \
         sed "s|{{USER}}|$USER|g" | \
-        sed "s|{{HOME}}|$HOME|g")
+        sed "s|{{HOME}}|$HOME|g" | \
+        sed "s|{{SERVICE_NAME}}|$target_service_name|g" | \
+        sed "s|{{DATA_DIR}}|$target_data_dir|g")
         
     # Write to target
     echo "$rendered_content" | sudo tee "$target_path" > /dev/null
@@ -36,7 +40,7 @@ function install_service_from_template() {
         
         # Reload & Enable
         sudo systemctl daemon-reload
-        sudo systemctl enable "$service_name"
+        sudo systemctl enable "$target_service_name"
         log_info "Service enabled."
     else
         log_error "Failed to write service file."

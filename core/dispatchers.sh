@@ -139,3 +139,42 @@ function run_security_menu() {
         [bB]) return ;;
     esac
 }
+
+# 11. SMART PROBES
+function run_smart_probes() {
+    if [ -f "$MODULES_DIR/extras/smart_probes.sh" ]; then
+        source "$MODULES_DIR/extras/smart_probes.sh"
+        run_smartprobe_menu
+    else
+        log_error "Module missing: extras/smart_probes.sh"
+    fi
+}
+
+# 12. MULTI-MATERIAL
+function run_multi_material() {
+    if [ -f "$MODULES_DIR/extras/multi_material.sh" ]; then
+        source "$MODULES_DIR/extras/multi_material.sh"
+        run_multimaterial_menu
+    else
+        log_error "Module missing: extras/multi_material.sh"
+    fi
+}
+
+# 13. TUNING & SYSTEM
+function run_tuning_tools() {
+    if [ -f "$MODULES_DIR/extras/tuning.sh" ]; then
+        source "$MODULES_DIR/extras/tuning.sh"
+        run_tuning_menu
+    else
+        log_error "Module missing: extras/tuning.sh"
+    fi
+}
+# 10. INSTANCE MANAGER
+function run_instance_manager_dispatcher() {
+    if [ -f "$MODULES_DIR/system/instance_manager.sh" ]; then
+        source "$MODULES_DIR/system/instance_manager.sh"
+        run_instance_manager
+    else
+        log_error "Module missing: system/instance_manager.sh"
+    fi
+}

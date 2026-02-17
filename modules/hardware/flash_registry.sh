@@ -12,7 +12,8 @@ function run_flash_menu() {
         echo "  ${C_GREEN}[1]${NC}  Auto-Flash          (Auto-detect via lsusb)"
         echo "  ${C_NEON}[2]${NC}  Quick CAN Setup     (1-Minute Wizard)"
         echo "  ${C_NEON}[3]${NC}  Manual Build        (make menuconfig)"
-        echo "  ${C_NEON}[4]${NC}  View Logs"
+        echo "  ${C_NEON}[4]${NC}  AVRDude Flash       (For AVR microcontrollers)"
+        echo "  ${C_NEON}[5]${NC}  View Logs"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -20,9 +21,17 @@ function run_flash_menu() {
         
         case $ch in
             1) auto_flash_mcu ;;
-            2) run_quick_can_wizard ;;
+            2) 
+                if [ -f "$MODULES_DIR/hardware/can_manager.sh" ]; then
+                    source "$MODULES_DIR/hardware/can_manager.sh"
+                    run_can_manager
+                else
+                    log_error "Module missing: hardware/can_manager.sh"
+                fi
+                ;;
             3) manual_build ;;
-            4) view_firmware_logs ;;
+            4) build_and_flash_avr ;;
+            5) view_firmware_logs ;;
             b|B) return ;;
             *) log_error "Invalid Selection" ;;
         esac
@@ -30,103 +39,84 @@ function run_flash_menu() {
 }
 
 function auto_flash_mcu() {
-    draw_header "⚡ AUTO-FLASH MCU"
+    draw_header "⚡ MCU FLASHING - INTERACTIVE"
     
-    echo "  Scanning for connected MCUs..."
+    echo "  Scanning for devices..."
     echo ""
     
-    # Detect USB devices
-    local usb_devices=$(lsusb 2>/dev/null)
-    
-    if [ -z "$usb_devices" ]; then
-        log_error "No USB devices found!"
-        read -p "  Press Enter..."
-        return
-    fi
-    
-    echo "  ${C_GREEN}Found USB devices:${NC}"
-    echo "$usb_devices" | sed 's/^/    /'
+    # 1. Show raw output for transparency (Community Standard)
+    echo -e "${C_WHITE}USB BUS:${NC}"
+    lsusb | sed 's/^/    /'
     echo ""
     
-    local detected_mcus=()
-    local detected_names=()
-    local detected=""
+    # 2. Identify potential targets
+    local targets=()
+    local target_names=()
     
-    # RP2040 in DFU mode
-    if echo "$usb_devices" | grep -qi "2e8a:0003"; then
-        detected_mcus+=("rp2040")
-        detected_names+=("RP2040 (Raspberry Pi Pico) - DFU Mode")
+    # RP2040 (DFU or Mass Storage)
+    if lsusb | grep -qi "2e8a:0003"; then
+        targets+=("rp2040")
+        target_names+=("RP2040 (RPI-RP2 / Pico / Toolhead)")
     fi
-    
-    # STM32 in DFU mode (0483:df11)
-    if echo "$usb_devices" | grep -qi "0483:df11"; then
-        detected_mcus+=("stm32_dfu")
-        detected_names+=("STM32 - DFU Mode")
+    # STM32 DFU (Standard)
+    if lsusb | grep -qi "0483:df11"; then
+        targets+=("stm32_dfu")
+        target_names+=("STM32 DFU Bootloader (Octopus/SKR/MKS)")
     fi
-    
-    # STM32F446 / Octopus Pro (1d50:614e) - USB Serial mode
-    if echo "$usb_devices" | grep -qi "1d50:614e"; then
-        detected_mcus+=("octopus_pro")
-        detected_names+=("Octopus Pro (STM32F446) - USB Serial")
-    fi
-    
-    if [ ${#detected_mcus[@]} -eq 0 ]; then
-        log_error "No supported MCU detected!"
-        echo ""
-        echo "  Supported devices:"
-        echo "  - Raspberry Pi Pico (RP2040)"
-        echo "  - Octopus Pro (STM32F446)"
-        echo "  - Other STM32 boards in DFU mode"
-        echo ""
-        echo "  Make sure your device is in DFU mode!"
-        read -p "  Press Enter..."
-        return
-    fi
-    
-    echo ""
-    if [ ${#detected_mcus[@]} -eq 1 ]; then
-        detected="${detected_mcus[0]}"
-        echo "  Detected: ${detected_names[0]}"
-    else
-        echo "  Multiple MCUs detected:"
-        for i in "${!detected_mcus[@]}"; do
-            echo "    $((i+1)) ${detected_names[$i]}"
-        done
-        echo ""
-        read -p "  Select MCU to flash [1-${#detected_mcus[@]}]: " sel
-        if [[ "$sel" =~ ^[0-9]+$ ]] && [ "$sel" -ge 1 ] && [ "$sel" -le ${#detected_mcus[@]} ]; then
-            detected="${detected_mcus[$((sel-1))]}"
-        else
-            log_error "Invalid selection"
-            return
+    # Existing Klipper devices
+    if [ -d "/dev/serial/by-id" ]; then
+        local k_devs=$(ls /dev/serial/by-id/usb-Klipper_* 2>/dev/null)
+        if [ -n "$k_devs" ]; then
+            for d in $k_devs; do
+                targets+=("serial:$d")
+                target_names+=("Klipper Serial: $(basename $d)")
+            done
         fi
     fi
-    
+
+    if [ ${#targets[@]} -eq 0 ]; then
+        draw_error "No devices found in DFU or Serial mode."
+        echo "  - RP2040: Hold BOOTSEL while connecting"
+        echo "  - STM32: Use BOOT jumper and RESET"
+        read -p "  Press Enter..."
+        return
+    fi
+
+    echo -e "${C_NEON}Detected Targets:${NC}"
+    for i in "${!targets[@]}"; do
+        echo "    [$((i+1))] ${target_names[$i]}"
+    done
     echo ""
-    log_info "Flashing $detected..."
+    read -p "  Select device [1-${#targets[@]}] or [B]ack: " choice
+    if [[ "$choice" =~ ^[bB]$ ]]; then return; fi
     
-    # Build and flash based on detected device
-    case "$detected" in
-        rp2040)
-            build_and_flash_rp2040 ;;
-        octopus_pro|stm32_dfu)
-            build_and_flash_stm32 ;;
-    esac
+    local idx=$((choice - 1))
+    if [ -z "${targets[$idx]}" ]; then log_error "Invalid selection"; return; fi
+
+    local selected="${targets[$idx]}"
+    
+    # Selection logic based on target
+    if [[ "$selected" == "rp2040" ]]; then
+        build_and_flash_rp2040
+    elif [[ "$selected" == "stm32_dfu" ]]; then
+        build_and_flash_stm32
+    elif [[ "$selected" == serial:* ]]; then
+        local dev_path="${selected#serial:}"
+        log_info "Serial flashing not yet fully automated. Please use manual build."
+        echo "  Target: $dev_path"
+        read -p "  Press Enter..."
+    fi
 }
 
 function build_and_flash_rp2040() {
-    draw_header "BUILD RP2040 FIRMWARE"
-    
+    draw_header "RP2040 FIRMWARE BUILD"
     local klipper_dir="$HOME/klipper"
+    
     cd "$klipper_dir"
+    log_info "Compiling RP2040 (Generic)..."
     
-    log_info "Cleaning..."
+    # Headless config injection
     make clean >/dev/null 2>&1
-    
-    # Create completely fresh config
-    rm -f .config
-    
-    log_info "Generating RP2040 config (headless)..."
     cat > .config <<'EOF'
 CONFIG_LOW_LEVEL_OPTIONS=y
 CONFIG_MACH_RP2040=y
@@ -138,57 +128,39 @@ CONFIG_RP2040_FLASH_START_2000=y
 CONFIG_USB_SERIAL_NUMBER_CHIPID=y
 EOF
     
-    make olddefconfig 2>&1 | tail -5
-    make -j$(nproc) 2>&1 | tail -20
+    make olddefconfig >/dev/null 2>&1
+    make -j$(nproc)
     
-    echo ""
-    echo "  Build output:"
-    ls -la "$klipper_dir/out/" | grep -i klipper || true
-    
-    # Determine flash method based on build artifact
-    if [ -f "$klipper_dir/out/klipper.uf2" ]; then
-        log_success "Firmware built: klipper.uf2"
-        echo ""
-        echo "  Method: Mass Storage Copy (USB Drive)"
-        echo "  Copy to RPI-RP2 drive:"
-        echo "    cp $klipper_dir/out/klipper.uf2 /media/\$USER/RPI-RP2/"
-        echo ""
-        echo "  Or use file manager to copy."
-        read -p "  Press Enter when done..."
-        
-    elif [ -f "$klipper_dir/out/klipper.bin" ]; then
-        log_success "Firmware built: klipper.bin"
-        echo ""
-        echo "  Method: DFU Flash"
-        
-        if lsusb | grep -q "2e8a:0003"; then
-            log_info "RP2040 detected in DFU mode!"
-            sudo dfu-util -R -a 0 -s 0x08000000:mass-erase:force -D "$klipper_dir/out/klipper.bin"
-            log_success "Flash complete!"
-        else
-            log_error "RP2040 not in DFU mode!"
-            echo "  Enter DFU mode: Hold BOOT + Press RESET"
-        fi
-    else
-        log_error "Build failed - no firmware file!"
+    if [ ! -f "out/klipper.uf2" ]; then
+        draw_error "Build failed! Check logs."
+        read -p "  Press Enter..."
+        return
     fi
     
-    read -p "  Press Enter..."
+    draw_success "Build complete: out/klipper.uf2"
+    echo ""
+    echo -e "${C_WHITE}COMMUNITY STANDARD FLASHING:${NC}"
+    echo "  1. Ensure your RP2040 is in BOOTSEL mode."
+    echo "  2. The device should appear as a USB drive (RPI-RP2)."
+    echo "  3. Mount the drive if your OS hasn't done so."
+    echo "  4. Execute command:"
+    echo -e "     ${C_NEON}cp $klipper_dir/out/klipper.uf2 /PATH/TO/MOUNT/POINT/${NC}"
+    echo ""
+    echo "  [i] Automated mounting is often unreliable across different OS versions"
+    echo "      and is avoided to prevent filesystem corruption."
+    echo ""
+    read -p "  Press Enter when done..."
 }
 
-function build_and_flash_octopus() {
-    draw_header "BUILD OCTOPUS PRO FIRMWARE"
-    
+function build_and_flash_stm32() {
+    draw_header "STM32 FIRMWARE BUILD & FLASH"
     local klipper_dir="$HOME/klipper"
+    
+    # We use F446 as common default if user doesn't specify
+    log_info "Compiling for STM32F446 (Default 8008000 offset)..."
+    
     cd "$klipper_dir"
-    
-    log_info "Cleaning..."
     make clean >/dev/null 2>&1
-    
-    # Create completely fresh config
-    rm -f .config
-    
-    log_info "Generating STM32F446 config (headless)..."
     cat > .config <<'EOF'
 CONFIG_LOW_LEVEL_OPTIONS=y
 CONFIG_MACH_STM32=y
@@ -196,9 +168,71 @@ CONFIG_MCU="stm32f446"
 CONFIG_BOARD_DIRECTORY="stm32"
 CONFIG_STM32_CLOCK_REF_12M=y
 CONFIG_STM32F446_SELECT=y
-CONFIG_FLASH_START=0x8000000
-CONFIG_FLASH_SIZE=0x80000
+CONFIG_FLASH_START=0x8008000
 CONFIG_USB_SERIAL_NUMBER_CHIPID=y
+EOF
+    
+    make olddefconfig >/dev/null 2>&1
+    make -j$(nproc)
+    
+    if [ ! -f "out/klipper.bin" ]; then
+        draw_error "Build failed!"
+        read -p "  Press Enter..."
+        return
+    fi
+    
+    draw_success "Build complete: out/klipper.bin"
+    echo ""
+    
+    if lsusb | grep -q "0483:df11"; then
+        log_info "STM32 DFU detected. Preparing to flash..."
+        echo "  Command: dfu-util -a 0 -d 0483:df11 -D out/klipper.bin -s 0x08008000:leave"
+        read -p "  Continue with Flash? [y/N] " yn
+        if [[ "$yn" =~ ^[yY]$ ]]; then
+            sudo dfu-util -a 0 -d 0483:df11 -D out/klipper.bin -s 0x08008000:leave
+            [ $? -eq 0 ] && log_success "Flash complete!" || log_error "Flash failed!"
+        fi
+    else
+        log_warn "DFU device lost or not found."
+        echo "  Please use the Manual SD Card method:"
+        echo -e "  Copy ${C_NEON}$klipper_dir/out/klipper.bin${NC} to SD card"
+        echo "  Rename to 'firmware.bin' and restart MCU."
+    fi
+    
+    read -p "  Press Enter..."
+}
+
+function build_and_flash_avr() {
+    draw_header "BUILD & FLASH AVR FIRMWARE"
+    # (Existing AVR logic remains standard)
+    draw_header "BUILD & FLASH AVR FIRMWARE"
+    
+    local klipper_dir="$HOME/klipper"
+    cd "$klipper_dir"
+    
+    echo "  Select AVR board:"
+    echo "  [1] ATmega328P (Arduino Uno/Nano)"
+    echo "  [2] ATmega2560 (Arduino Mega)"
+    echo "  [3] ATmega1284P"
+    read -p "  Option: " avr_opt
+    
+    local mcu=""
+    case $avr_opt in
+        1) mcu="atmega328p" ;;
+        2) mcu="atmega2560" ;;
+        3) mcu="atmega1284p" ;;
+        *) log_error "Invalid selection"; return ;;
+    esac
+    
+    log_info "Cleaning..."
+    make clean >/dev/null 2>&1
+    rm -f .config
+    
+    log_info "Generating AVR $mcu config..."
+    cat > .config <<EOF
+CONFIG_MACH_AVR=y
+CONFIG_MCU="$mcu"
+CONFIG_AVR_BOARD_DIRECTORY="$mcu"
 EOF
     
     make olddefconfig 2>&1 | tail -5
@@ -208,27 +242,34 @@ EOF
     echo "  Build output:"
     ls -la "$klipper_dir/out/" | grep -i klipper || true
     
-    if [ -f "$klipper_dir/out/klipper.bin" ]; then
-        log_success "Firmware built: klipper.bin"
+    if [ -f "$klipper_dir/out/klipper.hex" ]; then
+        log_success "Firmware built: klipper.hex"
         echo ""
         
-        if lsusb | grep -q "0483:df11"; then
-            log_info "STM32 detected in DFU mode!"
-            sudo dfu-util -R -a 0 -s 0x08000000:mass-erase:force -D "$klipper_dir/out/klipper.bin"
-            log_success "Flash complete!"
-        else
-            log_error "STM32 not in DFU mode!"
-            echo "  Enter DFU mode: Hold BOOT + Press RESET"
-        fi
+        # Check for programmer
+        echo "  Select programmer:"
+        echo "  [1] USBasp"
+        echo "  [2] AVRISP mkII"
+        echo "  [3] Arduino (bootloader)"
+        read -p "  Option: " prog_opt
+        
+        local prog=""
+        local device=""
+        case $prog_opt in
+            1) prog="usbasp"; device="$mcu" ;;
+            2) prog="avrispmkII"; device="$mcu" ;;
+            3) prog="arduino"; device="$mcu" ;;
+            *) log_error "Invalid selection"; return ;;
+        esac
+        
+        log_info "Flashing via AVRDude..."
+        sudo avrdude -c $prog -p $device -U flash:w:"$klipper_dir/out/klipper.hex":i
+        log_success "Flash complete!"
     else
         log_error "Build failed!"
     fi
     
     read -p "  Press Enter..."
-}
-
-function build_and_flash_stm32() {
-    build_and_flash_octopus
 }
 
 function view_firmware_logs() {
@@ -541,297 +582,6 @@ function flash_via_katapult() {
     else
         draw_error "Flash failed!"
     fi
-    
-    read -p "  Press Enter..."
-}
-
-# ============================================================
-# QUICK CAN SETUP WIZARD
-# ============================================================
-
-function run_quick_can_wizard() {
-    local board=""
-    local can_pin=""
-    local mcu_type=""
-    
-    while true; do
-        draw_header "⚡ QUICK CAN SETUP WIZARD"
-        
-        echo -e "${C_PURPLE}Select your Board:${NC}"
-        echo ""
-        echo "  ${C_NEON}[1]${NC}  BTT EBB36/42 v1.1/v1.2 (STM32G0B1)  - Most Common"
-        echo "  ${C_NEON}[2]${NC}  BTT Octopus Pro (STM32F446)"
-        echo "  ${C_NEON}[3]${NC}  BTT Octopus Pro (STM32F429)"
-        echo "  ${C_NEON}[4]${NC}  BTT SB2209 (RP2040)"
-        echo "  ${C_NEON}[5]${NC}  MKS SKIPR (STM32F407)"
-        echo "  ${C_NEON}[6]${NC}  Fysetc Cheetah v2.0 (STM32F072)"
-        echo ""
-        echo "  ${C_GREY}[B]${NC}  Back to Forge Menu"
-        echo ""
-        read -p "  >> CHOICE: " ch
-        
-        case $ch in
-            1) board="ebb42"; mcu_type="stm32g0b1"; can_pin="PB0_PB1"; break ;;
-            2) board="octopus446"; mcu_type="stm32f446"; can_pin="PA11_PA12"; break ;;
-            3) board="octopus429"; mcu_type="stm32f429"; can_pin="PA11_PA12"; break ;;
-            4) board="sb2209_rp2040"; mcu_type="rp2040"; can_pin="GPIO28_GPIO29"; break ;;
-            5) board="mksskipr"; mcu_type="stm32f407"; can_pin="PD0_PD1"; break ;;
-            6) board="cheetah"; mcu_type="stm32f072"; can_pin="PA11_PA12"; break ;;
-            b|B) return ;;
-        esac
-    done
-    
-    clear
-    draw_header "⚡ QUICK CAN SETUP - $board"
-    
-    echo -e "${C_GREEN}Step 1/4: Configure CAN-Bus Network${NC}"
-    echo ""
-    
-    local net_file="/etc/network/interfaces.d/can0"
-    sudo tee "$net_file" > /dev/null <<'EOF'
-allow-hotplug can0
-iface can0 can static
-    bitrate 1000000
-    up ifconfig $IFACE txqueuelen 128
-EOF
-    
-    sudo ip link set can0 up type can bitrate 1000000 2>/dev/null || sudo ifup can0 2>/dev/null
-    
-    if ip -br link show can0 &>/dev/null; then
-        echo -e "  ${C_GREEN}✓${NC} CAN-Netzwerk konfiguriert"
-    else
-        echo -e "  ${C_YELLOW}!${NC} CAN-Interface konnte nicht aktiviert werden"
-    fi
-    
-    echo ""
-    echo -e "${C_GREEN}Step 2/4: Install Katapult Bootloader${NC}"
-    echo ""
-    
-    local katapult_dir="$HOME/katapult"
-    if [ ! -d "$katapult_dir" ]; then
-        echo "  Klonen von Katapult..."
-        cd "$HOME"
-        git clone https://github.com/Arksine/katapult
-    fi
-    
-    cd "$katapult_dir"
-    make clean &>/dev/null
-    
-    case $board in
-        ebb42)
-            cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_MCU="stm32g0b1"
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_FLASH_START=0x8000000
-CONFIG_FLASH_SIZE=0x20000
-CONFIG_STM32_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
-CONFIG_CANBUS_PB0_PB1=y
-EOF
-            ;;
-        octopus446)
-            cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_MCU="stm32f446"
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_FLASH_START=0x8000000
-CONFIG_FLASH_SIZE=0x80000
-CONFIG_STM32_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
-CONFIG_STM32_CANBUS_PA11_PA12=y
-EOF
-            ;;
-        octopus429)
-            cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_MCU="stm32f429"
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_FLASH_START=0x8000000
-CONFIG_FLASH_SIZE=0x80000
-CONFIG_STM32_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
-CONFIG_STM32_CANBUS_PA11_PA12=y
-EOF
-            ;;
-        sb2209_rp2040)
-            cat > .config <<'EOF'
-CONFIG_MACH_RP2040=y
-CONFIG_MCU="rp2040"
-CONFIG_BOARD_DIRECTORY="rp2040"
-CONFIG_FLASH_SIZE=0x200000
-CONFIG_RP2040_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
-CONFIG_CANBUS_GPIO_TX=28
-CONFIG_CANBUS_GPIO_RX=29
-EOF
-            ;;
-        mksskipr)
-            cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_MCU="stm32f407"
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_FLASH_START=0x8000000
-CONFIG_FLASH_SIZE=0x80000
-CONFIG_STM32_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
-CONFIG_STM32_CANBUS_PD0_PD1=y
-EOF
-            ;;
-        cheetah)
-            cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_MCU="stm32f072"
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_FLASH_START=0x8000000
-CONFIG_FLASH_SIZE=0x20000
-CONFIG_STM32_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
-CONFIG_STM32_CANBUS_PA11_PA12=y
-EOF
-            ;;
-    esac
-    
-    make olddefconfig &>/dev/null
-    make -j$(nproc) &>/dev/null
-    
-    if [ -f "$katapult_dir/out/katapult.bin" ]; then
-        echo -e "  ${C_GREEN}✓${NC} Katapult gebaut"
-    else
-        echo -e "  ${C_RED}✗${NC} Katapult Build fehlgeschlagen"
-        read -p "  Press Enter..."
-        return
-    fi
-    
-    echo ""
-    echo -e "${C_YELLOW}!!! BITTE MCU IN DFU MODUS SETZEN !!!${NC}"
-    echo ""
-    echo "  Halte den Boot-Button gedrückt und verbinde USB"
-    echo ""
-    read -p "  Enter drücken wenn bereit..."
-    
-    echo ""
-    echo "  Flashe Katapult..."
-    make flash FLASH_DEVICE=0483:df11 &>/dev/null || echo -e "  ${C_YELLOW}!${NC} Bitte manuell flashen"
-    
-    echo ""
-    echo -e "${C_GREEN}Step 3/4: Build Klipper Firmware${NC}"
-    echo ""
-    
-    local klipper_dir="$HOME/klipper"
-    cd "$klipper_dir"
-    make clean &>/dev/null
-    
-    case $board in
-        ebb42)
-            cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_MCU="stm32g0b1"
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_FLASH_START=0x8002000
-CONFIG_STM32_CANBUS_PB0_PB1=y
-CONFIG_CANBUS_FREQUENCY=1000000
-EOF
-            ;;
-        octopus446)
-            cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_MCU="stm32f446"
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_FLASH_START=0x8002000
-CONFIG_STM32_CANBUS_PA11_PA12=y
-CONFIG_CANBUS_FREQUENCY=1000000
-EOF
-            ;;
-        octopus429)
-            cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_MCU="stm32f429"
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_FLASH_START=0x8002000
-CONFIG_STM32_CANBUS_PA11_PA12=y
-CONFIG_CANBUS_FREQUENCY=1000000
-EOF
-            ;;
-        sb2209_rp2040)
-            cat > .config <<'EOF'
-CONFIG_MACH_RP2040=y
-CONFIG_MCU="rp2040"
-CONFIG_BOARD_DIRECTORY="rp2040"
-CONFIG_RP2040_FLASH_START_2000=y
-CONFIG_RP2040_CANBUS_GPIO28_GPIO29=y
-CONFIG_CANBUS_FREQUENCY=1000000
-EOF
-            ;;
-        mksskipr)
-            cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_MCU="stm32f407"
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_FLASH_START=0x800c000
-CONFIG_STM32_CANBUS_PD0_PD1=y
-CONFIG_CANBUS_FREQUENCY=1000000
-EOF
-            ;;
-        cheetah)
-            cat > .config <<'EOF'
-CONFIG_MACH_STM32=y
-CONFIG_MCU="stm32f072"
-CONFIG_BOARD_DIRECTORY="stm32"
-CONFIG_FLASH_START=0x8002000
-CONFIG_STM32_CANBUS_PA11_PA12=y
-CONFIG_CANBUS_FREQUENCY=1000000
-EOF
-            ;;
-    esac
-    
-    make olddefconfig &>/dev/null
-    make -j$(nproc) &>/dev/null
-    
-    if [ -f "$klipper_dir/out/klipper.bin" ]; then
-        echo -e "  ${C_GREEN}✓${NC} Klipper gebaut"
-    else
-        echo -e "  ${C_RED}✗${NC} Klipper Build fehlgeschlagen"
-        read -p "  Press Enter..."
-        return
-    fi
-    
-    echo ""
-    echo -e "${C_GREEN}Step 4/4: Flash Klipper via Katapult (CAN)${NC}"
-    echo ""
-    
-    sleep 2
-    
-    echo "  Finde MCU auf CAN-Bus..."
-    local can_uuid=""
-    
-    for i in {1..10}; do
-        can_uuid=$(python3 ~/katapult/scripts/flash_can.py --scan 2>/dev/null | grep -oP 'can0\s+\K[0-9a-f]+' | head -1)
-        if [ -n "$can_uuid" ]; then
-            break
-        fi
-        sleep 1
-    done
-    
-    if [ -n "$can_uuid" ]; then
-        echo "  Gefunden: CAN UUID = $can_uuid"
-        python3 ~/katapult/scripts/flash_can.py "$klipper_dir/out/klipper.bin" -i can0 -u "$can_uuid" &>/dev/null
-        echo -e "  ${C_GREEN}✓${NC} Klipper geflasht!"
-    else
-        echo -e "  ${C_YELLOW}!${NC} MCU nicht gefunden. Bitte manuell flashen."
-    fi
-    
-    echo ""
-    draw_success "QUICK CAN SETUP ABGESCHLOSSEN!"
-    echo ""
-    
-    echo -e "${C_CYAN}Füge dies in deine printer.cfg ein:${NC}"
-    echo ""
-    echo "[mcu can0]"
-    echo "canbus_uuid: <YOUR_CAN_UUID>"
-    echo ""
-    echo "  Um UUID zu finden: ~/katapult/scripts/flash_can.py --scan"
-    echo ""
     
     read -p "  Press Enter..."
 }

@@ -54,7 +54,7 @@ function check_environment() {
     fi
 
     # 6. Dependencies
-    local deps=("git" "curl" "wget" "python3" "virtualenv" "dfu-util" "rsync" "make" "gcc")
+    local deps=("git" "curl" "wget" "python3" "virtualenv" "dfu-util" "rsync" "make" "gcc" "python3-serial" "python3-can")
     local missing=()
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &> /dev/null; then

@@ -19,8 +19,9 @@ function add_update_manager_entry() {
     
     local moonraker_conf="$HOME/printer_data/config/moonraker.conf"
     
-    # Ensure moonraker.conf exists
+    # Ensure moonraker.conf directory and file exist
     if [ ! -f "$moonraker_conf" ]; then
+        mkdir -p "$(dirname "$moonraker_conf")"
         touch "$moonraker_conf"
     fi
     

@@ -8,7 +8,7 @@ Wants=network-online.target
 Type=simple
 User={{USER}}
 RemainAfterExit=yes
-ExecStart={{HOME}}/klippy-env/bin/python {{HOME}}/klipper/klippy/klippy.py {{HOME}}/printer_data/config/printer.cfg -l {{HOME}}/printer_data/logs/klippy.log -a {{HOME}}/printer_data/comms/klippy.sock
+ExecStart={{HOME}}/klippy-env/bin/python {{HOME}}/klipper/klippy/klippy.py {{DATA_DIR}}/config/printer.cfg -l {{DATA_DIR}}/logs/klippy.log -a {{DATA_DIR}}/comms/klippy.sock
 Restart=always
 RestartSec=10
 

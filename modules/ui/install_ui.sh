@@ -277,6 +277,15 @@ server {
 }
 EOF
     
+    # Fix permissions for Nginx - CRITICAL FOR 403 REDIRECT LOOP
+    log_info "Fixing permissions for $root_dir..."
+    # 1. Ensure the user home dir is traversing for others (o+x)
+    sudo chmod o+x "$HOME"
+    
+    # 2. Ensure the UI folder is readable/executable for everyone
+    sudo chown -R $USER:$USER "$root_dir"
+    sudo chmod -R 755 "$root_dir"
+    
     # Enable site
     sudo ln -sf "$cfg_file" /etc/nginx/sites-enabled/
     
@@ -287,6 +296,8 @@ EOF
     
     # Test and restart
     if sudo nginx -t; then
+        sudo systemctl enable nginx
+        sudo systemctl start nginx
         sudo systemctl reload nginx
         log_success "Nginx configured for $ui_type on port $port"
     else

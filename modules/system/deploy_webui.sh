@@ -61,6 +61,7 @@ function deploy_katana_webui() {
     # Copy new files
     sudo cp -r "$webui_src/dist/"* "$webui_dest/"
     sudo chown -R $USER:$USER "$webui_dest"
+    sudo chmod -R 755 "$webui_dest"
     
     log_success "Web UI deployed successfully."
     

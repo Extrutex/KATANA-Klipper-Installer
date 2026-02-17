@@ -47,206 +47,47 @@ function do_install_ratos() {
 }
 
 function do_install_klipper() {
-    local variant="$1"
-    log_info "Installing Klipper ($variant)..."
+    local variant="${1:-Standard}"
+    local data_dir="${2:-$HOME/printer_data}"
+    local service_name="${3:-klipper}"
     
-    # 0. System Dependencies (Robustness Fix)
+    log_info "Installing Klipper ($variant) into $data_dir..."
+    
+    # 0. System Dependencies
     log_info "Ensuring Klipper System Dependencies..."
     local k_deps=("virtualenv" "python3-dev" "libffi-dev" "build-essential" "libncurses-dev" "libusb-dev" "avrdude" "gcc-avr" "binutils-avr" "avr-libc" "stm32flash" "libnewlib-arm-none-eabi" "gcc-arm-none-eabi" "binutils-arm-none-eabi" "libusb-1.0-0-dev")
     
-    if sudo -n true 2>/dev/null; then
-        sudo apt-get install -y "${k_deps[@]}"
-    else
-         echo "  [!] Sudo required for Klipper dependencies."
-         sudo apt-get install -y "${k_deps[@]}"
-    fi
+    sudo apt-get install -y "${k_deps[@]}" >/dev/null 2>&1
     
-    # 1. Clone
-    local repo_dir="$HOME/klipper_repo"
-    if [ -d "$repo_dir" ]; then
-        log_info "Klipper repo already exists at $repo_dir. Pulling updates..."
-        cd "$repo_dir" && git pull
-    else
+    # 1. Repo & Env (Shared across instances)
+    local repo_dir="$HOME/klipper"
+    if [ ! -d "$repo_dir" ]; then
         exec_silent "Cloning Klipper" "git clone https://github.com/Klipper3d/klipper.git $repo_dir"
     fi
 
-    # 2. VirtualEnv
-    local env_dir="$HOME/klipper_env"
+    local env_dir="$HOME/klippy-env"
     if [ ! -d "$env_dir" ]; then
         exec_silent "Creating VirtualEnv" "virtualenv -p python3 $env_dir"
         exec_silent "Installing Dependencies" "$env_dir/bin/pip install -r $repo_dir/scripts/klippy-requirements.txt"
     fi
 
-    # 3. Symlink check (Init first install)
-    if [ ! -L "$HOME/klipper" ]; then
-        ln -s "$repo_dir" "$HOME/klipper"
-        ln -s "$env_dir" "$HOME/klippy-env"
-        log_success "Initialized Symlinks for Klipper."
-    fi
+    # 2. Instance Directories
+    mkdir -p "$data_dir/config" "$data_dir/logs" "$data_dir/comms" "$data_dir/gcodes"
 
-    # 4. Service File
-    # Using KATANA Service Manager v2.0
+    # 3. Service File (Dynamic)
     if command -v install_service_from_template &> /dev/null; then
-        install_service_from_template "klipper"
+        install_service_from_template "klipper" "$service_name" "$data_dir"
     else
-        # Fallback if manager not loaded
-        log_warn "Service Manager not found. Using fallback."
-        cat <<EOF | sudo tee /etc/systemd/system/klipper.service >/dev/null
-[Unit]
-Description=Klipper 3D Printer Firmware
-After=network.target
-
-[Service]
-Type=simple
-User=$USER
-RemainAfterExit=yes
-ExecStart=$HOME/klippy-env/bin/python $HOME/klipper/klippy/klippy.py $HOME/printer_data/config/printer.cfg -l $HOME/printer_data/logs/klippy.log -a $HOME/printer_data/comms/klippy.sock
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-        sudo systemctl daemon-reload
-        sudo systemctl enable klipper
+        log_error "Service Manager missing! Klipper service NOT installed."
     fi
     
-    sudo systemctl restart klipper
+    sudo systemctl restart "$service_name"
     
-    # Add to Moonraker Update Manager
-    if [ -f "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" ]; then
-        source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh"
-        add_update_manager_entry "Klipper" "git_repo" "$HOME/klipper" "https://github.com/Klipper3d/klipper" "klipper"
-    fi
-    
-    log_success "Klipper ($variant) installed and service started."
-    read -p "  Press Enter..."
-}
-
-function do_install_kalico() {
-    log_info "Installing Kalico..."
-    
-    # 1. Clone
-    local repo_dir="$HOME/kalico_repo"
-    if [ -d "$repo_dir" ]; then
-        log_info "Kalico repo already exists at $repo_dir. Pulling updates..."
-        cd "$repo_dir" && git pull
-    else
-        exec_silent "Cloning Kalico" "git clone https://github.com/KalicoCrew/kalico.git $repo_dir"
-    fi
-
-    # 2. VirtualEnv
-    local env_dir="$HOME/kalico_env"
-    if [ ! -d "$env_dir" ]; then
-        exec_silent "Creating VirtualEnv" "virtualenv -p python3 $env_dir"
-        exec_silent "Installing Dependencies" "$env_dir/bin/pip install -r $repo_dir/scripts/klippy-requirements.txt"
-    fi
-    
-    log_success "Kalico installed. Use 'Engine Manager' to switch to it."
-    read -p "  Press Enter..."
-}
-
-function do_install_moonraker() {
-    log_info "Installing Moonraker..."
-    
-    # 1. Dependencies (System)
-    log_info "Installing System Dependencies for Moonraker..."
-    # Common requirements for Moonraker
-    local m_deps=("python3-virtualenv" "python3-dev" "liblmdb-dev" "libopenjp2-7" "libsodium-dev" "zlib1g-dev" "libjpeg-dev" "packagekit" "python3-wheel" "nginx")
-    
-    if sudo -n true 2>/dev/null; then
-        sudo apt-get install -y "${m_deps[@]}"
-    else
-         echo "  [!] Sudo required for Moonraker dependencies."
-         sudo apt-get install -y "${m_deps[@]}"
-    fi
-
-    # 2. Clone
-    local repo_dir="$HOME/moonraker"
-    if [ -d "$repo_dir" ]; then
-        log_info "Moonraker repo exists. Pulling..."
-        cd "$repo_dir" && git pull
-    else
-        exec_silent "Cloning Moonraker" "git clone https://github.com/Arksine/moonraker.git $repo_dir"
-    fi
-
-    # 3. VirtualEnv
-    local env_dir="$HOME/moonraker-env"
-    if [ ! -d "$env_dir" ]; then
-        exec_silent "Creating VirtualEnv" "virtualenv -p python3 $env_dir"
-        exec_silent "Installing Dependencies" "$env_dir/bin/pip install -r $repo_dir/scripts/moonraker-requirements.txt"
-    fi
-
-    # 4. Service File
-    # ALWAYS recreate moonraker.service to ensure correct ExecStart
-    cat <<EOF | sudo tee /etc/systemd/system/moonraker.service >/dev/null
-[Unit]
-Description=Moonraker API Server for Klipper
-Requires=network-online.target
-After=network-online.target
-
-[Service]
-Type=simple
-User=$USER
-WorkingDirectory=$HOME/moonraker
-ExecStart=$HOME/moonraker-env/bin/python -m moonraker --config $HOME/printer_data/config/moonraker.conf
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    sudo systemctl daemon-reload
-    sudo systemctl enable moonraker
-    
-    # ALWAYS ensure printer_data directories exist (not just when configs are missing)
-    mkdir -p "$HOME/printer_data/config"
-    mkdir -p "$HOME/printer_data/logs"
-    mkdir -p "$HOME/printer_data/comms"
-    mkdir -p "$HOME/printer_data/gcodes"
-    mkdir -p "$HOME/printer_data/systemd"
-    
-    # Create moonraker.conf only if it doesn't exist (preserve user changes)
-    local moonraker_conf="$HOME/printer_data/config/moonraker.conf"
-    if [ ! -f "$moonraker_conf" ]; then
-        cat > "$moonraker_conf" <<EOF
-[server]
-host = 0.0.0.0
-port = 7125
-
-[authorization]
-trusted_clients =
-    127.0.0.1
-    192.168.0.0/16
-    10.0.0.0/8
-
-[update_manager]
-enable_auto_refresh = True
-EOF
-    else
-        # Ensure update_manager section exists
-        if ! grep -q "\[update_manager\]" "$moonraker_conf"; then
-            echo "" >> "$moonraker_conf"
-            echo "[update_manager]" >> "$moonraker_conf"
-            echo "enable_auto_refresh = True" >> "$moonraker_conf"
-        fi
-    fi
-
-    # Create env file for systemd
-    echo "MOONRAKER_ARGS=--config $HOME/printer_data/config/moonraker.conf" > "$HOME/printer_data/systemd/moonraker.env"
-    
-    # ALWAYS create basic printer.cfg if missing
-    if [ ! -f "$HOME/printer_data/config/printer.cfg" ]; then
-        cat <<EOF > "$HOME/printer_data/config/printer.cfg"
-# Basic Klipper Config - Edit for your setup!
-[mcu]
-serial: /tmp/klipper_mock
-
-[printer]
-kinematics: none
-max_velocity: 100
-max_accel: 1000
-
+    # 4. Default Config (First time only)
+    local config_file="$data_dir/config/printer.cfg"
+    if [ ! -f "$config_file" ]; then
+        log_info "Creating default printer.cfg..."
+        cat > "$config_file" <<EOF
 [stepper_x]
 step_pin: PA2
 dir_pin: !PA1
@@ -284,10 +125,76 @@ heater_pin: PC1
 
 [fan]
 pin: PC0
+
+[mcu]
+serial: /dev/serial/by-id/change-me
+
+[printer]
+kinematics: cartesian
+max_velocity: 300
+max_accel: 3000
+max_z_velocity: 5
+max_z_accel: 100
 EOF
     fi
+
+    log_success "Klipper instance '$service_name' ready."
+}
+
+function do_install_moonraker() {
+    local data_dir="${1:-$HOME/printer_data}"
+    local service_name="${2:-moonraker}"
+    local port="${3:-7125}"
     
-    # Setup PolKit permissions for Moonraker (to avoid warnings)
+    log_info "Installing Moonraker into $data_dir (Port: $port)..."
+    
+    # 1. System Dependencies
+    local m_deps=("python3-virtualenv" "python3-dev" "liblmdb-dev" "libopenjp2-7" "libsodium-dev" "zlib1g-dev" "libjpeg-dev" "packagekit" "python3-wheel" "nginx")
+    sudo apt-get install -y "${m_deps[@]}" >/dev/null 2>&1
+
+    # 2. Repo & Env (Shared)
+    local repo_dir="$HOME/moonraker"
+    if [ ! -d "$repo_dir" ]; then
+        exec_silent "Cloning Moonraker" "git clone https://github.com/Arksine/moonraker.git $repo_dir"
+    fi
+
+    local env_dir="$HOME/moonraker-env"
+    if [ ! -d "$env_dir" ]; then
+        exec_silent "Creating VirtualEnv" "virtualenv -p python3 $env_dir"
+        exec_silent "Installing Dependencies" "$env_dir/bin/pip install -r $repo_dir/scripts/moonraker-requirements.txt"
+    fi
+
+    # 3. Instance Directories
+    mkdir -p "$data_dir/config" "$data_dir/logs" "$data_dir/comms" "$data_dir/gcodes" "$data_dir/systemd"
+
+    # 4. Instance Config (moonraker.conf)
+    local moonraker_conf="$data_dir/config/moonraker.conf"
+    if [ ! -f "$moonraker_conf" ]; then
+        cat > "$moonraker_conf" <<EOF
+[server]
+host = 0.0.0.0
+port = $port
+klippy_uds_address = $data_dir/comms/klippy.sock
+
+[authorization]
+trusted_clients =
+    127.0.0.1
+    192.168.0.0/16
+    10.0.0.0/8
+
+[update_manager]
+enable_auto_refresh = True
+EOF
+    fi
+
+    # 5. Service File (Dynamic)
+    if command -v install_service_from_template &> /dev/null; then
+        install_service_from_template "moonraker" "$service_name" "$data_dir"
+    else
+        log_error "Service Manager missing! Moonraker service NOT installed."
+    fi
+    
+    # 6. PolKit Permissions
     local current_user=$(whoami)
     sudo mkdir -p /etc/polkit-1/localauthority/50-local.d
     sudo tee /etc/polkit-1/localauthority/50-local.d/moonraker.pkla > /dev/null << POLLIT
@@ -305,34 +212,10 @@ ResultActive=yes
 Identity=unix-user:$current_user
 Action=org.freedesktop.login1.power-off
 ResultActive=yes
-
-[Allow Moonraker PowerOff Multi]
-Identity=unix-user:$current_user
-Action=org.freedesktop.login1.power-off-multiple-sessions
-ResultActive=yes
-
-[Allow Moonraker Reboot Multi]
-Identity=unix-user:$current_user
-Action=org.freedesktop.login1.reboot-multiple-sessions
-ResultActive=yes
-
-[Allow PackageKit]
-Identity=unix-user:$current_user
-Action=org.freedesktop.packagekit.system-sources-refresh
-ResultActive=yes
 POLLIT
-    
-    sudo systemctl daemon-reload
-    sudo systemctl restart moonraker klipper
-    
-    # Add to Moonraker Update Manager
-    if [ -f "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" ]; then
-        source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh"
-        add_update_manager_entry "Moonraker" "git_repo" "$HOME/moonraker" "https://github.com/Arksine/moonraker" "moonraker"
-    fi
-    
+
+    sudo systemctl restart "$service_name"
     log_success "Moonraker installed and service started."
-    read -p "  Press Enter..."
 }
 
 function update_core_stack() {

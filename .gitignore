@@ -12,4 +12,4 @@ configs/userspace/*.cfg
 !configs/userspace/overrides.cfg
 
 # System
-.DS_Store
+.DS_Store.agent/

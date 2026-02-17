@@ -652,10 +652,10 @@ function run_extras_smartprobes() {
         read -p "  >> COMMAND: " ch
         
         case $ch in
-            1) install_smartprobe ;;
-            2) install_cartographer ;;
-            3) install_beacon ;;
-            4) install_btt_eddy ;;
+            1) run_smartprobe_menu ;; # Updated to use the new specific menu
+            2) run_smartprobe_menu ;; # Fallback/Redirect for specific items if user clicks them directly
+            3) run_smartprobe_menu ;;
+            4) run_smartprobe_menu ;;
             b|B) return ;;
         esac
     done
@@ -693,9 +693,9 @@ function run_extras_toolchanger() {
         read -p "  >> COMMAND: " ch
         
         case $ch in
-            1) install_happyhare ;;
-            2) install_stealthchanger ;;
-            3) install_madmax ;;
+            1) run_multimaterial_menu ;; # Updated
+            2) run_multimaterial_menu ;; # Redirect
+            3) run_multimaterial_menu ;;
             b|B) return ;;
         esac
     done
@@ -723,8 +723,8 @@ function run_extras_tuning() {
         
         case $ch in
             1) run_katana_flow ;;
-            2) install_shaketune ;;
-            3) install_octoprint ;;
+            2) run_tuning_tools ;; # Use dispatcher
+            3) run_tuning_tools ;;
             b|B) return ;;
         esac
     done
@@ -872,10 +872,11 @@ function run_settings_menu() {
         
         echo "  ${C_GREEN}[1]${NC}  Profile                (minimal / standard / power)"
         echo "  ${C_NEON}[2]${NC}  Terminal               (Colors / Theme)"
-        echo "  ${C_NEON}[3]${NC}  CAN-Bus                (Network Config)"
-        echo "  ${C_NEON}[4]${NC}  Engine Switch          (Klipper / Kalico / RatOS)"
-        echo "  ${C_NEON}[5]${NC}  Uninstall              (Remove Everything)"
-        echo "  ${C_NEON}[6]${NC}  Info                   (Version / Credits)"
+        echo "  ${C_NEON}[3]${NC}  Instance Manager       (Add/Remove Instances)"
+        echo "  ${C_NEON}[4]${NC}  CAN-Bus                (Network Config)"
+        echo "  ${C_NEON}[5]${NC}  Engine Switch          (Klipper / Kalico / RatOS)"
+        echo "  ${C_NEON}[6]${NC}  Uninstall              (Remove Everything)"
+        echo "  ${C_NEON}[7]${NC}  Info                   (Version / Credits)"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -884,10 +885,11 @@ function run_settings_menu() {
         case $ch in
             1) change_profile ;;
             2) change_theme ;;
-            3) setup_can_network ;;
-            4) run_engine_manager ;;
-            5) run_uninstaller ;;
-            6) show_info ;;
+            3) run_instance_manager_dispatcher ;;
+            4) setup_can_network ;;
+            5) run_engine_manager ;;
+            6) run_uninstaller ;;
+            7) show_info ;;
             b|B) return ;;
             *) log_error "Invalid Selection" ;;
         esac
@@ -1012,6 +1014,19 @@ function menu_item() {
     local desc="$3"
     local line=$(printf "%-5s %-20s %s" "$num" "$title" "$desc")
     box_row "$line"
+}
+
+# ============================================================
+# PIXEL-PERFECT ALIGNMENT (Big Pickle Standard)
+# ============================================================
+
+function print_status_line() {
+    local label="$1"
+    local status="$2"
+    local color="${3:-$C_NEON}"
+    # %-25s reserviert genau 25 Zeichen für den Text, linksbündig.
+    # Uses Indigo/Blue border as specified in skills.md example
+    printf "  ${C_PURPLE}║${NC} %-25s │ %b%-37s\e[0m ${C_PURPLE}║${NC}\n" "$label" "$color" "$status"
 }
 
 # Legacy colors (if used by other modules)

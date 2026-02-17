@@ -8,9 +8,9 @@ After=network-online.target
 Type=simple
 User={{USER}}
 SyslogIdentifier=moonraker
-Environment=MOONRAKER_CONF={{HOME}}/printer_data/config/moonraker.conf
-Environment=MOONRAKER_LOG={{HOME}}/printer_data/logs/moonraker.log
-ExecStart={{HOME}}/moonraker-env/bin/python {{HOME}}/moonraker/moonraker/moonraker.py -d {{HOME}}/printer_data
+Environment=MOONRAKER_CONF={{DATA_DIR}}/config/moonraker.conf
+Environment=MOONRAKER_LOG={{DATA_DIR}}/logs/moonraker.log
+ExecStart={{HOME}}/moonraker-env/bin/python {{HOME}}/moonraker/moonraker/moonraker.py -d {{DATA_DIR}}
 Restart=always
 RestartSec=10
 
