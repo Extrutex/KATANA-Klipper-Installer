@@ -275,16 +275,27 @@ function do_update_klipper() {
     
     cd "$klipper_dir"
     
+    # Auto-detect default branch (master or main)
+    local branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+    if [ -z "$branch" ]; then
+        # Fallback: check which branch exists
+        if git rev-parse --verify origin/master &>/dev/null; then
+            branch="master"
+        else
+            branch="main"
+        fi
+    fi
+    
     # Check for updates
     local current_sha=$(git rev-parse HEAD)
     git fetch origin
-    local latest_sha=$(git rev-parse origin/main)
+    local latest_sha=$(git rev-parse origin/$branch 2>/dev/null)
     
     if [ "$current_sha" == "$latest_sha" ]; then
         log_success "Klipper is already up to date."
     else
-        log_info "Updating from $(git rev-parse --short HEAD) to $(git rev-parse --short origin/main)..."
-        git pull origin main
+        log_info "Updating from $(git rev-parse --short HEAD) to $(git rev-parse --short origin/$branch)..."
+        git pull origin $branch
         
         # Rebuild
         log_info "Rebuilding Klipper..."
@@ -318,20 +329,30 @@ function do_update_moonraker() {
     
     cd "$moonraker_dir"
     
+    # Auto-detect default branch
+    local branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+    if [ -z "$branch" ]; then
+        if git rev-parse --verify origin/master &>/dev/null; then
+            branch="master"
+        else
+            branch="main"
+        fi
+    fi
+    
     # Check for updates
     local current_sha=$(git rev-parse HEAD)
     git fetch origin
-    local latest_sha=$(git rev-parse origin/main)
+    local latest_sha=$(git rev-parse origin/$branch 2>/dev/null)
     
     if [ "$current_sha" == "$latest_sha" ]; then
         log_success "Moonraker is already up to date."
     else
-        log_info "Updating from $(git rev-parse --short HEAD) to $(git rev-parse --short origin/main)..."
-        git pull origin main
+        log_info "Updating from $(git rev-parse --short HEAD) to $(git rev-parse --short origin/$branch)..."
+        git pull origin $branch
         
         # Install requirements
         log_info "Installing dependencies..."
-        pip install -r requirements.txt --upgrade
+        "$HOME/moonraker-env/bin/pip" install -r scripts/moonraker-requirements.txt --upgrade
         
         # Restart service
         sudo systemctl restart moonraker
