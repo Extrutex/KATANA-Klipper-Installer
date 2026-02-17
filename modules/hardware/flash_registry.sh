@@ -9,35 +9,178 @@ function run_flash_menu() {
     while true; do
         draw_header "⚒ THE FORGE - MCU MANAGER"
         
-        echo "  [1] Detect MCUs (USB & CAN)"
-        echo "  [2] Quick Build (Preconfigured Boards)"
-        echo "  [3] Manual Build (make menuconfig)"
-        echo "  [4] Flash Firmware"
-        echo "  [5] Setup CAN-Bus Network"
-        echo "  [6] Install Katapult Bootloader"
-        echo "  [7] Flash via Katapult (CAN)"
-        echo "  [8] HAL Board Profiles"
-        echo ""
-        echo "  ${C_GREEN}[Q]${NC}  Quick CAN Setup Wizard      <-- RECOMMENDED!"
+        echo "  ${C_GREEN}[1]${NC}  Auto-Flash          (Auto-detect via lsusb)"
+        echo "  ${C_NEON}[2]${NC}  Quick CAN Setup     (1-Minute Wizard)"
+        echo "  ${C_NEON}[3]${NC}  Manual Build        (make menuconfig)"
+        echo "  ${C_NEON}[4]${NC}  View Logs"
         echo ""
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
         
         case $ch in
-            1) detect_mcus ;;
-            2) run_quick_build_menu ;;
+            1) auto_flash_mcu ;;
+            2) run_quick_can_wizard ;;
             3) manual_build ;;
-            4) select_flash_method ;;
-            5) setup_can_network ;;
-            6) install_katapult ;;
-            7) flash_via_katapult ;;
-            8) run_hal_flasher ;;
-            q|Q) run_quick_can_wizard ;;
+            4) view_firmware_logs ;;
             b|B) return ;;
             *) log_error "Invalid Selection" ;;
         esac
     done
+}
+
+function auto_flash_mcu() {
+    draw_header "⚡ AUTO-FLASH MCU"
+    
+    echo "  Scanning for connected MCUs..."
+    echo ""
+    
+    # Detect USB devices
+    local usb_devices=$(lsusb 2>/dev/null)
+    
+    if [ -z "$usb_devices" ]; then
+        log_error "No USB devices found!"
+        read -p "  Press Enter..."
+        return
+    fi
+    
+    echo "  ${C_GREEN}Found USB devices:${NC}"
+    echo "$usb_devices" | sed 's/^/    /'
+    echo ""
+    
+    # Common MCU IDs
+    local detected=""
+    
+    # RP2040 (Raspberry Pi Pico)
+    if echo "$usb_devices" | grep -qi "2e8a:0003"; then
+        detected="rp2040"
+        log_info "Detected: RP2040 (Raspberry Pi Pico)"
+    fi
+    
+    # STM32F103 (BluePill, etc)
+    if echo "$usb_devices" | grep -qi "0483:df11"; then
+        detected="stm32f103"
+        log_info "Detected: STM32F103 (DFU Mode)"
+    fi
+    
+    # STM32G0B1 (EBB36/42, SB2209)
+    if echo "$usb_devices" | grep -qi "0483:df11"; then
+        detected="stm32g0b1"
+        log_info "Detected: STM32G0B1 (EBB36/42)"
+    fi
+    
+    # STM32F446 (Octopus Pro)
+    if echo "$usb_devices" | grep -qi "0483:df11"; then
+        detected="stm32f446"
+        log_info "Detected: STM32F446 (Octopus Pro)"
+    fi
+    
+    if [ -z "$detected" ]; then
+        log_error "No supported MCU detected!"
+        echo ""
+        echo "  Supported devices:"
+        echo "  - Raspberry Pi Pico (RP2040)"
+        echo "  - STM32F103 (BluePill)"
+        echo "  - STM32G0B1 (EBB36/42)"
+        echo "  - STM32F446 (Octopus Pro)"
+        echo ""
+        echo "  Make sure your device is in DFU mode!"
+        read -p "  Press Enter..."
+        return
+    fi
+    
+    echo ""
+    read -p "  Flash $detected? [y/N] " yn
+    if [[ ! "$yn" =~ ^[yY]$ ]]; then
+        return
+    fi
+    
+    # Build and flash based on detected device
+    case "$detected" in
+        rp2040)
+            build_and_flash_rp2040 ;;
+        stm32f103|stm32g0b1|stm32f446)
+            build_and_flash_stm32 ;;
+    esac
+}
+
+function build_and_flash_rp2040() {
+    log_info "Building firmware for RP2040..."
+    
+    cd "$HOME/klipper"
+    make clean >/dev/null 2>&1
+    
+    cat > .config <<'EOF'
+CONFIG_MACH_RP2040=y
+CONFIG_MCU="rp2040"
+CONFIG_BOARD_DIRECTORY="rp2040"
+CONFIG_FLASH_SIZE=0x200000
+CONFIG_RP2040_FLASH_START_2000=y
+EOF
+    
+    make olddefconfig >/dev/null 2>&1
+    make -j$(nproc)
+    
+    if [ -f "$HOME/klipper/out/klipper.uf2" ]; then
+        log_success "Firmware built: $HOME/klipper/out/klipper.uf2"
+        echo ""
+        echo "  Copy klipper.uf2 to your RP2040 (mount as USB drive)"
+        echo "  Or press Enter to flash via DFU..."
+        
+        read -p "  " yn
+        if [[ "$yn" =~ ^[yY]$ ]]; then
+            sudo dfu-util -d 2e8a:0003 -a 0 -D "$HOME/klipper/out/klipper.uf2" -s 0x8000000:leave
+        fi
+    else
+        log_error "Build failed!"
+    fi
+    
+    read -p "  Press Enter..."
+}
+
+function build_and_flash_stm32() {
+    log_info "Building firmware for STM32..."
+    
+    cd "$HOME/klipper"
+    make clean >/dev/null 2>&1
+    
+    cat > .config <<'EOF'
+CONFIG_MACH_STM32=y
+CONFIG_BOARD_DIRECTORY="stm32"
+CONFIG_MCU="stm32f103xe"
+CONFIG_CLOCK_FREQ=72000000
+CONFIG_FLASH_START=0x8000000
+CONFIG_FLASH_SIZE=0x80000
+CONFIG_USBSERIAL=y
+EOF
+    
+    make olddefconfig >/dev/null 2>&1
+    make -j$(nproc)
+    
+    if [ -f "$HOME/klipper/out/klipper.bin" ]; then
+        log_success "Firmware built!"
+        echo ""
+        echo "  Flashing via DFU..."
+        sudo dfu-util -d 0483:df11 -a 0 -D "$HOME/klipper/out/klipper.bin" -s 0x08000000:leave
+        log_success "Flash complete!"
+    else
+        log_error "Build failed!"
+    fi
+    
+    read -p "  Press Enter..."
+}
+
+function view_firmware_logs() {
+    draw_header "FIRMWARE BUILD LOGS"
+    
+    if [ -f "$HOME/klipper/make.log" ]; then
+        tail -50 "$HOME/klipper/make.log"
+    else
+        echo "  No build logs found."
+    fi
+    
+    read -p "  Press Enter..."
+}
 }
 
 function detect_mcus() {

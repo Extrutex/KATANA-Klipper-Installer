@@ -272,10 +272,9 @@ EOF
     fi
     
     # Setup PolKit permissions for Moonraker (to avoid warnings)
-    if ! grep -q "moonraker" /etc/polkit-1/localauthority/50-local.d/moonraker.pkla 2>/dev/null; then
-        sudo mkdir -p /etc/polkit-1/localauthority/50-local.d
-        sudo tee /etc/polkit-1/localauthority/50-local.d/moonraker.pkla > /dev/null << 'POLLIT'
-[Allow Moonraker]
+    sudo mkdir -p /etc/polkit-1/localauthority/50-local.d
+    sudo tee /etc/polkit-1/localauthority/50-local.d/moonraker.pkla > /dev/null << 'POLLIT'
+[Allow Moonraker Systemd]
 Identity=unix-user:pi
 Action=org.freedesktop.systemd1.manage-units
 ResultActive=yes
@@ -289,9 +288,24 @@ ResultActive=yes
 Identity=unix-user:pi
 Action=org.freedesktop.login1.power-off
 ResultActive=yes
+
+[Allow Moonraker PowerOff Multi]
+Identity=unix-user:pi
+Action=org.freedesktop.login1.power-off-multiple-sessions
+ResultActive=yes
+
+[Allow Moonraker Reboot Multi]
+Identity=unix-user:pi
+Action=org.freedesktop.login1.reboot-multiple-sessions
+ResultActive=yes
+
+[Allow PackageKit]
+Identity=unix-user:pi
+Action=org.freedesktop.packagekit.system-sources-refresh
+ResultActive=yes
 POLLIT
-    fi
     
+    sudo systemctl daemon-reload
     sudo systemctl restart moonraker klipper
     
     log_success "Moonraker installed and service started."
