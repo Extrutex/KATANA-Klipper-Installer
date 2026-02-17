@@ -39,7 +39,7 @@ function auto_flash_mcu() {
     local usb_devices=$(lsusb 2>/dev/null)
     
     if [ -z "$usb_devices" ]; then
-        log_error "Keine USB-Geräte gefunden!"
+        log_error "No USB devices found!"
         read -p "  Enter drücken..."
         return
     fi
@@ -53,17 +53,17 @@ function auto_flash_mcu() {
     
     if echo "$usb_devices" | grep -qi "2e8a:0003"; then
         detected_mcus+=("rp2040")
-        log_info "Erkannt: RP2040 (Raspberry Pi Pico)"
+        log_info "Detected: RP2040 (Raspberry Pi Pico)"
     fi
     
     if echo "$usb_devices" | grep -qi "0483:df11"; then
         detected_mcus+=("stm32_dfu")
-        log_info "Erkannt: STM32 im DFU-Modus (0483:df11)"
+        log_info "Detected: STM32 in DFU Mode (0483:df11)"
     fi
     
     if echo "$usb_devices" | grep -qi "1d50:614e"; then
         detected_mcus+=("stm32_can")
-        log_info "Erkannt: STM32 (CAN-Modus)"
+        log_info "Detected: STM32 (CAN Mode)"
     fi
     
     if [ ${#detected_mcus[@]} -eq 0 ]; then
@@ -82,25 +82,25 @@ function auto_flash_mcu() {
     echo ""
     if [ ${#detected_mcus[@]} -eq 1 ]; then
         detected="${detected_mcus[0]}"
-        echo "  Einzelner MCU erkannt: $detected"
+        echo "  Single MCU detected: $detected"
     else
-        echo "  Mehrere MCUs erkannt:"
+        echo "  Multiple MCUs detected:"
         for i in "${!detected_mcus[@]}"; do
             echo "    $((i+1)) ${detected_mcus[$i]}"
         done
         echo ""
-        read -p "  MCU zum Flashen wählen [1-${#detected_mcus[@]}]: " sel
+        read -p "  Select MCU to flash [1-${#detected_mcus[@]}]: " sel
         if [[ "$sel" =~ ^[0-9]+$ ]] && [ "$sel" -ge 1 ] && [ "$sel" -le ${#detected_mcus[@]} ]; then
             detected="${detected_mcus[$((sel-1))]}"
         else
-            log_error "Ungültige Auswahl"
+            log_error "Invalid selection"
             return
         fi
     fi
     
     echo ""
-    read -p "  $detected flashen? [j/N] " yn
-    if [[ ! "$yn" =~ ^[jJ]$ ]]; then
+    read -p "  Flash $detected? [y/N] " yn
+    if [[ ! "$yn" =~ ^[yY]$ ]]; then
         return
     fi
     
@@ -111,13 +111,13 @@ function auto_flash_mcu() {
         stm32_dfu)
             build_and_flash_stm32 ;;
         stm32_can)
-            log_info "STM32 im CAN-Modus erkannt - Quick CAN Setup zum Flashen verwenden"
-            read -p "  Enter drücken..." ;;
+            log_info "STM32 in CAN mode detected - use Quick CAN Setup to flash"
+            read -p "  Press Enter..." ;;
     esac
 }
 
 function build_and_flash_rp2040() {
-    log_info "Baue Firmware für RP2040..."
+    log_info "Building firmware for RP2040..."
     
     local klipper_dir="$HOME/klipper"
     cd "$klipper_dir"

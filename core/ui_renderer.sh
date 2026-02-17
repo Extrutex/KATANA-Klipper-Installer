@@ -401,11 +401,11 @@ function draw_main_menu() {
     box_row_left "${C_WHITE}⚡ MAIN MENU${NC}"
     draw_box_mid
     box_row_left "${C_GREEN}[1]${NC}  ⚡ QUICK START     Full Install Wizard"
-    box_row_left "${C_NEON}[2]${NC}  🔄 UPDATE         Alle Komponenten updaten"
-    box_row_left "${C_NEON}[3]${NC}  📦 EXTRAS         Erweiterungen installieren"
+    box_row_left "${C_NEON}[2]${NC}  🔄 UPDATE         Update All Components"
+    box_row_left "${C_NEON}[3]${NC}  📦 EXTRAS         Install Extensions"
     box_row_left "${C_NEON}[4]${NC}  🔧 FORGE          MCU / Firmware / CAN-Bus"
-    box_row_left "${C_NEON}[5]${NC}  🩺 DIAGNOSE       Service / Logs / Reparatur"
-    box_row_left "${C_NEON}[6]${NC}  ⚙️  EINSTELLUNGEN  Profil / Theme / Netzwerk"
+    box_row_left "${C_NEON}[5]${NC}  🩺 DIAGNOSE       Service / Logs / Repair"
+    box_row_left "${C_NEON}[6]${NC}  ⚙️  SETTINGS       Profile / Theme / Network"
     
     draw_box_mid
     box_row_left "${C_RED}[X]${NC}  Exit             Close KATANAOS"
@@ -421,10 +421,10 @@ function run_quick_start() {
     while true; do
         draw_header "⚡ QUICK START - INSTALLATION WIZARD"
         
-        echo "  ${C_GREEN}[1]${NC}  Komplette Installation   Klipper + Moonraker + UI"
-        echo "  ${C_NEON}[2]${NC}  Nur Firmware            Klipper Only"
-        echo "  ${C_NEON}[3]${NC}  UI hinzufügen           Mainsail / Fluidd"
-        echo "  ${C_NEON}[4]${NC}  Config importieren      Bestehende printer.cfg"
+        echo "  ${C_GREEN}[1]${NC}  Full Installation      Klipper + Moonraker + UI"
+        echo "  ${C_NEON}[2]${NC}  Firmware Only         Klipper Only"
+        echo "  ${C_NEON}[3]${NC}  Add UI                Mainsail / Fluidd"
+        echo "  ${C_NEON}[4]${NC}  Import Config         Existing printer.cfg"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -449,12 +449,12 @@ function run_update_menu() {
     while true; do
         draw_header "🔄 UPDATE MANAGER"
         
-        echo "  ${C_GREEN}[1]${NC}  Alles updaten           Klipper + Moonraker + alle Extras"
-        echo "  ${C_NEON}[2]${NC}  Nur Klipper             Firmware"
-        echo "  ${C_NEON}[3]${NC}  Nur Moonraker           API Server"
-        echo "  ${C_NEON}[4]${NC}  Nur UI                  Mainsail / Fluidd"
-        echo "  ${C_NEON}[5]${NC}  Nur Extras              Alle installierten Erweiterungen"
-        echo "  ${C_NEON}[6]${NC}  Nur prüfen              Nicht installieren"
+        echo "  ${C_GREEN}[1]${NC}  Update All              Klipper + Moonraker + all Extras"
+        echo "  ${C_NEON}[2]${NC}  Klipper Only           Firmware"
+        echo "  ${C_NEON}[3]${NC}  Moonraker Only         API Server"
+        echo "  ${C_NEON}[4]${NC}  UI Only                Mainsail / Fluidd"
+        echo "  ${C_NEON}[5]${NC}  Extras Only            All installed extensions"
+        echo "  ${C_NEON}[6]${NC}  Check Only             Just check, don't install"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -526,7 +526,7 @@ function check_updates_only() {
 
 function run_extras_menu() {
     while true; do
-        draw_header "📦 EXTRAS - ERWEITERUNGEN"
+        draw_header "📦 EXTRAS - EXTENSIONS"
         
         echo "  ${C_GREEN}[1]${NC}  🎨 WEB UI              Mainsail / Fluidd"
         echo "  ${C_NEON}[2]${NC}  📷 VISION              Crowsnest / KlipperScreen"
@@ -779,16 +779,16 @@ function run_diagnose_menu() {
     while true; do
         draw_header "🩺 DIAGNOSE"
         
-        echo "  ${C_GREEN}[1]${NC}  Service Status        Alle Services prüfen"
+        echo "  ${C_GREEN}[1]${NC}  Service Status        Check all services"
         echo "  ${C_NEON}[2]${NC}  Logs                  Klipper / Moonraker"
-        echo "  ${C_NEON}[3]${NC}  Reparatur"
-        echo "        ├── Klipper neustarten"
-        echo "        ├── Moonraker neustarten"
-        echo "        ├── Auto-Restart konfigurieren"
-        echo "        └── printer.cfg validieren"
-        echo "  ${C_NEON}[4]${NC}  Notfall"
-        echo "        ├── Komplette Neuinstallation"
-        echo "        └── Vollständige Deinstallation"
+        echo "  ${C_NEON}[3]${NC}  Repair"
+        echo "        ├── Restart Klipper"
+        echo "        ├── Restart Moonraker"
+        echo "        ├── Configure Auto-Restart"
+        echo "        └── Validate printer.cfg"
+        echo "  ${C_NEON}[4]${NC}  Emergency"
+        echo "        ├── Full Reinstall"
+        echo "        └── Complete Uninstall"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -863,18 +863,18 @@ function run_emergency_menu() {
 }
 
 # ============================================================
-# MENU 6: EINSTELLUNGEN
+# MENU 6: SETTINGS
 # ============================================================
 
 function run_settings_menu() {
     while true; do
-        draw_header "⚙️ EINSTELLUNGEN"
+        draw_header "⚙️ SETTINGS"
         
-        echo "  ${C_GREEN}[1]${NC}  Profil                (minimal / standard / power)"
-        echo "  ${C_NEON}[2]${NC}  Terminal               (Farben / Theme)"
-        echo "  ${C_NEON}[3]${NC}  CAN-Bus                (Netzwerk Konfiguration)"
+        echo "  ${C_GREEN}[1]${NC}  Profile                (minimal / standard / power)"
+        echo "  ${C_NEON}[2]${NC}  Terminal               (Colors / Theme)"
+        echo "  ${C_NEON}[3]${NC}  CAN-Bus                (Network Config)"
         echo "  ${C_NEON}[4]${NC}  Engine Switch          (Klipper / Kalico / RatOS)"
-        echo "  ${C_NEON}[5]${NC}  Uninstall              (Alles entfernen)"
+        echo "  ${C_NEON}[5]${NC}  Uninstall              (Remove Everything)"
         echo "  ${C_NEON}[6]${NC}  Info                   (Version / Credits)"
         echo ""
         echo "  [B] Back"
