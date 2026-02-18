@@ -1,228 +1,103 @@
-# ⚔️ KATANAOS vs. KIAUH - Umfassender Vergleich
+# ⚔️ KATANAOS vs. KIAUH - Ehrlicher Vergleich
 
-> **KIAUH war der Wegbereiter. Aber 2026 ist KATANAOS der bessere Weg.**
+> **Stand: v2.2 — Nur tatsächlich funktionale Features werden gezählt.**
 
 ---
 
-## Der Paradigmenwechsel: Werkzeugkasten vs. Autopilot
+## Der Unterschied
 
 | Aspekt | KIAUH | KATANAOS |
 |--------|-------|----------|
 | **Philosophie** | Werkzeugkasten (manuell) | Autopilot (automatisch) |
-| **Installation** | 5+ Menüs durchklicken | 1 Befehl: `./katanaos.sh` |
-| **Architektur** | Monolithisch (~2000 Zeilen) | Modular (core/ + modules/) |
-| **Version** | v3.x (2022) | v2.1 (2026) |
-| **Menü** | ASCII Basic | ASCII Professionell |
+| **Installation** | Mehrere Menüs durchklicken | 1 Tastendruck: Quick Start |
+| **Architektur** | Monolithisch | Modular (core/ + modules/) |
+| **Sprache** | Bash | Bash |
+| **Menüpunkte** | ~6 | 6 (konsolidiert) |
+| **MCU Flash** | Manuell + Wiki | lsusb Auto-Detection + DFU |
 
 ---
 
-## Was KATANAOS BESSER macht
+## Feature-Vergleich
 
-### 1. ✅ Professionelles Menü-System
+### Kern-Features
+
+| Feature | KIAUH | KATANAOS | Vorteil |
+|---------|-------|----------|---------|
+| Klipper installieren | ✅ | ✅ | Gleich |
+| Moonraker installieren | ✅ | ✅ | Gleich |
+| Mainsail installieren | ✅ | ✅ | Gleich |
+| Fluidd installieren | ✅ | ✅ | Gleich |
+| Firmware bauen | ✅ menuconfig | ✅ menuconfig | Gleich |
+| Firmware flashen | ✅ manuell | ✅ **auto-detect USB** | KATANA |
+| Updaten | ✅ | ✅ auto-branch | KATANA |
+| Uninstall | ✅ | ✅ | Gleich |
+
+### Extras
+
+| Feature | KIAUH | KATANAOS |
+|---------|-------|----------|
+| Crowsnest | ❌ | ✅ |
+| KlipperScreen | ❌ | ✅ |
+| Engine Switch (Kalico/RatOS) | ❌ | ✅ |
+| Smart Probes (Beacon/Carto/Eddy) | ❌ | ✅ |
+| ShakeTune | ❌ | ✅ |
+| Multi-Material (Happy Hare) | ❌ | ✅ |
+| Backup & Restore | ❌ | ✅ |
+| Profile (minimal/standard/power) | ❌ | ✅ |
+| System Status Dashboard | ❌ | ✅ |
+| Diagnose (Logs/Repair) | ❌ | ✅ |
+| PolicyKit Auto-Setup | ❌ | ✅ |
+| USB Device Scan (lsusb) | ❌ | ✅ |
+| DFU Auto-Flash | ❌ | ✅ |
+| Linux Host MCU (automatisch) | ❌ | ✅ |
+| Post-Install Summary | ❌ | ✅ |
+
+### Was KIAUH noch voraus hat
+
+| Aspekt | Details |
+|--------|---------|
+| **Stabilität** | Seit Jahren im Einsatz, alle Bugs bekannt |
+| **Community** | Große Nutzerbasis, viele Tutorials |
+| **Dokumentation** | Umfangreiche Docs + Wiki |
+| **Testing** | Durch tausende User getestet |
+
+---
+
+## Menü-Vergleich
 
 **KIAUH:**
-- Unübersichtliche Numerierung
-- Keine visuelle Gruppierung
-- Farblose ASCII-Boxen
-
-**KATANAOS:**
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│ SYSTEM STATUS                                                    │
-├──────────────────────────────────────────────────────────────────┤
-│ ● Klipper       : ONLINE    3D Printer Firmware                │
-│ ● Moonraker     : ONLINE    API Server                         │
-├──────────────────────────────────────────────────────────────────┤
-│ >> WEB INTERFACES                                              │
-├──────────────────────────────────────────────────────────────────┤
-│ ● Mainsail      : INSTALLED                                     │
-│ ○ Fluidd        : NOT INSTALLED                                │
-└──────────────────────────────────────────────────────────────────┘
+ 1) [Install]
+ 2) [Remove]
+ 3) [Update]
+ 4) [Advanced]
+ Q) Exit
 ```
 
-### 2. ✅ Security ab Werk (Production-Grade)
-
-**KIAUH:** System ist "nackt" - jeder Port offen
-
-**KATANAOS:**
-- **UFW Firewall** - Nur SSH(22), HTTP(80), API(7125) offen
-- **SSH Hardening** - Key-Auth only, Root-Login aus
-- **Log2Ram** - Schont die SD-Karte
-- **Nginx Hardening** - Security Headers
-- **Auto-Restart** - Services starten bei Absturz automatisch neu
-
-### 3. ✅ The Forge (CAN-Bus Automatisierung)
-
-**KIAUH:** Manuell mit Wiki
-
-**KATANAOS:** Automatische Erkennung & Konfiguration
-
-### 4. ✅ KlipperScreen integriert
-
-**KIAUH:** ❌ Nicht vorhanden
-
-**KATANAOS:** ✅ Option 4 → Vision Stack
-
-### 5. ✅ OctoPrint Support
-
-**KIAUH:** ❌ Nicht vorhanden
-
-**KATANAOS:** ✅ Option 16
-
-### 6. ✅ Printer Config Wizard
-
-**KIAUH:** Manuell
-
-**KATANAOS:** ✅ Option 14 - Templates für:
-- Basic
-- Ender-3
-- Voron 2.4 / Trident
-- Custom
-
-### 7. ✅ Multi-Engine Support
-
-- Klipper (Standard)
-- Kalico (High-Performance MPC)
-- RatOS (RatRig Fork)
-- Wechsel per Engine Switch (Option 6)
-
-### 8. ✅ KATANA FLOW
-
-- Smart Purge
-- Adaptive Mesh (KAMP integriert)
-- ShakeTune (Vibrationsanalyse)
-
-### 9. ✅ Dr. KATANA Diagnostics
-
-- Log-Analyse
-- Service-Status Prüfung
-- Automatische Repair-Funktionen
-- Permission Fixer
-
-### 10. ✅ Backup & Restore
-
-- Vollständige System-Sicherung
-- Wiederherstellung mit einem Befehl
-- Externe Speicher-Unterstützung
-
-### 11. ✅ Happy Hare & Smart Probe
-
-- Automatische Treiber-Installation
-- udev-Regeln werden gemanagt
-- Hardware Menu (Option 10)
-
-### 12. ✅ HORIZON UI (Next-Gen)
-
-- Modernes React Dashboard
-- In Entwicklung (horizon/ Ordner)
-- Via Option 3 → 3 installierbar
-
----
-
-## Feature Matrix (Stand v2.1)
-
+**KATANAOS v2.2:**
 ```
-                        KIAUH    KATANAOS
-                        ─────    ────────
-Klipper                   ✅         ✅
-Moonraker                 ✅         ✅
-Mainsail                  ✅         ✅
-Fluidd                    ✅         ✅
-Crowsnest                 ❌         ✅
-KlipperScreen             ❌         ✅
-Happy Hare                ❌         ✅
-Smart Probe               ❌         ✅
-OctoPrint                 ❌         ✅
-CAN-Bus                   ⚠️         ⚠️
-Backup/Restore            ⚠️         ✅
-UFW Firewall              ❌         ✅
-SSH Hardening            ❌         ✅
-Log2Ram                  ❌         ✅
-Auto-Restart             ❌         ✅
-Printer Config Wizard    ❌         ✅
-Update System             ⚠️         ✅
-Engine Switch             ❌         ✅
-Diagnostics               ❌         ✅
-KATANA FLOW               ❌         ✅
-HORIZON UI                ❌         ✅
+ [1] QUICK START      Auto-Pilot Installation
+ [2] FORGE            Build & Flash MCU Firmware
+ [3] EXTRAS           Vision / Probes / System / Tools
+ [4] UPDATE           Klipper & Moonraker
+ [5] DIAGNOSE         Service Status / Logs / Repair
+ [6] SETTINGS         Profile / Engine / CAN / Uninstall
 ```
-
----
-
-## Menü-Übersicht KATANAOS v2.1
-
-| Option | Name | Beschreibung |
-|--------|------|--------------|
-| 1 | Full Install | Komplett-Installation |
-| 2 | Core Firmware | Klipper / Kalico / RatOS |
-| 3 | Web UI | Mainsail / Fluidd / HORIZON |
-| 4 | Vision Stack | Crowsnest / KlipperScreen |
-| 5 | The Forge | Flash MCU / CAN-Bus |
-| 6 | Engine Switch | Zwischen Firmware wechseln |
-| 7 | Update | Klipper & Moonraker |
-| 8 | Diagnostics | Log-Analyse & Repair |
-| 9 | KATANA FLOW | Smart Purge / Adaptive Mesh |
-| 10 | Hardware | Happy Hare / Smart Probe |
-| 11 | Security | Firewall / SSH Hardening |
-| 12 | Backup | Backup & Restore |
-| 13 | Uninstall | Entfernen |
-| 14 | Printer Config | printer.cfg erstellen |
-| 15 | Auto-Restart | Service Health Watch |
-| 16 | OctoPrint | OctoPrint installieren |
-
----
-
-## Was KIAUH noch voraus hat
-
-### ❌ Stabilität
-- KIAUH wird seit Jahren genutzt
-- Alle Bugs sind bekannt
-- KATANAOS muss sich noch beweisen
-
-### ❌ Community Support
-- Große Nutzerbasis
-- Viele Tutorials
-- Schnelle Hilfe bei Problemen
-
-### ❌ Dokumentation
-- Umfangreiche Docs online
-- KATANAOS: docs/ Ordner wird erstellt
-
----
-
-## Was bei KATANAOS noch fehlt
-
-### 🔴 Kritisch
-
-| Feature | Status |
-|---------|--------|
-| Multi-Machine Support | ❌ |
-| Touchscreen Wizard | ❌ |
-
-### 🟡 Wichtig
-
-| Feature | Status |
-|---------|--------|
-| Theme Builder | ❌ |
-| Plugin Manager | ⚠️ Moonraker Only |
 
 ---
 
 ## Fazit
 
-**KATANAOS übertrifft KIAUH weil:**
+**KATANAOS überholt KIAUH bei:**
+1. **Forge** — USB-Erkennung und Auto-Flash statt manueller Wiki-Anleitung
+2. **Extras** — Crowsnest, KlipperScreen, Smart Probes integriert
+3. **Engine Switch** — Klipper ↔ Kalico ↔ RatOS mit einem Klick
+4. **Diagnose** — Eingebaute Service-Checks und Log-Viewer
+5. **Profiles** — Vorkonfigurierte Installation statt Einzelauswahl
 
-1. **Modern** - Modular, farbig, strukturiert
-2. **Sicherer** - Firewall, SSH Hardening, Log2Ram ab Werk
-3. **Kompletter** - Alle Features integriert (16 Optionen!)
-4. **Zukunftsfähig** - Mit HORIZON WebUI
-5. **Aktiver** - Wird 2026 noch entwickelt
-6. **Auto-Restart** - Services überleben Neustarts
-7. **Printer Config** - Einfache Config-Erstellung
+**KIAUH bleibt besser bei:**
+1. **Stabilität** — Jahrelang getestet
+2. **Community** — Mehr Tutorials und Support
 
-**ABER:** Vor Release 1.0 muss es noch ausführlich getestet werden!
-
----
-
-> *KIAUH war der Wegbereiter. KATANAOS ist der Nachfolger.*
-> *Upgrade to Pro-Grade.*
+> **KATANAOS ist der modernere Ansatz. Aber KIAUH hat die Battle-Tested Reality.**
+> Sobald KATANAOS v1.0-stable erreicht, gibt es keinen Grund mehr für KIAUH.

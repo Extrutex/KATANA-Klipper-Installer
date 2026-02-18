@@ -17,7 +17,7 @@
 
   <p>
     <b>Opinionated automation for the modern 3D printing stack.</b><br>
-    Deploys a hardened, fully configured Klipper environment (including essential macros) in minutes.
+    Deploys a hardened, fully configured Klipper environment in minutes.
   </p>
 </div>
 
@@ -27,110 +27,102 @@
 
 ## ⚡ Overview
 
-
 **KATANAOS** is a CLI management suite engineered to streamline the deployment and maintenance of the Klipper ecosystem. Unlike modular toolboxes that require extensive manual menu navigation, KATANAOS utilizes an **"Auto-Pilot" workflow** to provision the entire stack (Firmware, API, Reverse Proxy, HMI) in a single execution pass.
 
-
-It is designed for users who treat their 3D printer as a production appliance, prioritizing **security, stability, and reproducible configuration** over manual tinkering.
+It is designed for users who treat their 3D printer as a production appliance, prioritizing **speed, stability, and reproducible configuration** over manual tinkering.
 
 
 ## 📦 Features
 
 
-### 🟣 Deployment Matrix
-A real-time dashboard that verifies the installation state of all stack components.
-- **Function:** Checks for Klipper, Moonraker, UI frontends, and system services.
-- **Purpose:** Provides immediate visual feedback on which parts of the ecosystem are deployed.
+### ⚡ Quick Start (Auto-Pilot)
+One-click installation of the full Klipper stack with profile support.
+- **Profiles:** `minimal` (Klipper + Moonraker), `standard` (+ Mainsail), `power` (everything)
+- **Includes:** Klipper, Moonraker, Mainsail/Fluidd, Nginx, PolicyKit, systemd services
+- **Post-Install:** Visual summary with checkmarks showing what was installed
 
 
-### ⚡ Dynamic Nginx Management
-KATANAOS handles the reverse proxy configuration automatically.
-- **Feature:** Switch between **Mainsail** and **Fluidd** instantly via the menu.
-- **Mechanism:** The script rewrites the Nginx site configuration and restarts the service seamlessly.
+### 🔥 THE FORGE - MCU Firmware Manager
+Build and flash firmware for any Klipper-supported board.
+- **Universal:** Uses Klipper's `menuconfig` — supports every board Klipper supports
+- **Auto-Detection:** Scans USB devices via `lsusb` to find boards in DFU/bootloader mode
+- **Smart Flash:** Auto-detects `0483:df11` (STM32 DFU), `1d50:614e` (Klipper USB), `/dev/serial/by-id/`
+- **Flash Methods:** DFU (auto), USB Serial (auto), SD Card (manual), CAN Bus (Katapult)
+- **Linux Host MCU:** Fully automatic build & install for Raspberry Pi host MCU
+- **Handles known quirks:** Recognizes successful DFU flash despite `dfu-util` detach errors
 
 
-### 🔥 THE FORGE - MCU Manager
-A dedicated engine for MCU management and communication.
-- **Quick Build:** Preconfigured builds for 9 popular boards:
-  - BTT Octopus F446 v1.1, F429, H723
-  - Raspberry Pi RP2040 (Generic)
-  - BTT SKR E3 Turbo, SKR 3
-  - Fysetc Cheetah v2.0
-  - Fly Gemini S, BTT GTR, BTT E3 RRF
-- **Katapult Bootloader:** Install and flash via CAN-Bus
-- **CAN-Bus Network:** Auto-setup with 1M bitrate
-- **Flash Methods:** USB, SD Card, Katapult (CAN-Bus)
-
-
-### 🛠️ Hardware Extensions
-Intelligent installation for modern Klipper hardware.
-- **StealthChanger** - Toolchanging system for Voron printers
-- **MADMAX** - Mechanical tool lock system
-- **Cartographer** - High-speed inductive Z-probe
-- **Beacon** - Eddy Current Probe for precision Z-mapping
-- **BTT Eddy** - BigTreeTech Eddy Current Probe
-- **Bed Distance Sensor** - Accelerometer-based Z calibration
-- **Happy Hare** - MMU V1/V2/ERCF support
+### 🔄 Engine Switch
+Switch between Klipper firmware variants without reinstalling.
+- **Klipper** (upstream) ↔ **Kalico** (fork) ↔ **RatOS** (fork)
+- Automatic detection of current engine via symlink/directory analysis
 
 
 ### 👁️ Vision Stack
-Full support for local machine interfaces.
+Camera and touch display support.
 - **Crowsnest** - Webcam Streaming Daemon
 - **KlipperScreen** - Touch UI for direct printer control
 
 
-### 🧩 EXTRAS
-Advanced printing features.
+### 🔌 Smart Probes
+One-click installation for modern Z-probes.
+- **Beacon** - Eddy Current Probe
+- **Cartographer** - High-speed inductive probe
+- **BTT Eddy** - BigTreeTech Eddy Current Probe
+
+
+### 🧩 Extras
+Additional printing tools and macros.
+- **ShakeTune** - Input Shaper analysis
 - **KATANA-FLOW** - Smart Purge & Park (KAMP replacement)
-  - Smart Park: Proximity parking to prevent oozing
-  - Blade Purge: Pattern purge line following the toolhead
-  - Two install variants: Simple Include or Section Header
-- **ShakeTune** - Input Shaper analysis and tuning
-- **OctoPrint** - Optional remote monitoring support
+- **Multi-Material** - Happy Hare / Monolith support
 
 
-### 💾 Backup System
-Multiple backup strategies for data safety.
-- **tar.gz Backups** - Classic directory snapshots
-- **Restic** - Encrypted, deduplicated snapshots with verification
+### 💾 Backup & Restore
+Automated backup system for Klipper configs.
+- **ZIP Backups** with automatic rotation (keeps last 5)
+- **Git Push** for version-controlled config backups
+- **Restore** from any backup with service stop/start handling
 
 
-### 🛡️ System Hardening
-Security is not an option; it is a default.
-- **UFW Firewall:** Automated rule generation
-- **Log2Ram:** RAM-based logging to protect SD cards
+### � Update Manager
+Keep your stack current.
+- **Auto-detects** git branch (`master` vs `main`) per repository
+- Updates Klipper, Moonraker, or both with rebuild and service restart
 
 
-### 🚑 Dr. Katana
-Safety net for your printer.
-- **Log Analyzer:** Scans logs for common errors
-- **Permission Fixer:** Auto-corrects ownership issues
-- **Dependency Repair:** Re-installs missing packages
+### 🩺 Diagnostics
+System health monitoring and repair.
+- **Service Status** - Check all running services
+- **Log Viewer** - Klipper, Moonraker, dmesg logs
+- **Repair** - Restart services, validate config
+- **Emergency** - Full reinstall or complete uninstall
+
+
+### � System Status Dashboard
+Real-time status display in the main menu.
+- Shows Engine status (Klipper/Kalico/RatOS) with online/offline indicator
+- Shows Moonraker status with online/offline indicator
+- Updates every time the main menu is rendered
 
 
 ## 🛠️ Usage
 
 **Requirements:**
 - Hardware: Raspberry Pi (3/4/5/Zero2), Orange Pi, or generic Linux host
-- OS: Debian Bookworm / Bullseye (Lite recommended)
+- OS: Raspberry Pi OS Lite (Bookworm/Bullseye) or Debian-based
 - User: Standard user with `sudo` privileges
-- **Git** (if not installed, see below)
 
 
 ### Installation
 
-**Important: Update system & install Git**
+**Step 1: Update system & install Git**
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y git
 ```
 
-**Optional: Remove legacy KIAUH**
-```bash
-cd ~
-rm -rf ~/kiauh
-```
-
+**Step 2: Clone & run KATANA**
 ```bash
 cd ~
 git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
@@ -139,128 +131,68 @@ chmod +x katanaos.sh
 ./katanaos.sh
 ```
 
+**Optional: Remove legacy KIAUH**
+```bash
+rm -rf ~/kiauh
+```
 
-### 🚀 First Time Setup (Important!)
+
+### 🚀 First Time Setup
 
 If this is a **fresh installation**, follow this order:
 
 ```
 Step 1:  [1] QUICK START → Full Install     (installs Klipper + Moonraker + Web UI)
-Step 2:  [4] FORGE → Build & Flash MCU      (compiles firmware for your board)
+Step 2:  [2] FORGE → Build & Flash MCU      (compiles firmware for your board)
 Step 3:  [3] EXTRAS → Install extensions     (optional: Crowsnest, probes, etc.)
 ```
 
-> ⚠️ **The FORGE (Menu 4) requires Klipper to be installed first!**
+> ⚠️ **The FORGE requires Klipper to be installed first!**
 > It compiles firmware from the Klipper source code (`~/klipper`).
-> If you skip Step 1 and go straight to the Forge, nothing will happen because
-> the source code doesn't exist yet.
->
-> **TL;DR:** Always run **Quick Start** first on a fresh system.
+> Always run **Quick Start** first on a fresh system.
 
 
-### 🛡️ Firewall & Port Management
-
-KATANAOS includes an optional UFW firewall. If enabled, certain ports are open by default:
-
-| Port | Service | Default |
-|------|---------|---------|
-| 22 | SSH | ✅ Open |
-| 80 | HTTP (Mainsail/Fluidd) | ✅ Open |
-| 443 | HTTPS | ✅ Open |
-| 7125 | Moonraker API | ✅ Open |
-| 8080 | Crowsnest/Webcam | ✅ Open |
-
-**Opening additional ports:**
-
-If you install additional services (like Spoolman on port 9000), you can open ports via the menu:
-
-```
-[11] Security → [6] Port Management
-```
-
-Or via command line:
-```bash
-sudo ufw allow 9000/tcp
-```
-
-**Closing ports:**
-```bash
-sudo ufw delete allow 9000/tcp
-```
-
-**View current rules:**
-```bash
-sudo ufw status numbered
-```
-
-**Disable firewall (if needed):**
-```bash
-sudo ufw disable
-```
-
-
-### 📋 Menu Reference
-
-After launching `./katanaos.sh`, the main menu appears with a structured interface. Use the number keys (1-15) to navigate and press Enter to execute. Press X to exit.
+### � Menu Structure
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║ ⚡ INSTALLER                                                         ║
+║                    KATANAOS v2.2 - MAIN MENU                       ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║ [1]  Full Install       Klipper + Moonraker + UI                    ║
-║ [2]  Core Firmware      Klipper / Kalico / RatOS                    ║
-║ [3]  Web UI             Mainsail / Fluidd                            ║
-║ [4]  Vision Stack      Crowsnest / KlipperScreen                    ║
-║ [5]  The Forge         MCU Flash / CAN-Bus / Katapult                ║
-╠══════════════════════════════════════════════════════════════════════╣
-║ 🔧 SYSTEM                                                            ║
-╠══════════════════════════════════════════════════════════════════════╣
-║ [6]  Engine Switch     Installed: KLIPPER                           ║
-║ [7]  Update            Klipper & Moonraker                           ║
-║ [8]  Diagnostics       Log Analysis & Repair                        ║
-╠══════════════════════════════════════════════════════════════════════╣
-║ 🧩 EXTRAS                                                            ║
-╠══════════════════════════════════════════════════════════════════════╣
-║ [9]  KATANA-FLOW      Smart Purge & ShakeTune                       ║
-║ [10] Hardware          Toolchanger / Probes                          ║
-╠══════════════════════════════════════════════════════════════════════╣
-║ 🔒 MANAGEMENT                                                        ║
-╠══════════════════════════════════════════════════════════════════════╣
-║ [11] Security          Firewall / SSH Hardening                     ║
-║ [12] Backup            Backup & Restore                             ║
-║ [13] Uninstall         Remove Klipper Stack                          ║
-║ [14] Printer Config    Create printer.cfg                           ║
-║ [15] Auto-Restart      Service Health Watch                         ║
-╠══════════════════════════════════════════════════════════════════════╣
-║ [X]  Exit              Close KATANAOS                               ║
+║                                                                    ║
+║  [1]  QUICK START         Auto-Pilot Installation                  ║
+║  [2]  FORGE               Build & Flash MCU Firmware               ║
+║  [3]  EXTRAS              Vision / Probes / System / Tools         ║
+║  [4]  UPDATE              Klipper & Moonraker                      ║
+║  [5]  DIAGNOSE            Service Status / Logs / Repair           ║
+║  [6]  SETTINGS            Profile / Engine / CAN / Uninstall       ║
+║                                                                    ║
+║  [X]  EXIT                                                         ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
-#### ⚡ INSTALLER
-- **[1] Full Install** - Deploys the complete Klipper stack (Klipper, Moonraker, and a web UI) in one go
-- **[2] Core Firmware** - Install Klipper, Kalico, or RatOS firmware only
-- **[3] Web UI** - Choose and install Mainsail or Fluidd web interface
-- **[4] Vision Stack** - Install Crowsnest (webcam streaming) and/or KlipperScreen (touch UI)
-- **[5] The Forge** - MCU firmware compilation, flashing, CAN-Bus setup, and Katapult bootloader management
+#### [1] Quick Start
+Installs the full Klipper stack based on your selected profile (minimal/standard/power).
 
-#### 🔧 SYSTEM
-- **[6] Engine Switch** - Switch between installed Klipper engines (Klipper, Kalico, RatOS)
-- **[7] Update** - Update Klipper and Moonraker to the latest versions
-- **[8] Diagnostics** - Run log analysis, fix permissions, and repair dependencies (Dr. Katana)
+#### [2] Forge
+Opens Klipper's `menuconfig`, compiles firmware, scans USB for connected boards, and flashes automatically.
 
-#### 🧩 EXTRAS
-- **[9] KATANA-FLOW** - Install Smart Purge & Park macros and ShakeTune for input shaper analysis
-- **[10] Hardware** - Configure tool changers, probes (Cartographer, Beacon, BTT Eddy), and sensors
+#### [3] Extras
+| Submenu | Contents |
+|---|---|
+| Web UI | Install/switch Mainsail or Fluidd |
+| Vision | Crowsnest, KlipperScreen |
+| Smart Probes | Beacon, Cartographer, BTT Eddy |
+| Printing | ShakeTune, KATANA-FLOW, Multi-Material |
+| System | Backup, Restore, Log2Ram |
 
-#### 🔒 MANAGEMENT
-- **[11] Security** - Configure UFW firewall and SSH hardening
-- **[12] Backup** - Create and restore backups (tar.gz or Restic encrypted backups)
-- **[13] Uninstall** - Remove the entire Klipper stack from the system
-- **[14] Printer Config** - Generate a basic printer.cfg template
-- **[15] Auto-Restart** - Enable service health monitoring with automatic restart on failure
+#### [4] Update
+Updates Klipper and/or Moonraker to latest version from GitHub.
 
-#### Exit
-- **[X]** - Exit KATANAOS and return to the terminal
+#### [5] Diagnose
+Check service status, view logs, restart services, emergency reinstall.
+
+#### [6] Settings
+Change profile, switch engine (Klipper/Kalico/RatOS), manage instances, CAN-Bus setup, uninstall.
 
 
 ## License
