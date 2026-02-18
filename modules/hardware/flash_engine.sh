@@ -110,7 +110,7 @@ function run_linux_wizard() {
         return
     fi
 
-    echo "  This will compile & install Klipper for the Raspberry Pi itself."
+    echo "  This will compile & install Klipper for this Linux host as a secondary MCU."
     echo "  No configuration needed - fully automatic."
     echo ""
     read -p "  Start? [y/N]: " yn
@@ -341,10 +341,11 @@ function flash_via_can() {
     log_info "CAN Bus Flashing (Katapult)"
     echo "  ---------------------------------------------------"
 
-    if command -v candump &> /dev/null && ip link show can0 &> /dev/null; then
-        echo "  CAN0 interface found."
+    local can_iface="${KATANA_CAN_INTERFACE:-can0}"
+    if command -v candump &> /dev/null && ip link show "$can_iface" &> /dev/null; then
+        echo "  $can_iface interface found."
     else
-        log_warn "CAN interface not detected. Ensure can0 is configured."
+        log_warn "CAN interface not detected. Ensure $can_iface is configured."
     fi
 
     read -p "  Enter UUID to flash: " uuid

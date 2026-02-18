@@ -4,10 +4,11 @@
 # Handles network config, Katapult bootloader and UUID scanning.
 
 function run_can_manager() {
+    local can_iface="${KATANA_CAN_INTERFACE:-can0}"
     while true; do
-        draw_header "🚌 CAN-BUS MANAGER"
+        draw_header "CAN-BUS MANAGER"
         echo ""
-        echo "  [1] Configure CAN network (can0)"
+        echo "  [1] Configure CAN network ($can_iface)"
         echo "  [2] Install Katapult bootloader (DFU)"
         echo "  [3] Scan CAN devices (find UUIDs)"
         echo "  [4] Flash via Katapult (existing UUID)"
@@ -29,32 +30,37 @@ function run_can_manager() {
 
 function setup_can_network() {
     draw_header "CAN NETWORK SETUP"
-    
-    local bitrate=1000000
-    local txqueuelen=1024
-    
-    echo "  Configuration for can0:"
+
+    local can_iface="${KATANA_CAN_INTERFACE:-can0}"
+    local bitrate="${KATANA_CAN_BITRATE:-1000000}"
+    local txqueuelen="${KATANA_CAN_TXQUEUELEN:-1024}"
+
+    echo "  Configuration for $can_iface:"
     echo "  - Bitrate: $bitrate"
     echo "  - TX Queue Length: $txqueuelen"
     echo ""
+    echo "  To change defaults, edit ~/.katana.conf"
+    echo ""
+    read -p "  Custom bitrate? [Enter = $bitrate]: " custom_bitrate
+    [ -n "$custom_bitrate" ] && bitrate="$custom_bitrate"
     read -p "  Write configuration? [y/N]: " yn
     if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
 
-    log_info "Creating /etc/network/interfaces.d/can0..."
-    sudo tee /etc/network/interfaces.d/can0 > /dev/null <<EOF
-allow-hotplug can0
-iface can0 can static
+    log_info "Creating /etc/network/interfaces.d/$can_iface..."
+    sudo tee "/etc/network/interfaces.d/$can_iface" > /dev/null <<EOF
+allow-hotplug $can_iface
+iface $can_iface can static
     bitrate $bitrate
     up ip link set \$IFACE txqueuelen $txqueuelen
 EOF
 
     log_info "Activating network..."
-    sudo ip link set can0 up type can bitrate "$bitrate" 2>/dev/null || sudo ifup can0 2>/dev/null
-    
-    if ip link show can0 | grep -q "UP"; then
-        draw_success "CAN0 IS ACTIVE!"
+    sudo ip link set "$can_iface" up type can bitrate "$bitrate" 2>/dev/null || sudo ifup "$can_iface" 2>/dev/null
+
+    if ip link show "$can_iface" | grep -q "UP"; then
+        draw_success "${can_iface^^} IS ACTIVE!"
     else
-        log_warn "Could not activate CAN0. Check if a CAN adapter is connected."
+        log_warn "Could not activate $can_iface. Check if a CAN adapter is connected."
     fi
     sleep 2
 }
@@ -74,10 +80,11 @@ function scan_can_devices() {
         git clone https://github.com/Arksine/katapult "$HOME/katapult"
     fi
 
-    log_info "Scanning bus (can0)..."
+    local can_iface="${KATANA_CAN_INTERFACE:-can0}"
+    log_info "Scanning bus ($can_iface)..."
     echo ""
-    
-    local output=$(python3 "$HOME/katapult/scripts/flashtool.py" -i can0 -q 2>&1)
+
+    local output=$(python3 "$HOME/katapult/scripts/flashtool.py" -i "$can_iface" -q 2>&1)
     
     if echo "$output" | grep -q "Detected UUID"; then
         echo -e "${C_GREEN}Detected devices:${NC}"
@@ -130,60 +137,61 @@ function install_katapult_wizard() {
     cd "$katapult_dir" || { log_error "Katapult directory not found"; return 1; }
     make clean &>/dev/null
     
-    log_info "Generating configuration..."
+    local can_bitrate="${KATANA_CAN_BITRATE:-1000000}"
+    log_info "Generating configuration (CAN bitrate: $can_bitrate)..."
     case $board in
         ebb42)
-            cat > .config <<'EOF'
+            cat > .config <<EOF
 CONFIG_MACH_STM32=y
 CONFIG_MCU="stm32g0b1"
 CONFIG_BOARD_DIRECTORY="stm32"
 CONFIG_STM32_CANBUS_PB0_PB1=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
             ;;
         octopus446)
-            cat > .config <<'EOF'
+            cat > .config <<EOF
 CONFIG_MACH_STM32=y
 CONFIG_MCU="stm32f446"
 CONFIG_BOARD_DIRECTORY="stm32"
 CONFIG_STM32_CANBUS_PA11_PA12=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
             ;;
         octopus429)
-            cat > .config <<'EOF'
+            cat > .config <<EOF
 CONFIG_MACH_STM32=y
 CONFIG_MCU="stm32f429"
 CONFIG_BOARD_DIRECTORY="stm32"
 CONFIG_STM32_CANBUS_PA11_PA12=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
             ;;
         sb2209_rp2040)
-            cat > .config <<'EOF'
+            cat > .config <<EOF
 CONFIG_MACH_RP2040=y
 CONFIG_MCU="rp2040"
 CONFIG_BOARD_DIRECTORY="rp2040"
 CONFIG_RP2040_CANBUS_GPIO28_GPIO29=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
             ;;
         mksskipr)
-            cat > .config <<'EOF'
+            cat > .config <<EOF
 CONFIG_MACH_STM32=y
 CONFIG_MCU="stm32f407"
 CONFIG_BOARD_DIRECTORY="stm32"
 CONFIG_STM32_CANBUS_PD0_PD1=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
             ;;
         cheetah)
-            cat > .config <<'EOF'
+            cat > .config <<EOF
 CONFIG_MACH_STM32=y
 CONFIG_MCU="stm32f072"
 CONFIG_BOARD_DIRECTORY="stm32"
 CONFIG_STM32_CANBUS_PA11_PA12=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
             ;;
     esac
@@ -227,8 +235,9 @@ function flash_via_katapult_wizard() {
     fi
     
     # 1. Scan for devices
+    local can_iface="${KATANA_CAN_INTERFACE:-can0}"
     log_info "Scanning for devices in Katapult mode..."
-    local scan_output=$(python3 "$HOME/katapult/scripts/flashtool.py" -i can0 -q 2>&1)
+    local scan_output=$(python3 "$HOME/katapult/scripts/flashtool.py" -i "$can_iface" -q 2>&1)
     local uuids=($(echo "$scan_output" | grep "Detected UUID" | awk '{print $3}'))
     
     if [ ${#uuids[@]} -eq 0 ]; then
@@ -252,7 +261,7 @@ function flash_via_katapult_wizard() {
     
     echo ""
     log_info "Flashing $firmware to $selected_uuid..."
-    python3 "$HOME/katapult/scripts/flashtool.py" -i can0 -u "$selected_uuid" -f "$firmware"
+    python3 "$HOME/katapult/scripts/flashtool.py" -i "$can_iface" -u "$selected_uuid" -f "$firmware"
     
     if [ $? -eq 0 ]; then
         draw_success "FLASH SUCCESSFUL!"

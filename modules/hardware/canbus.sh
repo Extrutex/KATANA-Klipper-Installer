@@ -21,11 +21,11 @@ function scan_cub_devices() {
 
 function configure_can_network() {
     echo -e "${C_CYAN}>> Generating CAN Network Config...${NC}"
-    
-    local can_iface="can0"
-    local bitrate="1000000" # 1M
-    local txqueuelen="1024"
-    
+
+    local can_iface="${KATANA_CAN_INTERFACE:-can0}"
+    local bitrate="${KATANA_CAN_BITRATE:-1000000}"
+    local txqueuelen="${KATANA_CAN_TXQUEUELEN:-1024}"
+
     local config_file="/etc/network/interfaces.d/$can_iface"
     
     # Check if file exists to avoid accidental overwrite without backup
@@ -118,29 +118,25 @@ function compile_and_flash() {
 function setup_config_stm32f446() {
     local type=$1
     local target_dir
-    
+    local can_bitrate="${KATANA_CAN_BITRATE:-1000000}"
+
     if [ "$type" == "klipper" ]; then
         target_dir="$HOME/klipper"
     else
         target_dir="$HOME/katapult"
     fi
-    
+
     echo -e "${C_CYAN}>> Configuring for STM32F446 ($type)...${NC}"
-    
+
     if [ ! -d "$target_dir" ]; then
         echo -e "${C_RED}Error: $target_dir not found.${NC}"
         return
     fi
-    
+
     cd "$target_dir" || { log_error "Directory not found: $target_dir"; return 1; }
-    
-    # Base config clean
+
     make clean
-    
-    # --- WRITE .CONFIG DIRECTLY ---
-    # Patch .config for CAN (fragile, depends on Kconfig structure)
-    # Alternatives: use scripts/kconfig/merge_config.sh if available
-    
+
     cat > .config <<EOF
 CONFIG_LOW_LEVEL_OPTIONS=y
 CONFIG_MACH_STM32=y
@@ -156,13 +152,12 @@ CONFIG_FLASH_SIZE=0x80000
 CONFIG_RAM_START=0x20000000
 CONFIG_RAM_SIZE=0x20000
 CONFIG_STM32_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
     else
-        # Klipper specific
         cat >> .config <<EOF
 CONFIG_STM32_CANBUS_PA11_PA12=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
     fi
 
@@ -177,13 +172,14 @@ EOF
 function setup_config_stm32f429() {
     local type=$1
     local target_dir
+    local can_bitrate="${KATANA_CAN_BITRATE:-1000000}"
     if [ "$type" == "klipper" ]; then target_dir="$HOME/klipper"; else target_dir="$HOME/katapult"; fi
-    
+
     echo -e "${C_CYAN}>> Configuring for STM32F429 (Octopus Pro) ($type)...${NC}"
     if [ ! -d "$target_dir" ]; then echo -e "${C_RED}Error: $target_dir not found.${NC}"; return; fi
     cd "$target_dir" || { log_error "Directory not found: $target_dir"; return 1; }
     make clean
-    
+
     cat > .config <<EOF
 CONFIG_LOW_LEVEL_OPTIONS=y
 CONFIG_MACH_STM32=y
@@ -199,12 +195,12 @@ CONFIG_FLASH_SIZE=0x80000
 CONFIG_RAM_START=0x20000000
 CONFIG_RAM_SIZE=0x30000
 CONFIG_STM32_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
     else
         cat >> .config <<EOF
 CONFIG_STM32_CANBUS_PA11_PA12=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
     fi
     make olddefconfig
@@ -214,13 +210,14 @@ EOF
 function setup_config_stm32g0b1() {
     local type=$1
     local target_dir
+    local can_bitrate="${KATANA_CAN_BITRATE:-1000000}"
     if [ "$type" == "klipper" ]; then target_dir="$HOME/klipper"; else target_dir="$HOME/katapult"; fi
-    
+
     echo -e "${C_CYAN}>> Configuring for STM32G0B1 (EBB/SB2209) ($type)...${NC}"
     if [ ! -d "$target_dir" ]; then echo -e "${C_RED}Error: $target_dir not found.${NC}"; return; fi
     cd "$target_dir" || { log_error "Directory not found: $target_dir"; return 1; }
     make clean
-    
+
     cat > .config <<EOF
 CONFIG_LOW_LEVEL_OPTIONS=y
 CONFIG_MACH_STM32=y
@@ -230,24 +227,20 @@ CONFIG_CLOCK_FREQ=64000000
 EOF
 
     if [ "$type" == "katapult" ]; then
-        # Check bootloader offset? standard is usually 8KiB for these if previously flashed? 
-        # For fresh Katapult install, we assume 0 offset for the bootloader itself unless flashing via another bootloader.
-        # Im assuming this is to flash Katapult ONTO the board.
         cat >> .config <<EOF
 CONFIG_FLASH_START=0x8000000
 CONFIG_FLASH_SIZE=0x20000
 CONFIG_RAM_START=0x20000000
 CONFIG_RAM_SIZE=0x24000
 CONFIG_STM32_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 CONFIG_CANBUS_PB0_PB1=y
 EOF
     else
-        # Klipper with Katapult offset (usually 8KiB)
         cat >> .config <<EOF
 CONFIG_FLASH_START=0x8002000
 CONFIG_STM32_CANBUS_PB0_PB1=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
     fi
     make olddefconfig
@@ -257,13 +250,14 @@ EOF
 function setup_config_rp2040() {
     local type=$1
     local target_dir
+    local can_bitrate="${KATANA_CAN_BITRATE:-1000000}"
     if [ "$type" == "klipper" ]; then target_dir="$HOME/klipper"; else target_dir="$HOME/katapult"; fi
-    
+
     echo -e "${C_CYAN}>> Configuring for RP2040 (SB2209) ($type)...${NC}"
     if [ ! -d "$target_dir" ]; then echo -e "${C_RED}Error: $target_dir not found.${NC}"; return; fi
     cd "$target_dir" || { log_error "Directory not found: $target_dir"; return 1; }
     make clean
-    
+
     cat > .config <<EOF
 CONFIG_LOW_LEVEL_OPTIONS=y
 CONFIG_MACH_RP2040=y
@@ -276,7 +270,7 @@ EOF
         cat >> .config <<EOF
 CONFIG_FLASH_SIZE=0x200000
 CONFIG_RP2040_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 CONFIG_CANBUS_GPIO_TX=28
 CONFIG_CANBUS_GPIO_RX=29
 EOF
@@ -284,7 +278,7 @@ EOF
         cat >> .config <<EOF
 CONFIG_RP2040_FLASH_START_2000=y
 CONFIG_RP2040_CANBUS_GPIO28_GPIO29=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
     fi
     make olddefconfig
@@ -292,15 +286,16 @@ EOF
 }
 
 function setup_config_stm32f407() {
-   local type=$1
+    local type=$1
     local target_dir
+    local can_bitrate="${KATANA_CAN_BITRATE:-1000000}"
     if [ "$type" == "klipper" ]; then target_dir="$HOME/klipper"; else target_dir="$HOME/katapult"; fi
-    
+
     echo -e "${C_CYAN}>> Configuring for STM32F407 (MKS SKIPR) ($type)...${NC}"
     if [ ! -d "$target_dir" ]; then echo -e "${C_RED}Error: $target_dir not found.${NC}"; return; fi
     cd "$target_dir" || { log_error "Directory not found: $target_dir"; return 1; }
     make clean
-    
+
     cat > .config <<EOF
 CONFIG_LOW_LEVEL_OPTIONS=y
 CONFIG_MACH_STM32=y
@@ -316,13 +311,13 @@ CONFIG_FLASH_SIZE=0x80000
 CONFIG_RAM_START=0x20000000
 CONFIG_RAM_SIZE=0x20000
 CONFIG_STM32_SELECT=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
     else
         cat >> .config <<EOF
 CONFIG_FLASH_START=0x800c000
 CONFIG_STM32_CANBUS_PD0_PD1=y
-CONFIG_CANBUS_FREQUENCY=1000000
+CONFIG_CANBUS_FREQUENCY=$can_bitrate
 EOF
     fi
     make olddefconfig
@@ -338,7 +333,7 @@ function forge_wizard() {
     echo -e "${C_CYAN}1. Scan USB/Serial Devices${NC}"
     echo -e "${C_CYAN}2. Flash Katapult (CanBoot)${NC}"
     echo -e "${C_CYAN}3. Flash Klipper${NC}"
-    echo -e "${C_CYAN}4. Generate Network Config (can0)${NC}"
+    echo -e "${C_CYAN}4. Generate Network Config (${KATANA_CAN_INTERFACE:-can0})${NC}"
     echo -e "${C_GREY}X. Back${NC}"
     
     read -p "  >> CHOICE: " forge_choice

@@ -63,6 +63,8 @@ function handle_args() {
 
 # --- CORE LOADER ---
 source "$CORE_DIR/logging.sh"
+source "$CORE_DIR/user_detect.sh"
+source "$CORE_DIR/config_loader.sh"
 source "$CORE_DIR/ui_renderer.sh"
 source "$CORE_DIR/env_check.sh"
 source "$CORE_DIR/engine_manager.sh"

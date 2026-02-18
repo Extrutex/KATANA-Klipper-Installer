@@ -160,7 +160,7 @@ function view_timelapse_files() {
         done
         
         echo ""
-        echo "  To view, use: http://<pi-ip>/timelapse/"
+        echo "  To view, use: http://$(hostname -I | awk '{print $1}')/timelapse/"
     fi
     
     read -p "  Press Enter..."

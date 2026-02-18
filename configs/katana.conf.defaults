@@ -1,0 +1,17 @@
+# ==============================================================================
+# KATANAOS Default Configuration
+# ==============================================================================
+# Copy this file to ~/.katana.conf and edit to override defaults.
+# Values here are used when no user override exists.
+# ==============================================================================
+
+# CAN Bus Settings
+KATANA_CAN_INTERFACE="can0"
+KATANA_CAN_BITRATE="1000000"
+KATANA_CAN_TXQUEUELEN="1024"
+
+# Moonraker Settings
+KATANA_MOONRAKER_PORT="7125"
+
+# Serial Defaults
+KATANA_DEFAULT_BAUDRATE="250000"

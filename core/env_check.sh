@@ -8,7 +8,7 @@ function check_environment() {
 
     # 1. Root Check
     if [ "$EUID" -eq 0 ]; then
-        log_error "Do NOT run KATANA as root. Run as regular user (e.g., pi/biqu)."
+        log_error "Do NOT run KATANA as root. Run as your regular user with sudo privileges."
         exit 1
     fi
 
