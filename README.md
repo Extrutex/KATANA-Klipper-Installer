@@ -119,10 +119,10 @@ Safety net for your printer.
 
 ### Installation
 
-**Important: Install Git first**
+**Important: Update system & install Git**
 ```bash
-sudo apt update
-sudo apt install git
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git
 ```
 
 **Optional: Remove legacy KIAUH**
