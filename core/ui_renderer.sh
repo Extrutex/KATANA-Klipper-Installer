@@ -80,11 +80,12 @@ function draw_warn_bot() {
 # LINE DRAWING FUNCTIONS (each defined ONCE)
 # ============================================================
 
+
 function box_row() {
     local content="$1"
     local len
     len=$(visible_len "$content")
-    local pad=$((BOX_WIDTH - len - 2))
+    local pad=$((BOX_WIDTH - len - 1))
     local spaces
     spaces=$(make_pad "$pad")
     echo -e "${INDENT}${C_PURPLE}║${NC} ${content}${spaces}${C_PURPLE}║${NC}"
@@ -94,7 +95,7 @@ function box_row_left() {
     local content="$1"
     local len
     len=$(visible_len "$content")
-    local pad=$((BOX_WIDTH - len - 2))
+    local pad=$((BOX_WIDTH - len - 1))
     local spaces
     spaces=$(make_pad "$pad")
     echo -e "${INDENT}${C_PURPLE}║${NC} ${content}${spaces}${C_PURPLE}║${NC}"
@@ -104,7 +105,7 @@ function box_row_center() {
     local content="$1"
     local len
     len=$(visible_len "$content")
-    local total=$((BOX_WIDTH - 2))
+    local total=$((BOX_WIDTH - 1))
     local left_pad=$(( (total - len) / 2 ))
     local right_pad=$((total - len - left_pad))
     local lspaces
@@ -118,7 +119,7 @@ function sub_row() {
     local content="$1"
     local len
     len=$(visible_len "$content")
-    local pad=$((BOX_WIDTH - len - 2))
+    local pad=$((BOX_WIDTH - len - 1))
     local spaces
     spaces=$(make_pad "$pad")
     echo -e "${INDENT}${C_PURPLE}║${NC} ${content}${spaces}${C_PURPLE}║${NC}"
@@ -128,7 +129,7 @@ function warn_row() {
     local content="$1"
     local len
     len=$(visible_len "$content")
-    local pad=$((BOX_WIDTH - len - 2))
+    local pad=$((BOX_WIDTH - len - 1))
     local spaces
     spaces=$(make_pad "$pad")
     echo -e "${INDENT}${C_ORANGE}║${NC} ${content}${spaces}${C_ORANGE}║${NC}"
@@ -138,7 +139,7 @@ function warn_row_center() {
     local content="$1"
     local len
     len=$(visible_len "$content")
-    local total=$((BOX_WIDTH - 2))
+    local total=$((BOX_WIDTH - 1))
     local left_pad=$(( (total - len) / 2 ))
     local right_pad=$((total - len - left_pad))
     local lspaces
@@ -1083,5 +1084,5 @@ function print_status_line() {
     local label="$1"
     local status="$2"
     local color="${3:-$C_NEON}"
-    printf "  ${C_PURPLE}║${NC} %-25s | %b%-37s\e[0m ${C_PURPLE}║${NC}\n" "$label" "$color" "$status"
+    printf "  ${C_PURPLE}║${NC} %-25s | %b%-40s\e[0m ${C_PURPLE}║${NC}\n" "$label" "$color" "$status"
 }
