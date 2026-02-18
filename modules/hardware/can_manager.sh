@@ -40,6 +40,12 @@ function setup_can_network() {
     read -p "  Write configuration? [y/N]: " yn
     if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
 
+    # Ensure ifupdown is installed (required for /etc/network/interfaces on Bookworm)
+    if ! command -v ifup &> /dev/null; then
+        log_info "Installing network dependencies (ifupdown)..."
+        sudo apt-get update && sudo apt-get install -y ifupdown
+    fi
+
     log_info "Creating /etc/network/interfaces.d/can0..."
     sudo tee /etc/network/interfaces.d/can0 > /dev/null <<EOF
 allow-hotplug can0
@@ -49,8 +55,19 @@ iface can0 can static
 EOF
 
     log_info "Activating network..."
-    sudo ip link set can0 up type can bitrate "$bitrate" 2>/dev/null || sudo ifup can0 2>/dev/null
-    
+    # Attempt manual up first to verify settings immediately
+    if ! ip link show can0 | grep -q "UP"; then
+        sudo ip link set can0 down 2>/dev/null
+        sudo ip link set can0 type can bitrate "$bitrate"
+        sudo ip link set can0 txqueuelen "$txqueuelen"
+        sudo ip link set can0 up
+    else
+        # If already up, just reload via ifup
+        sudo ifdown can0 2>/dev/null
+        sudo ifup can0 2>/dev/null
+    fi
+ 
+    sleep 2
     if ip link show can0 | grep -q "UP"; then
         draw_success "CAN0 IS ACTIVE!"
     else
