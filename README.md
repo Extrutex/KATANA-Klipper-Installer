@@ -154,34 +154,36 @@ Step 3:  [2] FORGE       → Build Printer MCUs    (Flashes your Octopus, Toolhe
 > 3. Only **THEN** flash your printer mainboards and toolboards.
 
 
-### 📖 How-To: Add a CAN Toolhead (The Right Way)
+### 📖 How-To: Add a Toolhead (CAN or USB) - The One-Click Way
 
-To use **"One-Click Updates"** later, follow this exact sequence for new boards (e.g. SB2209, EBB36):
+To use **"One-Click Updates"** (no jumpers, no buttons), follow this workflow for **ANY** board (CAN or USB):
 
-**Phase 1: The Bootloader (Katapult)**
+#### A) The Bootloader (Katapult) - *The Foundation*
 _(Skip if your board already has CanBoot/Katapult pre-installed)_
 1.  Connect board via **USB** (hold Boot button).
-2.  Go to `[2] Forge -> [3] Katapult Manager -> [2] Install Katapult (DFU)`.
-3.  Select your board type. KATANA/dfu-util installs the bootloader.
+2.  Go to `[2] Forge -> [3] Katapult Manager -> [2] Install Katapult`.
+3.  Select your board (e.g., SB2209, EBB36, Nitehawk).
+    - **For CAN:** Katapult installs in CAN mode.
+    - **For USB:** Katapult installs in USB mode.
 
-**Phase 2: The Firmware (Klipper)**
+#### B) The Firmware (Klipper) - *The Brain*
 1.  Go to `[2] Forge -> [1] Build & Flash`.
-2.  Configure Klipper `menuconfig`:
-    - **Communication Interface:** `CAN bus (on PB0/PB1)` (Crucial!)
-    - **Bootloader Offset:** `8KiB` (Required for Katapult)
+2.  Configure `menuconfig`:
+    - **CAN Board:** `Communication interface: CAN bus (PB0/PB1)`.
+    - **USB Board:** `Communication interface: USB`.
+    - **Bootloader Offset:** `8KiB` (Required!).
 3.  **Build**.
-4.  **SAVE CONFIG:** When asked, say **YES**. Name it (e.g., `SB2240_Toolhead`).
-    - **Connection Method:** Select `[2] CAN Bus` (since we will use it via CAN later).
-5.  **FLASH:** Since it's still on USB, choose `[1] Flash via DFU` (or Katapult via USB).
+4.  **SAVE CONFIG:** When asked, say **YES**. Name it (e.g., `Nitehawk_USB` or `SB2240_CAN`).
+    - **Connection Method:**
+        - Select `[2] CAN Bus` (if you will use it via CAN).
+        - Select `[1] USB` (if you will use it via USB).
+5.  **FLASH:**
+    - If connecting via USB for the first time: Choose `[1] Flash via DFU` (or Katapult).
 
-**Phase 3: The Assembly**
-1.  Disconnect USB.
-2.  Connect **CAN H/L** to your U2C Bridge.
-3.  Connect **24V**.
-4.  Verify: `[6] Settings -> [4] CAN-Bus -> [3] Scan`.
-
-**Future Updates:**
-Just run `[2] Forge -> [4] Update All Saved MCUs`. KATANA rebuilds and flashes everything automatically over CAN!
+#### C) Future Updates ( The Magic ✨ )
+Connect the board normally (CAN or USB).
+Run `[2] Forge -> [4] Update All Saved MCUs`.
+KATANA will rebuild and flash it automatically. **No boot buttons. No jumpers.**
 
 
 ### � Menu Structure
