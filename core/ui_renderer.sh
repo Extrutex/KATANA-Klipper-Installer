@@ -309,7 +309,7 @@ function check_bed_distance_sensor_status() {
 function draw_header_main() {
     clear
     echo -e "${C_PURPLE}"
-EOF
+    cat << "EOF"
           /\      _  __    _    _____    _    _   _    _      ___    ____ 
          /  \    | |/ /   / \  |_   _|  / \  | \ | |  / \    / _ \  / ___|
          \  /    | ' /   / _ \   | |   / _ \ |  \| | / _ \  | | | | \___ \
