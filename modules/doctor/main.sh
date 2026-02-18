@@ -41,15 +41,15 @@ function doctor_check_permissions() {
     local target_dir="$HOME/printer_data"
     log_info "Scanning $target_dir for ownership issues..."
     
-    # Check if any file is NOT owned by pi:pi
-    if find "$target_dir" ! -user pi -o ! -group pi -print -quit | grep -q .; then
+    # Check if any file is NOT owned by current user
+    if find "$target_dir" ! -user "$USER" -o ! -group "$USER" -print -quit | grep -q .; then
         log_warn "Ownership issues detected!"
-        echo -e "Some files in ${target_dir} are not owned by user 'pi'."
+        echo -e "Some files in ${target_dir} are not owned by user '$USER'."
         
-        read -p "  >> Fix permissions (sudo chown -R pi:pi)? [y/N]: " fix_perm
+        read -p "  >> Fix permissions (sudo chown -R $USER:$USER)? [y/N]: " fix_perm
         if [[ "$fix_perm" =~ [yY] ]]; then
             log_info "Fixing permissions..."
-            if sudo chown -R pi:pi "$target_dir"; then
+            if sudo chown -R "$USER":"$USER" "$target_dir"; then
                 log_success "Permissions fixed successfully."
             else
                 log_error "Failed to fix permissions."
@@ -58,7 +58,7 @@ function doctor_check_permissions() {
             log_info "Skipping fix."
         fi
     else
-        log_success "All files in $target_dir are correctly owned by pi:pi."
+        log_success "All files in $target_dir are correctly owned by $USER."
     fi
     read -p "Press Enter to continue..."
 }

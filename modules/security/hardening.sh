@@ -6,7 +6,7 @@
 
 if [ -z "$KATANA_ROOT" ]; then
     KATANA_ROOT="$HOME/KATANA_INSTALLER"
-    source "$KATANA_ROOT/core/logger.sh"
+    source "$KATANA_ROOT/core/logging.sh"
 fi
 
 function install_security_stack() {

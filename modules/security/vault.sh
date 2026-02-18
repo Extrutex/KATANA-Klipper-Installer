@@ -24,17 +24,16 @@ function vault_create() {
         sleep 2; return
     fi
 
-    # 2. Create Zip
-    # Include config + moonraker db if present
-    local file_list="$CONFIG_DIR"
-    if [ -f "$DB_FILE" ]; then
-        file_list="$file_list $DB_FILE"
-    fi
-
+    # 2. Create Zip (relative paths from $HOME for safe restore)
     check_dependency "zip" "zip"
 
     log_info "Archiving to $filename..."
-    zip -r -q "$filepath" $file_list
+    local zip_args=("$CONFIG_DIR")
+    if [ -f "$DB_FILE" ]; then
+        zip_args+=("$DB_FILE")
+    fi
+
+    (cd "$HOME" && zip -r -q "$filepath" "${zip_args[@]#$HOME/}")
 
     if [ $? -eq 0 ]; then
         log_success "Backup verified: $filename"
@@ -45,11 +44,15 @@ function vault_create() {
 
     # 3. Rotation (Keep last 5)
     log_info "Rotating old backups..."
-    local count=$(ls -1 "$BACKUP_DIR"/backup_*.zip 2>/dev/null | wc -l)
-    if [ "$count" -gt 5 ]; then
-        # List oldest, delete
-        ls -1t "$BACKUP_DIR"/backup_*.zip | tail -n +6 | xargs rm -f
-        log_info "Purged $(($count - 5)) old backups."
+    local old_backups=("$BACKUP_DIR"/backup_*.zip)
+    if [ -e "${old_backups[0]}" ] && [ ${#old_backups[@]} -gt 5 ]; then
+        # Sort by mtime, delete oldest
+        local to_delete
+        to_delete=$(printf '%s\n' "${old_backups[@]}" | xargs ls -1t | tail -n +6)
+        if [ -n "$to_delete" ]; then
+            echo "$to_delete" | xargs rm -f
+            log_info "Purged old backups."
+        fi
     fi
 
     echo ""
@@ -69,8 +72,9 @@ function vault_restore() {
     echo "  Available Backups:"
     echo ""
     
-    # List backups with numbers
-    local backups=($(ls -1t "$BACKUP_DIR"/backup_*.zip))
+    # List backups sorted newest-first
+    local backups=()
+    while IFS= read -r -d '' f; do backups+=("$f"); done < <(find "$BACKUP_DIR" -maxdepth 1 -name 'backup_*.zip' -print0 | xargs -0 ls -1t 2>/dev/null | tr '\n' '\0')
     local i=1
     for bk in "${backups[@]}"; do
         echo "  [$i] $(basename "$bk")"
@@ -92,12 +96,8 @@ function vault_restore() {
             log_info "Restoring..."
             check_dependency "unzip" "unzip"
             
-            # Unzip to root ( since paths are absolute in zip? or relative? )
-            # zip -r uses relative path if cd'd, or absolute if given absolute.
-            # In vault_create we used absolute variables. zip usually strips leading slash.
-            
-            
-            unzip -o -q "$target" -d / 
+            # Restore to $HOME (backup uses relative paths from $HOME)
+            unzip -o -q "$target" -d "$HOME"
             
             if [ $? -eq 0 ]; then
                 log_success "System Restored."

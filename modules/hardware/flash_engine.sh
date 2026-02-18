@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
 # KATANA MODULE: THE FORGE (Flash Engine)
-# Usage: Firmware Build & Flash - KIAUH-style simplicity
+# Usage: Firmware Build & Flash
 # Rule: Flash method is determined by build artifact, NOT user choice
 # ==============================================================================
 

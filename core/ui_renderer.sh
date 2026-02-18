@@ -500,7 +500,7 @@ function update_moonraker_only() {
 
 function update_ui_only() {
     draw_header "UPDATE - WEB UI"
-    echo "  Wähle UI:"
+    echo "  Select UI:"
     echo "  [1] Mainsail"
     echo "  [2] Fluidd"
     read -p "  >> " ch
@@ -708,8 +708,8 @@ function run_extras_beddistance() {
     draw_header "📏 BED DISTANCE SENSOR"
     local status=$(check_bed_distance_sensor_status)
     echo "  Status: $status"
-    echo "  [1] Installieren"
-    echo "  [2] Entfernen"
+    echo "  [1] Install"
+    echo "  [2] Remove"
     read -p "  >> " ch
     read -p "  Enter..."
 }
@@ -776,7 +776,7 @@ function run_extras_system() {
         local log2ram=$(check_log2ram_status)
         
         echo "  ${C_GREEN}[1]${NC}  Log2Ram                [$log2ram]"
-        echo "  ${C_NEON}[2]${NC}  Backup erstellen"
+        echo "  ${C_NEON}[2]${NC}  Create Backup"
         echo "  ${C_NEON}[3]${NC}  Restore Backup"
         echo ""
         echo "  [B] Back"
@@ -879,10 +879,10 @@ function show_logs_menu() {
 
 function run_repair_menu() {
     while true; do
-        draw_header "REPARATUR"
-        echo "  [1] Klipper neustarten"
-        echo "  [2] Moonraker neustarten"
-        echo "  [3] Auto-Restart konfigurieren"
+        draw_header "REPAIR"
+        echo "  [1] Restart Klipper"
+        echo "  [2] Restart Moonraker"
+        echo "  [3] Configure Auto-Restart"
         echo "  [B] Back"
         read -p "  >> " ch
         case $ch in

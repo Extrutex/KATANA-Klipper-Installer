@@ -76,11 +76,11 @@ function run_system_diagnostics() {
     log_info "Packaging diagnostics..."
     check_dependency "zip" "zip"
     
-    cd /tmp
-    zip -r -q "$diag_dir/$zip_name" "katana_debug_${timestamp}"
+    (cd "$(dirname "$staging_dir")" && zip -r -q "$diag_dir/$zip_name" "$(basename "$staging_dir")")
+    local zip_rc=$?
     rm -rf "$staging_dir"
 
-    if [ $? -eq 0 ]; then
+    if [ $zip_rc -eq 0 ]; then
         log_success "Diagnostic Pack created!"
         echo "  [i] File: $diag_dir/$zip_name"
         echo "  [i] Send this file to the KATANA support channel."

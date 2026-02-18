@@ -8,13 +8,13 @@ function run_instance_manager() {
         draw_header "📟 INSTANCE MANAGER"
         
         # List Existing Instances
-        echo -e "${C_NEON}Aktive Instanzen:${NC}"
+        echo -e "${C_NEON}Active Instances:${NC}"
         list_instances
         echo ""
         
-        echo "  [1] Neue Instanz hinzufügen"
-        echo "  [2] Instanz entfernen"
-        echo "  [B] Zurück"
+        echo "  [1] Add new instance"
+        echo "  [2] Remove instance"
+        echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
         
@@ -22,7 +22,7 @@ function run_instance_manager() {
             1) add_new_instance ;;
             2) remove_instance ;;
             [bB]) return ;;
-            *) log_error "Ungültige Auswahl" ;;
+            *) log_error "Invalid selection" ;;
         esac
     done
 }
@@ -37,11 +37,11 @@ function list_instances() {
     done
 
     if [ ${#instances[@]} -eq 0 ]; then
-        echo "    Keine Instanzen gefunden."
+        echo "    No instances found."
         return
     fi
     
-    printf "    %-20s | %-10s | %-10s\n" "VERZEICHNIS" "PORT" "STATUS"
+    printf "    %-20s | %-10s | %-10s\n" "DIRECTORY" "PORT" "STATUS"
     echo "    --------------------------------------------------------"
     
     for inst in "${instances[@]}"; do
@@ -70,7 +70,7 @@ function list_instances() {
 }
 
 function add_new_instance() {
-    draw_header "INSTANZ HINZUFÜGEN"
+    draw_header "ADD INSTANCE"
     
     # 1. Find next free number
     local next_num=2
@@ -88,10 +88,10 @@ function add_new_instance() {
         ((next_port++))
     done
 
-    echo "  Vorschlag für neue Instanz:"
-    echo "  - Ordner: ~/printer_data_$next_num"
-    echo "  - Port:   $next_port"
-    echo "  - Service: klipper-$next_num / moonraker-$next_num"
+    echo "  New instance proposal:"
+    echo "  - Directory: ~/printer_data_$next_num"
+    echo "  - Port:      $next_port"
+    echo "  - Service:   klipper-$next_num / moonraker-$next_num"
     echo ""
     read -p "  Create? [y/N]: " yn
     if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
@@ -104,36 +104,36 @@ function add_new_instance() {
     if [ -f "$MODULES_DIR/engine/install_klipper.sh" ]; then
         source "$MODULES_DIR/engine/install_klipper.sh"
         
-        log_info "Erzeuge Instanz $next_num..."
+        log_info "Creating instance $next_num..."
         do_install_klipper "Standard" "$data_dir" "$k_svc"
         do_install_moonraker "$data_dir" "$m_svc" "$next_port"
         
-        draw_success "INSTANZ $next_num INSTALLIERT!"
-        echo "  Erreichbar unter: http://$(hostname -I | awk '{print $1}'):$next_port"
+        draw_success "INSTANCE $next_num INSTALLED!"
+        echo "  Accessible at: http://$(hostname -I | awk '{print $1}'):$next_port"
     else
-        log_error "Installer Modul nicht gefunden."
+        log_error "Installer module not found."
     fi
     
     read -p "  Press Enter..."
 }
 
 function remove_instance() {
-    draw_header "INSTANZ ENTFERNEN"
+    draw_header "REMOVE INSTANCE"
     
-    local instances=$(ls -d $HOME/printer_data* 2>/dev/null)
+    local instances=$(ls -d "$HOME"/printer_data* 2>/dev/null)
     if [ -z "$instances" ]; then
-        log_error "Keine Instanzen zum Entfernen gefunden."
+        log_error "No instances found to remove."
         read -p "  Press Enter..."
         return
     fi
 
-    echo "  Wähle Instanz zum LÖSCHEN:"
+    echo "  Select instance to DELETE:"
     local inst_arr=($instances)
     for i in "${!inst_arr[@]}"; do
         echo "    [$((i+1))] $(basename "${inst_arr[$i]}")"
     done
     echo ""
-    read -p "  Auswahl [1-${#inst_arr[@]}] oder [B]ack: " choice
+    read -p "  Select [1-${#inst_arr[@]}] or [B]ack: " choice
     if [[ "$choice" =~ ^[bB]$ ]]; then return; fi
     
     local idx=$((choice - 1))
@@ -141,14 +141,14 @@ function remove_instance() {
     local name=$(basename "$target")
     
     if [ "$name" == "printer_data" ]; then
-        log_warn "Das ist die Basis-Instanz. Wirklich löschen?"
+        log_warn "This is the base instance. Are you sure?"
     fi
 
-    echo -e "${C_RED}!!! ACHTUNG: Das löscht alle Configs und Service-Files für $name !!!${NC}"
-    read -p "  Sicher? Type 'DELETE': " confirm
+    echo -e "${C_RED}!!! WARNING: This will delete all configs and service files for $name !!!${NC}"
+    read -p "  Confirm? Type 'DELETE': " confirm
     if [ "$confirm" != "DELETE" ]; then return; fi
 
-    log_info "Entferne Services..."
+    log_info "Removing services..."
     local k_svc="klipper"; local m_svc="moonraker"
     if [ "$name" != "printer_data" ]; then
         local num="${name#printer_data_}"
@@ -161,9 +161,9 @@ function remove_instance() {
     sudo rm "/etc/systemd/system/$k_svc.service" "/etc/systemd/system/$m_svc.service" 2>/dev/null
     sudo systemctl daemon-reload
 
-    log_info "Lösche Daten-Verzeichnis..."
+    log_info "Deleting data directory..."
     rm -rf "$target"
     
-    draw_success "$name wurde vollständig entfernt."
+    draw_success "$name removed completely."
     read -p "  Press Enter..."
 }

@@ -10,6 +10,7 @@
   </a>
   <img src="https://img.shields.io/badge/Platform-Debian%20%7C%20Raspbian%20%7C%20Armbian-ff00bf.svg" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Bash%20Script-00ffff.svg" alt="Language">
+  <img src="https://img.shields.io/badge/Security-Hardened%20(Audit%20Phase%204)-success.svg" alt="Security">
 
 
   <br/><br/>
@@ -74,7 +75,7 @@ One-click installation for modern Z-probes.
 ### 🧩 Extras
 Additional printing tools and macros.
 - **ShakeTune** - Input Shaper analysis
-- **KATANA-FLOW** - Smart Purge & Park (KAMP replacement)
+- **KATANA-FLOW** - Smart Park (No-Retract) & X-Blade Purge (Cross-Pattern)
 - **Multi-Material** - Happy Hare / Monolith support
 
 
@@ -142,21 +143,22 @@ rm -rf ~/kiauh
 If this is a **fresh installation**, follow this order:
 
 ```
-Step 1:  [1] QUICK START → Full Install     (installs Klipper + Moonraker + Web UI)
-Step 2:  [2] FORGE → Build & Flash MCU      (compiles firmware for your board)
-Step 3:  [3] EXTRAS → Install extensions     (optional: Crowsnest, probes, etc.)
+Step 1:  [1] QUICK START → Full Install          (MANDATORY: Installs Klipper, Moonraker, UI)
+Step 2:  [2] FORGE       → Build "Linux Process" (MANDATORY: Flashes RPi as Host MCU)
+Step 3:  [2] FORGE       → Build Printer MCUs    (Flashes your Octopus, Toolhead, etc.)
 ```
 
-> ⚠️ **The FORGE requires Klipper to be installed first!**
-> It compiles firmware from the Klipper source code (`~/klipper`).
-> Always run **Quick Start** first on a fresh system.
+> ⚠️ **CRITICAL ORDER OF OPERATIONS:**
+> 1. You **MUST** run **Quick Start** first to get the Klipper source code.
+> 2. You **MUST** build the **Linux Host MCU** before adding other printers (services depend on it).
+> 3. Only **THEN** flash your printer mainboards and toolboards.
 
 
 ### � Menu Structure
 
 ```
 ╔══════════════════════════════════════════════════════════════════════╗
-║                    KATANAOS v2.2 - MAIN MENU                       ║
+║                    KATANAOS v2.4 - MAIN MENU                       ║
 ╠══════════════════════════════════════════════════════════════════════╣
 ║                                                                    ║
 ║  [1]  QUICK START         Auto-Pilot Installation                  ║
@@ -174,7 +176,7 @@ Step 3:  [3] EXTRAS → Install extensions     (optional: Crowsnest, probes, etc
 Installs the full Klipper stack based on your selected profile (minimal/standard/power).
 
 #### [2] Forge
-Opens Klipper's `menuconfig`, compiles firmware, scans USB for connected boards, and flashes automatically.
+Opens Klipper's `menuconfig`, compiles firmware, scans USB for connected boards, and flashes automatically. Includes **RP2040 Safety Lock** and **Smart Artifact Detection**.
 
 #### [3] Extras
 | Submenu | Contents |

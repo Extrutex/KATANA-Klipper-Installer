@@ -9,13 +9,13 @@ function scan_cub_devices() {
     local usb_devices=$(lsusb)
     
     # 2. Serial by-id Scan
-    local serial_devices=$(ls /dev/serial/by-id/* 2>/dev/null)
+    local serial_devices=(/dev/serial/by-id/*)
     
-    if [ -z "$serial_devices" ]; then
+    if [ ! -e "${serial_devices[0]}" ]; then
         echo -e "${C_WARN}No serial devices found in /dev/serial/by-id/${NC}"
     else
         echo -e "${C_GREEN}Found Serial Devices:${NC}"
-        echo "$serial_devices"
+        printf '%s\n' "${serial_devices[@]}"
     fi
 }
 
