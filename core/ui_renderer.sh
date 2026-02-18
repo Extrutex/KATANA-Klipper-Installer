@@ -309,14 +309,14 @@ function check_bed_distance_sensor_status() {
 function draw_header_main() {
     clear
     echo -e "${C_PURPLE}"
-    cat << "EOF"
-      /\      _  __    _    _____    _    _   _    _      ___    ____ 
-     /  \    | |/ /   / \  |_   _|  / \  | \ | |  / \    / _ \  / ___|
-     \  /    | ' /   / _ \   | |   / _ \ |  \| | / _ \  | | | | \___ \
-      \/     | . \  / ___ \  | |  / ___ \| |\  |/ ___ \ | |_| |  ___) |
-             |_|\_\/_/   \_\ |_| /_/   \_\_| \_/_/   \_\ \___/  |____/ 
 EOF
-    echo -e "                                                    ${C_PURPLE}${KATANA_VERSION}${C_PURPLE}"
+          /\      _  __    _    _____    _    _   _    _      ___    ____ 
+         /  \    | |/ /   / \  |_   _|  / \  | \ | |  / \    / _ \  / ___|
+         \  /    | ' /   / _ \   | |   / _ \ |  \| | / _ \  | | | | \___ \
+          \/     | . \  / ___ \  | |  / ___ \| |\  |/ ___ \ | |_| |  ___) |
+                 |_|\_\/_/   \_\ |_| /_/   \_\_| \_/_/   \_\ \___/  |____/ 
+EOF
+    echo -e "                                                              ${C_PURPLE}${KATANA_VERSION}${C_PURPLE}"
     echo -e "      ${C_NEON}>> KATANAOS // SYSTEM COMMAND INTERFACE${NC}"
     echo ""
 }
