@@ -1,5 +1,5 @@
 # ============================================================
-# KATANAOS VISUAL ENGINE v2.5
+# KATANAOS VISUAL ENGINE v2.6 — FIXED
 # ============================================================
 
 # Colors
@@ -17,140 +17,135 @@ NC=$'\033[0m'
 BOX_WIDTH=70
 INDENT="  "
 
+# Legacy colors (if used by other modules)
+C_TXT="$C_WHITE"
+C_OK="$C_GREEN"
+C_ERR="$C_RED"
+C_WARN="$C_YELLOW"
+
+# ============================================================
+# CORE UTILITY: VISIBLE LENGTH
+# ============================================================
+# Strips ALL ANSI escape sequences, then measures display width.
+# Uses wc -L which respects double-width chars (Emojis, CJK).
+
+function visible_len() {
+    local str="$1"
+    # 1) Strip ANSI escape codes
+    local clean
+    clean=$(printf '%b' "$str" | sed 's/\x1b\[[0-9;]*m//g')
+    # 2) wc -L returns display width (handles wide chars/emojis)
+    local width
+    width=$(printf '%s' "$clean" | wc -L)
+    echo "$width"
+}
+
+# Safe padding: returns N spaces, or empty string if N <= 0
+function make_pad() {
+    local n="$1"
+    if [ "$n" -gt 0 ] 2>/dev/null; then
+        printf '%*s' "$n" ''
+    fi
+}
+
 # ============================================================
 # BOX DRAWING FUNCTIONS
 # ============================================================
 
 function draw_box_top() {
-    echo -e "${INDENT}${C_PURPLE}╔${C_PURPLE}$(printf '═%.0s' $(seq 1 $BOX_WIDTH))${C_PURPLE}╗${NC}"
+    echo -e "${INDENT}${C_PURPLE}╔$(printf '═%.0s' $(seq 1 $BOX_WIDTH))╗${NC}"
 }
 
 function draw_box_mid() {
-    echo -e "${INDENT}${C_PURPLE}╠${C_PURPLE}$(printf '═%.0s' $(seq 1 $BOX_WIDTH))${C_PURPLE}╣${NC}"
+    echo -e "${INDENT}${C_PURPLE}╠$(printf '═%.0s' $(seq 1 $BOX_WIDTH))╣${NC}"
 }
 
 function draw_box_bot() {
-    echo -e "${INDENT}${C_PURPLE}╚${C_PURPLE}$(printf '═%.0s' $(seq 1 $BOX_WIDTH))${C_PURPLE}╝${NC}"
-}
-
-function draw_sub_top() {
-    echo -e "${INDENT}${C_PURPLE}╔${C_PURPLE}$(printf '═%.0s' $(seq 1 $BOX_WIDTH))${C_PURPLE}╗${NC}"
-}
-
-function draw_sub_mid() {
-    echo -e "${INDENT}${C_PURPLE}╠${C_PURPLE}$(printf '═%.0s' $(seq 1 $BOX_WIDTH))${C_PURPLE}╣${NC}"
-}
-
-function draw_sub_bot() {
-    echo -e "${INDENT}${C_PURPLE}╚${C_PURPLE}$(printf '═%.0s' $(seq 1 $BOX_WIDTH))${C_PURPLE}╝${NC}"
+    echo -e "${INDENT}${C_PURPLE}╚$(printf '═%.0s' $(seq 1 $BOX_WIDTH))╝${NC}"
 }
 
 function draw_warn_top() {
-    echo -e "${INDENT}${C_ORANGE}╔${C_ORANGE}$(printf '═%.0s' $(seq 1 $BOX_WIDTH))${C_ORANGE}╗${NC}"
+    echo -e "${INDENT}${C_ORANGE}╔$(printf '═%.0s' $(seq 1 $BOX_WIDTH))╗${NC}"
 }
 
 function draw_warn_mid() {
-    echo -e "${INDENT}${C_ORANGE}╠${C_ORANGE}$(printf '═%.0s' $(seq 1 $BOX_WIDTH))${C_ORANGE}╣${NC}"
+    echo -e "${INDENT}${C_ORANGE}╠$(printf '═%.0s' $(seq 1 $BOX_WIDTH))╣${NC}"
 }
 
 function draw_warn_bot() {
-    echo -e "${INDENT}${C_ORANGE}╚${C_ORANGE}$(printf '═%.0s' $(seq 1 $BOX_WIDTH))${C_ORANGE}╝${NC}"
+    echo -e "${INDENT}${C_ORANGE}╚$(printf '═%.0s' $(seq 1 $BOX_WIDTH))╝${NC}"
 }
 
 # ============================================================
-# LINE DRAWING FUNCTIONS
+# LINE DRAWING FUNCTIONS (each defined ONCE)
 # ============================================================
 
 function box_row() {
     local content="$1"
-    local len=${#content}
+    local len
+    len=$(visible_len "$content")
     local pad=$((BOX_WIDTH - len - 2))
-    [ $pad -lt 0 ] && pad=0
-    echo -e "${INDENT}${C_PURPLE}║${NC} ${content}$(printf ' %.0s' $(seq 1 $pad))${C_PURPLE}║${NC}"
+    local spaces
+    spaces=$(make_pad "$pad")
+    echo -e "${INDENT}${C_PURPLE}║${NC} ${content}${spaces}${C_PURPLE}║${NC}"
 }
 
 function box_row_left() {
     local content="$1"
-    local len=$(visible_len "$content")
+    local len
+    len=$(visible_len "$content")
     local pad=$((BOX_WIDTH - len - 2))
-    [ $pad -lt 0 ] && pad=0
-    echo -e "${INDENT}${C_PURPLE}║${NC}${content}$(printf ' %.0s' $(seq 1 $pad))${C_PURPLE}║${NC}"
-}
-
-function sub_row() {
-    local content="$1"
-    local len=${#content}
-    local pad=$((BOX_WIDTH - len - 2))
-    [ $pad -lt 0 ] && pad=0
-    echo -e "${INDENT}${C_PURPLE}║${NC} ${content}$(printf ' %.0s' $(seq 1 $pad))${C_PURPLE}║${NC}"
-}
-
-function warn_row() {
-    local content="$1"
-    local len=${#content}
-    local pad=$((BOX_WIDTH - len - 2))
-    [ $pad -lt 0 ] && pad=0
-    echo -e "${INDENT}${C_ORANGE}║${NC} ${content}$(printf ' %.0s' $(seq 1 $pad))${C_ORANGE}║${NC}"
-}
-
-function visible_len() {
-    local str="$1"
-    local len=0
-    local i
-    local in_ansi=0
-    for ((i=0; i<${#str}; i++)); do
-        local c="${str:$i:1}"
-        if [[ "$c" == $'\033' || "$in_ansi" == "1" ]]; then
-            if [[ "$in_ansi" == "0" ]]; then
-                in_ansi=1
-            elif [[ "$c" == "m" ]]; then
-                in_ansi=0
-            fi
-        else
-            ((len++))
-        fi
-    done
-    echo $len
-}
-
-function box_row() {
-    local content="$1"
-    local len=$(visible_len "$content")
-    local pad=$((BOX_WIDTH - len - 2))
-    [ $pad -lt 0 ] && pad=0
-    echo -e "${INDENT}${C_PURPLE}║${NC} ${content}$(printf ' %.0s' $(seq 1 $pad))${C_PURPLE}║${NC}"
-}
-
-function box_row_left() {
-    local content="$1"
-    local len=$(visible_len "$content")
-    local pad=$((BOX_WIDTH - len - 2))
-    [ $pad -lt 0 ] && pad=0
-    echo -e "${INDENT}${C_PURPLE}║${NC} ${content}$(printf ' %.0s' $(seq 1 $pad))${C_PURPLE}║${NC}"
+    local spaces
+    spaces=$(make_pad "$pad")
+    echo -e "${INDENT}${C_PURPLE}║${NC} ${content}${spaces}${C_PURPLE}║${NC}"
 }
 
 function box_row_center() {
     local content="$1"
-    local len=$(visible_len "$content")
-    local left=$(( (BOX_WIDTH - len - 2) / 2 ))
-    local right=$((BOX_WIDTH - len - 2 - left))
-    echo -e "${INDENT}${C_PURPLE}║${NC}$(printf ' %.0s' $(seq 1 $left))${content}$(printf ' %.0s' $(seq 1 $right))${C_PURPLE}║${NC}"
+    local len
+    len=$(visible_len "$content")
+    local total=$((BOX_WIDTH - 2))
+    local left_pad=$(( (total - len) / 2 ))
+    local right_pad=$((total - len - left_pad))
+    local lspaces
+    lspaces=$(make_pad "$left_pad")
+    local rspaces
+    rspaces=$(make_pad "$right_pad")
+    echo -e "${INDENT}${C_PURPLE}║${NC}${lspaces} ${content}${rspaces}${C_PURPLE}║${NC}"
 }
 
 function sub_row() {
     local content="$1"
-    local len=$(visible_len "$content")
+    local len
+    len=$(visible_len "$content")
     local pad=$((BOX_WIDTH - len - 2))
-    [ $pad -lt 0 ] && pad=0
-    echo -e "${INDENT}${C_PURPLE}║${NC} ${content}$(printf ' %.0s' $(seq 1 $pad))${C_PURPLE}║${NC}"
+    local spaces
+    spaces=$(make_pad "$pad")
+    echo -e "${INDENT}${C_PURPLE}║${NC} ${content}${spaces}${C_PURPLE}║${NC}"
 }
 
 function warn_row() {
     local content="$1"
-    local len=$(visible_len "$content")
+    local len
+    len=$(visible_len "$content")
     local pad=$((BOX_WIDTH - len - 2))
-    [ $pad -lt 0 ] && pad=0
-    echo -e "${INDENT}${C_ORANGE}║${NC} ${content}$(printf ' %.0s' $(seq 1 $pad))${C_ORANGE}║${NC}"
+    local spaces
+    spaces=$(make_pad "$pad")
+    echo -e "${INDENT}${C_ORANGE}║${NC} ${content}${spaces}${C_ORANGE}║${NC}"
+}
+
+function warn_row_center() {
+    local content="$1"
+    local len
+    len=$(visible_len "$content")
+    local total=$((BOX_WIDTH - 2))
+    local left_pad=$(( (total - len) / 2 ))
+    local right_pad=$((total - len - left_pad))
+    local lspaces
+    lspaces=$(make_pad "$left_pad")
+    local rspaces
+    rspaces=$(make_pad "$right_pad")
+    echo -e "${INDENT}${C_ORANGE}║${NC}${lspaces} ${content}${rspaces}${C_ORANGE}║${NC}"
 }
 
 # ============================================================
@@ -159,13 +154,12 @@ function warn_row() {
 
 function get_current_engine_short() {
     if [ -L "$HOME/klipper" ]; then
-        # Symlink: check which engine it points to
-        local target=$(readlink "$HOME/klipper")
+        local target
+        target=$(readlink "$HOME/klipper")
         if [[ "$target" == *"kalico"* ]]; then echo "KALICO";
         elif [[ "$target" == *"ratos"* ]]; then echo "RatOS";
         else echo "KLIPPER"; fi
     elif [ -d "$HOME/klipper" ]; then
-        # Regular directory: standard Klipper install
         echo "KLIPPER"
     else
         echo "NONE"
@@ -204,7 +198,7 @@ function box_status() {
     local status="$2"
     local icon
     local status_text
-    
+
     if [ "$status" = "INSTALLED" ]; then
         icon="${C_GREEN}●${NC}"
         status_text="${C_GREEN}INSTALLED${NC}"
@@ -212,7 +206,7 @@ function box_status() {
         icon="${C_GREY}○${NC}"
         status_text="${C_GREY}NOT INSTALLED${NC}"
     fi
-    
+
     box_row_left "$icon $name $status_text"
 }
 
@@ -310,11 +304,11 @@ function draw_header_main() {
     clear
     echo -e "${C_PURPLE}"
     cat << "EOF"
-          /\      _  __    _    _____    _    _   _    _      ___    ____ 
+          /\      _  __    _    _____    _    _   _    _      ___    ____
          /  \    | |/ /   / \  |_   _|  / \  | \ | |  / \    / _ \  / ___|
          \  /    | ' /   / _ \   | |   / _ \ |  \| | / _ \  | | | | \___ \
           \/     | . \  / ___ \  | |  / ___ \| |\  |/ ___ \ | |_| |  ___) |
-                 |_|\_\/_/   \_\ |_| /_/   \_\_| \_/_/   \_\ \___/  |____/ 
+                 |_|\_\/_/   \_\ |_| /_/   \_\_| \_/_/   \_\ \___/  |____/
 EOF
     echo -e "                                                              ${C_PURPLE}${KATANA_VERSION}${C_PURPLE}"
     echo -e "      ${C_NEON}>> KATANAOS // SYSTEM COMMAND INTERFACE${NC}"
@@ -324,9 +318,7 @@ EOF
 function draw_header() {
     local title="$1"
     draw_header_main
-    local title_len=${#title}
-    local pad=$(( (BOX_WIDTH - title_len) / 2 ))
-    box_row_center "${C_NEON}::$title ::${NC}"
+    box_row_center "${C_NEON}:: $title ::${NC}"
     echo ""
 }
 
@@ -336,16 +328,19 @@ function draw_header() {
 
 function draw_main_menu() {
     draw_header_main
-    
+
     # === SYSTEM STATUS ===
     draw_box_top
     box_row_left "${C_WHITE}SYSTEM STATUS${NC}"
     draw_box_mid
-    
-    local klipper_status=$(check_service_status "klipper")
-    local moonraker_status=$(check_service_status "moonraker")
-    local engine=$(get_current_engine_short)
-    
+
+    local klipper_status
+    klipper_status=$(check_service_status "klipper")
+    local moonraker_status
+    moonraker_status=$(check_service_status "moonraker")
+    local engine
+    engine=$(get_current_engine_short)
+
     if [ "$engine" != "NONE" ]; then
         if [ "$klipper_status" = "ONLINE" ]; then
             box_row_left "${C_GREEN}●${NC} Engine        : ${C_NEON}$engine${NC}    ${C_GREEN}ONLINE${NC}   3D Printer Firmware"
@@ -355,29 +350,35 @@ function draw_main_menu() {
     else
         box_row_left "${C_GREY}○${NC} Engine        : ${C_GREY}NOT INSTALLED${NC}"
     fi
-    
+
     if [ "$moonraker_status" = "ONLINE" ]; then
         box_row_left "${C_GREEN}●${NC} Moonraker     : ${C_GREEN}ONLINE ${NC}   API Server"
     else
         box_row_left "${C_GREY}○${NC} Moonraker     : ${C_GREY}OFFLINE${NC}   API Server"
     fi
-    
+
     draw_box_bot
-    
+
     # === INSTALLED COMPONENTS ===
-    local mainsail_status=$(check_dir_status "$HOME/mainsail")
-    local fluidd_status=$(check_dir_status "$HOME/fluidd")
-    local crowsnest_status=$(check_dir_status "$HOME/crowsnest")
-    local klipperscreen_status=$(check_dir_status "$HOME/KlipperScreen")
-    local happuhare_status=$(check_dir_status "$HOME/happy_hare")
-    local katanaflow_status=$(check_katanaflow_status)
-    
-    draw_sub_top
+    local mainsail_status
+    mainsail_status=$(check_dir_status "$HOME/mainsail")
+    local fluidd_status
+    fluidd_status=$(check_dir_status "$HOME/fluidd")
+    local crowsnest_status
+    crowsnest_status=$(check_dir_status "$HOME/crowsnest")
+    local klipperscreen_status
+    klipperscreen_status=$(check_dir_status "$HOME/KlipperScreen")
+    local happuhare_status
+    happuhare_status=$(check_dir_status "$HOME/happy_hare")
+    local katanaflow_status
+    katanaflow_status=$(check_katanaflow_status)
+
+    draw_box_top
     sub_row "${C_PURPLE}>> INSTALLED${NC}"
-    draw_sub_mid
-    
+    draw_box_mid
+
     local has_installed=0
-    
+
     if [ "$mainsail_status" = "INSTALLED" ] || [ "$fluidd_status" = "INSTALLED" ]; then
         box_row "${C_GREEN}●${NC} Web UI"
         has_installed=1
@@ -394,26 +395,25 @@ function draw_main_menu() {
         box_row "${C_GREEN}●${NC} KATANA Flow"
         has_installed=1
     fi
-    
+
     if [ $has_installed -eq 0 ]; then
         box_row "${C_GREY}○ No extras installed${NC}"
     fi
-    
-    draw_sub_bot
-    
+
+    draw_box_bot
+
     # === MAIN MENU ===
+    draw_box_top
+    box_row_left "${C_WHITE}MAIN MENU${NC}"
     draw_box_mid
-    box_row_left "${C_WHITE}⚡ MAIN MENU${NC}"
+    box_row_left "${C_GREEN}[1]${NC}  QUICK START     Full Install Wizard"
+    box_row_left "${C_NEON}[2]${NC}  FORGE           Build & Flash Firmware"
+    box_row_left "${C_NEON}[3]${NC}  EXTRAS          Install Extensions"
+    box_row_left "${C_NEON}[4]${NC}  UPDATE          Update All Components"
+    box_row_left "${C_NEON}[5]${NC}  DIAGNOSE        Service / Logs / Repair"
+    box_row_left "${C_NEON}[6]${NC}  SETTINGS        Profile / Theme / Network"
     draw_box_mid
-    box_row_left "${C_GREEN}[1]${NC}  ⚡ QUICK START     Full Install Wizard"
-    box_row_left "${C_NEON}[2]${NC}  🔧 FORGE          Build & Flash Firmware"
-    box_row_left "${C_NEON}[3]${NC}  📦 EXTRAS         Install Extensions"
-    box_row_left "${C_NEON}[4]${NC}  🔄 UPDATE         Update All Components"
-    box_row_left "${C_NEON}[5]${NC}  🩺 DIAGNOSE       Service / Logs / Repair"
-    box_row_left "${C_NEON}[6]${NC}  ⚙️  SETTINGS       Profile / Theme / Network"
-    
-    draw_box_mid
-    box_row_left "${C_RED}[X]${NC}  Exit             Close KATANAOS"
+    box_row_left "${C_RED}[X]${NC}  Exit            Close KATANAOS"
     draw_box_bot
     echo ""
 }
@@ -424,8 +424,8 @@ function draw_main_menu() {
 
 function run_quick_start() {
     while true; do
-        draw_header "⚡ QUICK START - INSTALLATION WIZARD"
-        
+        draw_header "QUICK START - INSTALLATION WIZARD"
+
         echo "  ${C_GREEN}[1]${NC}  Full Installation      Klipper + Moonraker + UI"
         echo "  ${C_NEON}[2]${NC}  Firmware Only         Klipper Only"
         echo "  ${C_NEON}[3]${NC}  Add UI                Mainsail / Fluidd"
@@ -434,7 +434,7 @@ function run_quick_start() {
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
             1) run_autopilot ;;
             2) run_installer_menu ;;
@@ -452,8 +452,8 @@ function run_quick_start() {
 
 function run_update_menu() {
     while true; do
-        draw_header "🔄 UPDATE MANAGER"
-        
+        draw_header "UPDATE MANAGER"
+
         echo "  ${C_GREEN}[1]${NC}  Update All              Klipper + Moonraker + all Extras"
         echo "  ${C_NEON}[2]${NC}  Klipper Only           Firmware"
         echo "  ${C_NEON}[3]${NC}  Moonraker Only         API Server"
@@ -464,7 +464,7 @@ function run_update_menu() {
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
             1) update_core_stack ;;
             2) update_klipper_only ;;
@@ -514,11 +514,12 @@ function update_ui_only() {
 function update_extras_only() {
     draw_header "UPDATE - EXTRAS"
     log_info "Checking installed extras for updates..."
-    
+
     local dirs=("$HOME/crowsnest" "$HOME/KlipperScreen" "$HOME/happy_hare" "$HOME/Cartographer" "$HOME/beacon" "$HOME/Eddy")
     for d in "${dirs[@]}"; do
         if [ -d "$d/.git" ]; then
-            local name=$(basename "$d")
+            local name
+            name=$(basename "$d")
             echo -ne "  [..] Updating $name..."
             if git -C "$d" pull --quiet 2>/dev/null; then
                 echo -e "\r${C_GREEN}  [OK] $name updated${NC}    "
@@ -527,7 +528,7 @@ function update_extras_only() {
             fi
         fi
     done
-    
+
     log_success "Extras update check complete."
     read -p "  Press Enter..."
 }
@@ -536,14 +537,17 @@ function check_updates_only() {
     draw_header "CHECK FOR UPDATES"
     log_info "Checking for available updates (no changes will be made)..."
     echo ""
-    
+
     local dirs=("$HOME/klipper" "$HOME/moonraker" "$HOME/crowsnest" "$HOME/KlipperScreen")
     for d in "${dirs[@]}"; do
         if [ -d "$d/.git" ]; then
-            local name=$(basename "$d")
+            local name
+            name=$(basename "$d")
             git -C "$d" fetch --quiet 2>/dev/null
-            local local_sha=$(git -C "$d" rev-parse HEAD 2>/dev/null)
-            local remote_sha=$(git -C "$d" rev-parse @{u} 2>/dev/null)
+            local local_sha
+            local_sha=$(git -C "$d" rev-parse HEAD 2>/dev/null)
+            local remote_sha
+            remote_sha=$(git -C "$d" rev-parse @{u} 2>/dev/null)
             if [ "$local_sha" = "$remote_sha" ]; then
                 echo -e "  ${C_GREEN}●${NC} $name: up to date"
             else
@@ -551,7 +555,7 @@ function check_updates_only() {
             fi
         fi
     done
-    
+
     echo ""
     read -p "  Press Enter..."
 }
@@ -562,21 +566,21 @@ function check_updates_only() {
 
 function run_extras_menu() {
     while true; do
-        draw_header "📦 EXTRAS - EXTENSIONS"
-        
-        echo "  ${C_GREEN}[1]${NC}  🎨 WEB UI              Mainsail / Fluidd"
-        echo "  ${C_NEON}[2]${NC}  📷 VISION              Crowsnest / KlipperScreen"
-        echo "  ${C_NEON}[3]${NC}  🔌 SMART PROBES        Smart Probe / Carto / Beacon / Eddy"
-        echo "  ${C_NEON}[4]${NC}  📏 BED DISTANCE        Bed Distance Sensor"
-        echo "  ${C_NEON}[5]${NC}  🛠️  TOOLCHANGER         Happy Hare / StealthChanger / MADMAX"
-        echo "  ${C_NEON}[6]${NC}  🔬 TUNING               KATANA Flow / ShakeTune / OctoPrint"
-        echo "  ${C_NEON}[7]${NC}  💾 SYSTEM               Log2Ram / Backup / Restore"
-        echo "  ${C_NEON}[8]${NC}  🔒 SECURITY             Firewall / SSH / PolKit"
+        draw_header "EXTRAS - EXTENSIONS"
+
+        echo "  ${C_GREEN}[1]${NC}  WEB UI              Mainsail / Fluidd"
+        echo "  ${C_NEON}[2]${NC}  VISION              Crowsnest / KlipperScreen"
+        echo "  ${C_NEON}[3]${NC}  SMART PROBES        Smart Probe / Carto / Beacon / Eddy"
+        echo "  ${C_NEON}[4]${NC}  BED DISTANCE        Bed Distance Sensor"
+        echo "  ${C_NEON}[5]${NC}  TOOLCHANGER         Happy Hare / StealthChanger / MADMAX"
+        echo "  ${C_NEON}[6]${NC}  TUNING              KATANA Flow / ShakeTune / OctoPrint"
+        echo "  ${C_NEON}[7]${NC}  SYSTEM              Log2Ram / Backup / Restore"
+        echo "  ${C_NEON}[8]${NC}  SECURITY            Firewall / SSH / PolKit"
         echo ""
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
             1) run_extras_webui ;;
             2) run_extras_vision ;;
@@ -594,11 +598,13 @@ function run_extras_menu() {
 
 function run_extras_webui() {
     while true; do
-        draw_header "🎨 WEB UI"
-        
-        local mainsail=$(check_dir_status "$HOME/mainsail")
-        local fluidd=$(check_dir_status "$HOME/fluidd")
-        
+        draw_header "WEB UI"
+
+        local mainsail
+        mainsail=$(check_dir_status "$HOME/mainsail")
+        local fluidd
+        fluidd=$(check_dir_status "$HOME/fluidd")
+
         echo "  ${C_GREEN}[1]${NC}  Mainsail installieren    [$mainsail]"
         echo "  ${C_NEON}[2]${NC}  Fluidd installieren       [$fluidd]"
         echo "  ${C_NEON}[3]${NC}  Zwischen UI wechseln"
@@ -606,7 +612,7 @@ function run_extras_webui() {
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
             1) run_ui_installer ;;
             2) install_fluidd ;;
@@ -636,18 +642,20 @@ function switch_ui() {
 
 function run_extras_vision() {
     while true; do
-        draw_header "📷 VISION"
-        
-        local crowsnest=$(check_dir_status "$HOME/crowsnest")
-        local klipperscreen=$(check_dir_status "$HOME/KlipperScreen")
-        
+        draw_header "VISION"
+
+        local crowsnest
+        crowsnest=$(check_dir_status "$HOME/crowsnest")
+        local klipperscreen
+        klipperscreen=$(check_dir_status "$HOME/KlipperScreen")
+
         echo "  ${C_GREEN}[1]${NC}  Crowsnest (Camera)     [$crowsnest]"
         echo "  ${C_NEON}[2]${NC}  KlipperScreen          [$klipperscreen]"
         echo ""
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
             1) install_crowsnest ;;
             2) dispatch_klipperscreen ;;
@@ -676,13 +684,17 @@ function dispatch_klipperscreen() {
 
 function run_extras_smartprobes() {
     while true; do
-        draw_header "🔌 SMART PROBES"
-        
-        local smartprobe=$(check_dir_status "$HOME/smart_probe")
-        local carto=$(check_cartographer_status)
-        local beacon=$(check_beacon_status)
-        local eddy=$(check_btt_eddy_status)
-        
+        draw_header "SMART PROBES"
+
+        local smartprobe
+        smartprobe=$(check_dir_status "$HOME/smart_probe")
+        local carto
+        carto=$(check_cartographer_status)
+        local beacon
+        beacon=$(check_beacon_status)
+        local eddy
+        eddy=$(check_btt_eddy_status)
+
         echo "  ${C_GREEN}[1]${NC}  Smart Probe            [$smartprobe]"
         echo "  ${C_NEON}[2]${NC}  Cartographer           [$carto]"
         echo "  ${C_NEON}[3]${NC}  Beacon Probe          [$beacon]"
@@ -691,10 +703,10 @@ function run_extras_smartprobes() {
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
-            1) run_smartprobe_menu ;; # Updated to use the new specific menu
-            2) run_smartprobe_menu ;; # Fallback/Redirect for specific items if user clicks them directly
+            1) run_smartprobe_menu ;;
+            2) run_smartprobe_menu ;;
             3) run_smartprobe_menu ;;
             4) run_smartprobe_menu ;;
             b|B) return ;;
@@ -702,11 +714,10 @@ function run_extras_smartprobes() {
     done
 }
 
-# Probe install functions are provided by modules/extras/smart_probes.sh (sourced at startup)
-
 function run_extras_beddistance() {
-    draw_header "📏 BED DISTANCE SENSOR"
-    local status=$(check_bed_distance_sensor_status)
+    draw_header "BED DISTANCE SENSOR"
+    local status
+    status=$(check_bed_distance_sensor_status)
     echo "  Status: $status"
     echo "  [1] Install"
     echo "  [2] Remove"
@@ -716,12 +727,15 @@ function run_extras_beddistance() {
 
 function run_extras_toolchanger() {
     while true; do
-        draw_header "🛠️ TOOLCHANGER"
-        
-        local happyhare=$(check_dir_status "$HOME/happy_hare")
-        local stealth=$(check_stealthchanger_status)
-        local madmax=$(check_madmax_status)
-        
+        draw_header "TOOLCHANGER"
+
+        local happyhare
+        happyhare=$(check_dir_status "$HOME/happy_hare")
+        local stealth
+        stealth=$(check_stealthchanger_status)
+        local madmax
+        madmax=$(check_madmax_status)
+
         echo "  ${C_GREEN}[1]${NC}  Happy Hare             [$happyhare]"
         echo "  ${C_NEON}[2]${NC}  StealthChanger         [$stealth]"
         echo "  ${C_NEON}[3]${NC}  MADMAX                 [$madmax]"
@@ -729,26 +743,27 @@ function run_extras_toolchanger() {
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
-            1) run_multimaterial_menu ;; # Updated
-            2) run_multimaterial_menu ;; # Redirect
+            1) run_multimaterial_menu ;;
+            2) run_multimaterial_menu ;;
             3) run_multimaterial_menu ;;
             b|B) return ;;
         esac
     done
 }
 
-# Toolchanger install functions are provided by modules/hardware/menu.sh (sourced at startup)
-
 function run_extras_tuning() {
     while true; do
-        draw_header "🔬 TUNING"
-        
-        local katanaflow=$(check_katanaflow_status)
-        local shaketune=$(check_shaketune_status)
-        local octoprint=$(check_octoprint_status)
-        
+        draw_header "TUNING"
+
+        local katanaflow
+        katanaflow=$(check_katanaflow_status)
+        local shaketune
+        shaketune=$(check_shaketune_status)
+        local octoprint
+        octoprint=$(check_octoprint_status)
+
         echo "  ${C_GREEN}[1]${NC}  KATANA Flow            [$katanaflow]"
         echo "  ${C_NEON}[2]${NC}  ShakeTune              [$shaketune]"
         echo "  ${C_NEON}[3]${NC}  OctoPrint              [$octoprint]"
@@ -756,25 +771,25 @@ function run_extras_tuning() {
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
             1) run_katana_flow ;;
-            2) run_tuning_tools ;; # Use dispatcher
+            2) run_tuning_tools ;;
             3) run_tuning_tools ;;
             b|B) return ;;
         esac
     done
 }
 
-# ShakeTune install is provided by modules/extras/tuning.sh (sourced via dispatcher)
 function install_octoprint() { run_octoprint_install; }
 
 function run_extras_system() {
     while true; do
-        draw_header "💾 SYSTEM"
-        
-        local log2ram=$(check_log2ram_status)
-        
+        draw_header "SYSTEM"
+
+        local log2ram
+        log2ram=$(check_log2ram_status)
+
         echo "  ${C_GREEN}[1]${NC}  Log2Ram                [$log2ram]"
         echo "  ${C_NEON}[2]${NC}  Create Backup"
         echo "  ${C_NEON}[3]${NC}  Restore Backup"
@@ -782,15 +797,15 @@ function run_extras_system() {
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
-            1) 
+            1)
                 if declare -f install_log2ram > /dev/null; then
                     install_log2ram
                 else
                     source "$MODULES_DIR/extras/tuning.sh"
                     install_log2ram
-                fi 
+                fi
                 ;;
             2) run_backup_menu ;;
             3) restore_backup ;;
@@ -798,8 +813,6 @@ function run_extras_system() {
         esac
     done
 }
-
-
 
 function run_extras_security() {
     run_security_menu
@@ -824,23 +837,23 @@ function run_forge_menu() {
 
 function run_diagnose_menu() {
     while true; do
-        draw_header "🩺 DIAGNOSE"
-        
+        draw_header "DIAGNOSE"
+
         echo "  ${C_GREEN}[1]${NC}  Service Status        Check all services"
         echo "  ${C_NEON}[2]${NC}  Logs                  Klipper / Moonraker"
         echo "  ${C_NEON}[3]${NC}  Repair"
-        echo "        ├── Restart Klipper"
-        echo "        ├── Restart Moonraker"
-        echo "        ├── Configure Auto-Restart"
-        echo "        └── Validate printer.cfg"
+        echo "        |- Restart Klipper"
+        echo "        |- Restart Moonraker"
+        echo "        |- Configure Auto-Restart"
+        echo "        '- Validate printer.cfg"
         echo "  ${C_NEON}[4]${NC}  Emergency"
-        echo "        ├── Full Reinstall"
-        echo "        └── Complete Uninstall"
+        echo "        |- Full Reinstall"
+        echo "        '- Complete Uninstall"
         echo ""
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
             1) check_all_services ;;
             2) show_logs_menu ;;
@@ -898,7 +911,7 @@ function run_emergency_menu() {
     while true; do
         draw_header "NOTFALL"
         echo "  [1] Komplette Neuinstallation"
-        echo "  [2] Vollständige Deinstallation"
+        echo "  [2] Vollstaendige Deinstallation"
         echo "  [B] Back"
         read -p "  >> " ch
         case $ch in
@@ -915,8 +928,8 @@ function run_emergency_menu() {
 
 function run_settings_menu() {
     while true; do
-        draw_header "⚙️ SETTINGS"
-        
+        draw_header "SETTINGS"
+
         echo "  ${C_GREEN}[1]${NC}  Profile                (minimal / standard / power)"
         echo "  ${C_NEON}[2]${NC}  Terminal               (Colors / Theme)"
         echo "  ${C_NEON}[3]${NC}  Instance Manager       (Add/Remove Instances)"
@@ -928,7 +941,7 @@ function run_settings_menu() {
         echo "  [B] Back"
         echo ""
         read -p "  >> COMMAND: " ch
-        
+
         case $ch in
             1) change_profile ;;
             2) change_theme ;;
@@ -1004,7 +1017,7 @@ function draw_loading() {
 function draw_success() {
     local message="$1"
     draw_box_top
-    box_row_center "${C_GREEN}✓ SUCCESS${NC}"
+    box_row_center "${C_GREEN}SUCCESS${NC}"
     draw_box_mid
     box_row " "
     box_row " ${C_WHITE}$message${NC}"
@@ -1016,20 +1029,13 @@ function draw_success() {
 function draw_error() {
     local message="$1"
     draw_warn_top
-    warn_row_center "${C_RED}✗ ERROR${NC}"
+    warn_row_center "${C_RED}ERROR${NC}"
     draw_warn_mid
     warn_row " "
     warn_row " ${C_WHITE}$message${NC}"
     warn_row " "
     draw_warn_bot
     echo ""
-}
-
-function warn_row_center() {
-    local content="$1"
-    local len=$((${#content} - 27))  # Subtract color codes
-    local pad=$(( (BOX_WIDTH - len) / 2 ))
-    echo -e "${INDENT}${C_ORANGE}│${NC}$(printf ' %.0s' $(seq 1 $pad))${content}$(printf ' %.0s' $(seq 1 $pad))${C_ORANGE}│${NC}"
 }
 
 # ============================================================
@@ -1041,6 +1047,11 @@ function draw_top() { draw_box_top; }
 function draw_mid() { draw_box_mid; }
 function draw_bot() { draw_box_bot; }
 function draw_line() { draw_box_mid; }
+
+# Alias: draw_sub_* -> draw_box_* (identical behavior)
+function draw_sub_top() { draw_box_top; }
+function draw_sub_mid() { draw_box_mid; }
+function draw_sub_bot() { draw_box_bot; }
 
 function print_line() {
     local left="$1"
@@ -1059,25 +1070,18 @@ function menu_item() {
     local num="$1"
     local title="$2"
     local desc="$3"
-    local line=$(printf "%-5s %-20s %s" "$num" "$title" "$desc")
+    local line
+    line=$(printf "%-5s %-20s %s" "$num" "$title" "$desc")
     box_row "$line"
 }
 
 # ============================================================
-# PIXEL-PERFECT ALIGNMENT (Big Pickle Standard)
+# PIXEL-PERFECT ALIGNMENT
 # ============================================================
 
 function print_status_line() {
     local label="$1"
     local status="$2"
     local color="${3:-$C_NEON}"
-    # %-25s reserviert genau 25 Zeichen für den Text, linksbündig.
-    # Uses Indigo/Blue border as specified in skills.md example
-    printf "  ${C_PURPLE}║${NC} %-25s │ %b%-37s\e[0m ${C_PURPLE}║${NC}\n" "$label" "$color" "$status"
+    printf "  ${C_PURPLE}║${NC} %-25s | %b%-37s\e[0m ${C_PURPLE}║${NC}\n" "$label" "$color" "$status"
 }
-
-# Legacy colors (if used by other modules)
-C_TXT="$C_WHITE"
-C_OK="$C_GREEN"
-C_ERR="$C_RED"
-C_WARN="$C_YELLOW"
