@@ -1,5 +1,5 @@
 # ============================================================
-# KATANAOS VISUAL ENGINE v2.2
+# KATANAOS VISUAL ENGINE v2.5
 # ============================================================
 
 # Colors
@@ -316,7 +316,7 @@ function draw_header_main() {
       \/     | . \  / ___ \  | |  / ___ \| |\  |/ ___ \ | |_| |  ___) |
              |_|\_\/_/   \_\ |_| /_/   \_\_| \_/_/   \_\ \___/  |____/ 
 EOF
-    echo -e "                                                    ${C_PURPLE}v2.2${C_PURPLE}"
+    echo -e "                                                    ${C_PURPLE}${VERSION}${C_PURPLE}"
     echo -e "      ${C_NEON}>> KATANAOS // SYSTEM COMMAND INTERFACE${NC}"
     echo ""
 }
