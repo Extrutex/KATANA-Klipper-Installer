@@ -51,7 +51,7 @@ function repair_moonraker_config() {
         cp "$template_file" "$config_file"
         
         # Fix permissions
-        chown $USER:$USER "$config_file"
+        chown "$USER":"$USER" "$config_file"
         
         log_success "Restored moonraker.conf from template."
         

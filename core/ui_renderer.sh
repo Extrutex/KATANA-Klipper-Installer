@@ -480,7 +480,7 @@ function run_update_menu() {
 
 function update_klipper_only() {
     draw_header "UPDATE - KLIPPER"
-    cd "$HOME/klipper"
+    cd "$HOME/klipper" || { log_error "Klipper directory not found"; return 1; }
     git pull
     make clean
     make olddefconfig
@@ -491,7 +491,7 @@ function update_klipper_only() {
 
 function update_moonraker_only() {
     draw_header "UPDATE - MOONRAKER"
-    cd "$HOME/moonraker"
+    cd "$HOME/moonraker" || { log_error "Moonraker directory not found"; return 1; }
     git pull
     ./scripts/install.sh
     sudo systemctl restart moonraker

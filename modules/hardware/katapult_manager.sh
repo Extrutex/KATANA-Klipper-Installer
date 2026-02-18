@@ -35,7 +35,7 @@ function run_katapult_menu() {
 function install_katapult_repo() {
     log_info "Downloading Katapult..."
     if [ -d "$KATAPULT_DIR" ]; then
-        cd "$KATAPULT_DIR"
+        cd "$KATAPULT_DIR" || return 1
         git pull
     else
         git clone https://github.com/Arksine/katapult "$KATAPULT_DIR"
@@ -55,7 +55,7 @@ function build_katapult() {
         log_error "Katapult not installed. Run Step 1 first."
         return
     fi
-    cd "$KATAPULT_DIR"
+    cd "$KATAPULT_DIR" || { log_error "Katapult directory not found"; return 1; }
     
     draw_header "BUILD KATAPULT"
     echo "  Select your architecture in menuconfig."

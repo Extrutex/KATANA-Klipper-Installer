@@ -104,7 +104,7 @@ function repair_system() {
                 heal_permissions
             else
                 log_info "Fixing Permissions (Manual Fallback)..."
-                sudo chown -R $USER:$USER $HOME/printer_data $HOME/klipper $HOME/moonraker 2>/dev/null
+                sudo chown -R "$USER":"$USER" "$HOME/printer_data" "$HOME/klipper" "$HOME/moonraker" 2>/dev/null
                 log_success "Permissions fixed."
             fi
             ;;

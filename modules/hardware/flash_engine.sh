@@ -48,7 +48,7 @@ function run_build_and_flash() {
         return
     fi
 
-    cd ~/klipper
+    cd ~/klipper || { log_error "Klipper directory not found"; return 1; }
 
     echo "  Step 1: Configure"
     echo "  ---------------------------------------------------"
@@ -116,7 +116,7 @@ function run_linux_wizard() {
     read -p "  Start? [y/N]: " yn
     if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
 
-    cd ~/klipper
+    cd ~/klipper || { log_error "Klipper directory not found"; return 1; }
 
     # Auto-configure for Linux Process
     echo "CONFIG_LOW_LEVEL_OPTIONS=y" > .config

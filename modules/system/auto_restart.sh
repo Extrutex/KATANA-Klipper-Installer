@@ -80,7 +80,7 @@ EOF
 
     # Reload systemd
     sudo systemctl daemon-reload
-    sudo systemctl restart $service
+    sudo systemctl restart "$service"
     
     log_info "Service $service configured with auto-restart."
 }
@@ -90,7 +90,7 @@ function disable_auto_restart() {
     
     for service in klipper moonraker crowsnest KlipperScreen; do
         if [ -d "/etc/systemd/system/${service}.service.d" ]; then
-            sudo rm -rf /etc/systemd/system/${service}.service.d
+            sudo rm -rf "/etc/systemd/system/${service}.service.d"
             log_info "Removed override for $service"
         fi
     done

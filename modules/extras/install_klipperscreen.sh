@@ -17,7 +17,7 @@ function do_install_klipperscreen() {
     log_info "Running KlipperScreen Install Script..."
     
     # Needs system packages so we might need sudo
-    cd "$repo_dir/scripts"
+    cd "$repo_dir/scripts" || { log_error "KlipperScreen scripts not found"; return 1; }
     
     # Runs venv + systemd setup
     if ./KlipperScreen-install.sh; then

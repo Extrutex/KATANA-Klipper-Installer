@@ -78,7 +78,7 @@ function build_mcu() {
     
     # Clean and compile
     log_info "Cleaning previous builds..."
-    cd "$KLIPPER_DIR"
+    cd "$KLIPPER_DIR" || { log_error "Klipper directory not found"; return 1; }
     make clean > /dev/null 2>&1
     
     log_info "Validating config..."

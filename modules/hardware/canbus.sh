@@ -132,7 +132,7 @@ function setup_config_stm32f446() {
         return
     fi
     
-    cd "$target_dir"
+    cd "$target_dir" || { log_error "Directory not found: $target_dir"; return 1; }
     
     # Base config clean
     make clean
@@ -181,7 +181,7 @@ function setup_config_stm32f429() {
     
     echo -e "${C_CYAN}>> Configuring for STM32F429 (Octopus Pro) ($type)...${NC}"
     if [ ! -d "$target_dir" ]; then echo -e "${C_RED}Error: $target_dir not found.${NC}"; return; fi
-    cd "$target_dir"
+    cd "$target_dir" || { log_error "Directory not found: $target_dir"; return 1; }
     make clean
     
     cat > .config <<EOF
@@ -218,7 +218,7 @@ function setup_config_stm32g0b1() {
     
     echo -e "${C_CYAN}>> Configuring for STM32G0B1 (EBB/SB2209) ($type)...${NC}"
     if [ ! -d "$target_dir" ]; then echo -e "${C_RED}Error: $target_dir not found.${NC}"; return; fi
-    cd "$target_dir"
+    cd "$target_dir" || { log_error "Directory not found: $target_dir"; return 1; }
     make clean
     
     cat > .config <<EOF
@@ -261,7 +261,7 @@ function setup_config_rp2040() {
     
     echo -e "${C_CYAN}>> Configuring for RP2040 (SB2209) ($type)...${NC}"
     if [ ! -d "$target_dir" ]; then echo -e "${C_RED}Error: $target_dir not found.${NC}"; return; fi
-    cd "$target_dir"
+    cd "$target_dir" || { log_error "Directory not found: $target_dir"; return 1; }
     make clean
     
     cat > .config <<EOF
@@ -298,7 +298,7 @@ function setup_config_stm32f407() {
     
     echo -e "${C_CYAN}>> Configuring for STM32F407 (MKS SKIPR) ($type)...${NC}"
     if [ ! -d "$target_dir" ]; then echo -e "${C_RED}Error: $target_dir not found.${NC}"; return; fi
-    cd "$target_dir"
+    cd "$target_dir" || { log_error "Directory not found: $target_dir"; return 1; }
     make clean
     
     cat > .config <<EOF

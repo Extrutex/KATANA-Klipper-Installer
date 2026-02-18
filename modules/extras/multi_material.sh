@@ -41,7 +41,7 @@ function install_happyhare() {
     
     if [ -f "$install_dir/install.sh" ]; then
         # HH has an interactive wizard
-        cd "$install_dir"
+        cd "$install_dir" || return 1
         bash install.sh
     else
         log_error "install.sh not found in Happy Hare repo."

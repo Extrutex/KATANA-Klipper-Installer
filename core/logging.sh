@@ -40,6 +40,8 @@ function exec_silent() {
     local cmd="$2"
     
     echo -ne "  [..] $desc..."
+    # CAUTION: eval is used here because callers pass compound commands as strings.
+    # All current callers use static strings only. Do NOT pass user-controlled input.
     if eval "$cmd" >> "$LOG_FILE" 2>&1; then
         echo -e "\r${C_GREEN}  [OK] $desc${C_RESET}    "
     else

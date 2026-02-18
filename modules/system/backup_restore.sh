@@ -95,7 +95,7 @@ function push_config_to_git() {
         echo "  Would you like to initialize one?"
         read -p "  [y/N]: " yn
         if [[ "$yn" =~ ^[yY] ]]; then
-            cd "$config_dir"
+            cd "$config_dir" || return 1
             git init
             git add .
             git commit -m "Initial Check-In via KATANA"
@@ -106,7 +106,7 @@ function push_config_to_git() {
     fi
     
     log_info "Pushing to Git..."
-    cd "$config_dir"
+    cd "$config_dir" || return 1
     git add .
     git commit -m "Auto-Backup: $(date)" || echo "Nothing to commit"
     
@@ -170,7 +170,8 @@ function restore_backup() {
     
     log_info "Extracting backup..."
     # Unzip to temp location first for safety
-    local temp_restore="/tmp/katana_restore_$(date +%s)"
+    local temp_restore
+    temp_restore=$(mktemp -d)
     mkdir -p "$temp_restore"
     
     if unzip -q "$target_backup" -d "$temp_restore"; then
@@ -211,7 +212,7 @@ function restore_backup() {
         rm -rf "$temp_restore"
         
         # Fix Permissions
-        sudo chown -R $USER:$USER "$HOME/printer_data"
+        sudo chown -R "$USER":"$USER" "$HOME/printer_data"
         
         log_success "Restore complete!"
         log_info "Restarting services..."

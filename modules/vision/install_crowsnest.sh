@@ -36,7 +36,7 @@ function do_install_crowsnest() {
         exec_silent "Cloning Crowsnest" "git clone https://github.com/mainsail-crew/crowsnest.git $repo_dir"
     fi
     
-    cd "$repo_dir"
+    cd "$repo_dir" || { log_error "Crowsnest directory not found"; return 1; }
     log_info "Running Crowsnest Installer..."
     
     if sudo -n true 2>/dev/null; then

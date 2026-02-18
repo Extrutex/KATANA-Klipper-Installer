@@ -45,7 +45,7 @@ function install_timelapse() {
         log_info "Timelapse already installed. Pulling updates..."
         cd "$timelapse_dir" && git pull
     else
-        cd "$HOME/moonraker"
+        cd "$HOME/moonraker" || return 1
         git clone https://github.com/mainsailcreations/moonraker-timelapse.git
     fi
     

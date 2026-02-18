@@ -79,7 +79,7 @@ function install_octoprint_with_klipper() {
     if [ -f "$HOME/OctoPrint/venv/bin/pip" ]; then
         $HOME/OctoPrint/venv/bin/pip install octoprint_klipper
     else
-        . $HOME/OctoPrint/venv/bin/activate
+        . "$HOME/OctoPrint/venv/bin/activate"
         pip install octoprint_klipper
     fi
     
@@ -88,7 +88,9 @@ function install_octoprint_with_klipper() {
 }
 
 function create_octoprint_service() {
-    cat > /tmp/octoprint.service <<EOF
+    local svc_tmp
+    svc_tmp=$(mktemp)
+    cat > "$svc_tmp" <<EOF
 [Unit]
 Description=OctoPrint Service
 After=network.target
@@ -108,19 +110,19 @@ WantedBy=multi-user.target
 EOF
 
     if sudo -n true 2>/dev/null; then
-        sudo cp /tmp/octoprint.service /etc/systemd/system/
+        sudo cp "$svc_tmp" /etc/systemd/system/octoprint.service
         sudo systemctl daemon-reload
         sudo systemctl enable octoprint
         sudo systemctl start octoprint
     else
         echo "  [!] Sudo required to install service."
-        sudo cp /tmp/octoprint.service /etc/systemd/system/
+        sudo cp "$svc_tmp" /etc/systemd/system/octoprint.service
         sudo systemctl daemon-reload
         sudo systemctl enable octoprint
         sudo systemctl start octoprint
     fi
     
-    rm -f /tmp/octoprint.service
+    rm -f "$svc_tmp"
 }
 
 function remove_octoprint() {

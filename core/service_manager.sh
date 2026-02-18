@@ -26,8 +26,7 @@ function install_service_from_template() {
     # Render Template
     # Replace template variables
     # Safe pattern: using | as delimiter to avoid path clashes
-    local rendered_content=$(cat "$template_path" | \
-        sed "s|{{USER}}|$USER|g" | \
+    local rendered_content=$(sed "s|{{USER}}|$USER|g" "$template_path" | \
         sed "s|{{HOME}}|$HOME|g" | \
         sed "s|{{SERVICE_NAME}}|$target_service_name|g" | \
         sed "s|{{DATA_DIR}}|$target_data_dir|g")

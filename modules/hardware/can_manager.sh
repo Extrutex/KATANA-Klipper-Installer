@@ -49,7 +49,7 @@ iface can0 can static
 EOF
 
     log_info "Aktiviere Netzwerk..."
-    sudo ip link set can0 up type can bitrate $bitrate 2>/dev/null || sudo ifup can0 2>/dev/null
+    sudo ip link set can0 up type can bitrate "$bitrate" 2>/dev/null || sudo ifup can0 2>/dev/null
     
     if ip link show can0 | grep -q "UP"; then
         draw_success "CAN0 IST AKTIV!"
@@ -127,7 +127,7 @@ function install_katapult_wizard() {
         git clone https://github.com/Arksine/katapult "$katapult_dir"
     fi
     
-    cd "$katapult_dir"
+    cd "$katapult_dir" || { log_error "Katapult directory not found"; return 1; }
     make clean &>/dev/null
     
     log_info "Generiere Konfiguration..."

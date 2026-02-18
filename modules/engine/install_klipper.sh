@@ -273,7 +273,7 @@ function do_update_klipper() {
 
     log_info "Updating Klipper..."
     
-    cd "$klipper_dir"
+    cd "$klipper_dir" || { log_error "Klipper directory not found"; return 1; }
     
     # Auto-detect default branch (master or main)
     local branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
@@ -327,7 +327,7 @@ function do_update_moonraker() {
 
     log_info "Updating Moonraker..."
     
-    cd "$moonraker_dir"
+    cd "$moonraker_dir" || { log_error "Moonraker directory not found"; return 1; }
     
     # Auto-detect default branch
     local branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')

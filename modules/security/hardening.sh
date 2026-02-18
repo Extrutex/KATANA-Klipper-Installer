@@ -46,7 +46,7 @@ function install_security_stack() {
     local ssh_port=22
     # Simple check, assuming standard config or user knows
     log_info "Allowing SSH (Port $ssh_port)..."
-    sudo ufw allow $ssh_port/tcp
+    sudo ufw allow "$ssh_port/tcp"
     
     # 5. Klipper / Moonraker Ports
     log_info "Allowing Klipper Services..."

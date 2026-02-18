@@ -182,7 +182,7 @@ function setup_nginx() {
     fi
     
     # Remove old symlink if exists
-    sudo rm -f /etc/nginx/sites-enabled/$ui_type
+    sudo rm -f "/etc/nginx/sites-enabled/$ui_type"
     
     # Create nginx config with determined port
     sudo tee "$cfg_file" > /dev/null <<EOF
@@ -263,7 +263,7 @@ EOF
     sudo chmod o+x "$HOME"
     
     # 2. Ensure the UI folder is readable/executable for everyone
-    sudo chown -R $USER:$USER "$root_dir"
+    sudo chown -R "$USER":"$USER" "$root_dir"
     sudo chmod -R 755 "$root_dir"
     
     # Enable site

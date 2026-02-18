@@ -14,7 +14,8 @@ function run_system_diagnostics() {
     mkdir -p "$diag_dir"
     local timestamp=$(date +"%Y-%m-%d_%H-%M")
     local zip_name="katana_debug_${timestamp}.zip"
-    local staging_dir="/tmp/katana_debug_${timestamp}"
+    local staging_dir
+    staging_dir=$(mktemp -d)
 
     mkdir -p "$staging_dir"
 
