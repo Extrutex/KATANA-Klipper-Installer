@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function install_klipperscreen() {
+function do_install_klipperscreen() {
     log_info "Installing KlipperScreen (Touch Interface)..."
 
     local repo_dir="$HOME/KlipperScreen"

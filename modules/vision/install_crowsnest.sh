@@ -1,9 +1,6 @@
 #!/bin/bash
 # modules/vision/install_crowsnest.sh
 
-# Source KlipperScreen installer
-source "$MODULES_DIR/extras/install_klipperscreen.sh"
-
 function install_vision_stack() {
     while true; do
         draw_header "HMI & VISION STACK"
@@ -20,7 +17,7 @@ function install_vision_stack() {
         
         case $ch in
             1) do_install_crowsnest ;;
-            2) install_klipperscreen ;;
+            2) do_install_klipperscreen ;;
             r|R) do_remove_crowsnest ;;
             k|K) do_remove_klipperscreen ;;
             b|B) return ;;

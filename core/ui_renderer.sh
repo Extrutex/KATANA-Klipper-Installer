@@ -650,7 +650,7 @@ function run_extras_vision() {
         
         case $ch in
             1) install_crowsnest ;;
-            2) install_klipperscreen ;;
+            2) dispatch_klipperscreen ;;
             b|B) return ;;
         esac
     done
@@ -665,10 +665,10 @@ function install_crowsnest() {
     fi
 }
 
-function install_klipperscreen() {
+function dispatch_klipperscreen() {
     if [ -f "$MODULES_DIR/extras/install_klipperscreen.sh" ]; then
         source "$MODULES_DIR/extras/install_klipperscreen.sh"
-        install_klipperscreen
+        do_install_klipperscreen
     else
         log_error "Module missing: extras/install_klipperscreen.sh"
     fi
