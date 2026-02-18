@@ -12,6 +12,7 @@ function run_hal_flasher() {
         echo "  ${C_GREEN}[1]${NC}  Build & Flash Firmware     (opens menuconfig)"
         echo "  ${C_NEON}[2]${NC}  Linux Host MCU             (automatic, no config needed)"
         echo "  ${C_NEON}[3]${NC}  Katapult (CanBoot) Manager"
+        echo "  ${C_NEON}[4]${NC}  Update All Saved MCUs"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -28,10 +29,97 @@ function run_hal_flasher() {
                    read -p "  Press Enter..."
                fi
                ;;
+            4) run_mcu_update_all ;;
             b|B) return ;;
         esac
     done
 }
+
+# ... (existing functions) ...
+
+# === MCU BATCH UPDATE ===
+
+function run_mcu_update_all() {
+    draw_header "BATCH UPDATE SAVED MCUS"
+    
+    if [ ! -d "$BOARD_REGISTRY_DIR" ]; then
+        log_error "No saved boards found. Build and save one first!"
+        read -p "  Press Enter..."
+        return
+    fi
+    
+    local configs=("$BOARD_REGISTRY_DIR"/*.meta)
+    if [ ! -e "${configs[0]}" ]; then
+        log_error "No saved boards found."
+        read -p "  Press Enter..."
+        return
+    fi
+    
+    echo "  Found saved boards:"
+    for meta in "${configs[@]}"; do
+        source "$meta"
+        echo "  - $BOARD_NAME ($ARCH)"
+    done
+    
+    echo ""
+    read -p "  Update all these boards now? [y/N]: " yn
+    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    
+    for meta in "${configs[@]}"; do
+        source "$meta"
+        local config_file="$BOARD_REGISTRY_DIR/${BOARD_NAME}.config"
+        
+        draw_header "UPDATING: $BOARD_NAME"
+        log_info "Architecture: $ARCH"
+        
+        if [ ! -f "$config_file" ]; then
+            log_error "Config file missing for $BOARD_NAME"
+            continue
+        fi
+        
+        # 1. Restore Config
+        cp "$config_file" "$HOME/klipper/.config"
+        cd "$HOME/klipper" || return
+        
+        # 2. Build
+        log_info "Building firmware..."
+        make olddefconfig > /dev/null
+        make clean > /dev/null
+        if make -j$(nproc); then
+            log_success "Build complete."
+        else
+            log_error "Build failed for $BOARD_NAME"
+            continue
+        fi
+        
+        # 3. Flash
+        log_info "Flashing ($FLASH_METHOD)..."
+        
+        case $FLASH_METHOD in
+            can)
+                flash_via_can
+                ;;
+            manual)
+                echo "  Skipping flash (Method: Manual/SD). Build is in out/."
+                ;;
+            usb|*)
+                # USB Default
+                if [ -f "out/klipper.uf2" ]; then flash_rp2040
+                elif [ -f "out/klipper.bin" ]; then flash_bin_artifact
+                elif [ -f "out/klipper.elf.hex" ]; then flash_avr_artifact
+                fi
+                ;;
+        esac
+        
+        echo ""
+        log_success "$BOARD_NAME finished."
+        sleep 2
+    done
+    
+    draw_success "All boards processed!"
+    read -p "  Press Enter..."
+}
+
 
 # === BUILD & FLASH (KIAUH-Style) ===
 # Opens menuconfig directly. User picks architecture + settings there.
@@ -78,7 +166,17 @@ function run_build_and_flash() {
     fi
 
     echo ""
-    echo "  Step 3: Flash"
+    echo "  Step 3: Post-Build Actions"
+    echo "  ---------------------------------------------------"
+    
+    # Save Config Prompt
+    read -p "  Save this configuration for later use? [y/N]: " save_yn
+    if [[ "$save_yn" =~ ^[yY] ]]; then
+        save_board_config
+    fi
+
+    echo ""
+    echo "  Step 4: Flash"
     echo "  ---------------------------------------------------"
 
     # === ARTIFACT-BASED FLASH DETECTION ===
@@ -96,6 +194,66 @@ function run_build_and_flash() {
 
     read -p "  Press Enter to finish..."
 }
+
+# === BOARD REGISTRY (MCU Persistence) ===
+
+BOARD_REGISTRY_DIR="$HOME/printer_data/config/katana_boards"
+
+function save_board_config() {
+    mkdir -p "$BOARD_REGISTRY_DIR"
+    
+    echo ""
+    echo "  ${C_NEON}:: SAVE BOARD CONFIGURATION ::${NC}"
+    echo "  Give this board a unique name (e.g. 'SHT36_Toolhead', 'U2C_Bridge')"
+    read -p "  >> Name: " board_name
+    
+    # Sanitize name (alphanumeric + underscore only)
+    board_name=$(echo "$board_name" | tr -cd '[:alnum:]_')
+    
+    if [ -z "$board_name" ]; then
+        log_error "Invalid name. Config NOT saved."
+        return
+    fi
+    
+    local config_src="$HOME/klipper/.config"
+    local config_dest="$BOARD_REGISTRY_DIR/${board_name}.config"
+    local meta_dest="$BOARD_REGISTRY_DIR/${board_name}.meta"
+    
+    if [ -f "$config_src" ]; then
+        cp "$config_src" "$config_dest"
+        
+        # Create Metadata
+        echo "BOARD_NAME=\"$board_name\"" > "$meta_dest"
+        echo "LAST_BUILT=\"$(date '+%Y-%m-%d %H:%M:%S')\"" >> "$meta_dest"
+        
+        # Extract Architecture from .config
+        local arch="unknown"
+        if grep -q "CONFIG_MACH_STM32=y" "$config_src"; then arch="stm32"; fi
+        if grep -q "CONFIG_MACH_RP2040=y" "$config_src"; then arch="rp2040"; fi
+        if grep -q "CONFIG_MACH_AVR=y" "$config_src"; then arch="avr"; fi
+        if grep -q "CONFIG_MACH_LINUX=y" "$config_src"; then arch="linux"; fi
+        echo "ARCH=\"$arch\"" >> "$meta_dest"
+        
+        echo ""
+        echo "  How is this board connected? (for auto-update)"
+        echo "  [1] USB (DFU/Serial) - Standard"
+        echo "  [2] CAN Bus (Katapult) - Bridge required"
+        echo "  [3] SD Card / Manual"
+        read -p "  >> Method: " f_method
+        
+        case $f_method in
+            2) echo "FLASH_METHOD=\"can\"" >> "$meta_dest" ;;
+            3) echo "FLASH_METHOD=\"manual\"" >> "$meta_dest" ;;
+            *) echo "FLASH_METHOD=\"usb\"" >> "$meta_dest" ;;
+        esac
+        
+        log_success "Saved: $board_name"
+        echo "  Location: $config_dest"
+    else
+        log_error ".config not found! Build first."
+    fi
+}
+
 
 # === LINUX HOST MCU (Fully Automatic) ===
 
