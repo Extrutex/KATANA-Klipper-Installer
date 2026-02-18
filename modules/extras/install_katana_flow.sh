@@ -1,11 +1,13 @@
 #!/bin/bash
+# modules/extras/install_katana_flow.sh
+# Legacy entry point — redirects to katana_flow.sh
 
 KATANA_FLOW_CFG_DIR="$CONFIGS_DIR/katana_flow"
 
 function do_extras_menu() {
     while true; do
         draw_header "KATANA EXTRA MODULES"
-        echo "  1) Install KATANA-FLOW (Smart Park/Purge)"
+        echo "  1) Install KATANA-FLOW (Print Lifecycle)"
         echo "  2) Install Crowsnest (Webcam)"
         echo "  3) Install ShakeTune (Input Shaper)"
         echo "  4) Install KlipperScreen (Touch UI)"
@@ -14,7 +16,12 @@ function do_extras_menu() {
         read -p "  >> " ch
         
         case $ch in
-            1) install_katana_flow ;;
+            1) 
+                if [ -f "$MODULES_DIR/extras/katana_flow.sh" ]; then
+                    source "$MODULES_DIR/extras/katana_flow.sh"
+                    do_install_flow
+                fi
+                ;;
             2) 
                 if [ -f "$MODULES_DIR/extras/install_crowsnest.sh" ]; then
                     source "$MODULES_DIR/extras/install_crowsnest.sh"
@@ -42,29 +49,4 @@ function do_extras_menu() {
             [bB]) return ;;
         esac
     done
-}
-
-function install_katana_flow() {
-    draw_header "KATANA-FLOW INSTALLER"
-
-    local dest_dir="$HOME/printer_data/config/katana_flow"
-    mkdir -p "$dest_dir"
-
-    # Copy files
-    cp "$KATANA_FLOW_CFG_DIR/smart_park.cfg" "$dest_dir/"
-    cp "$KATANA_FLOW_CFG_DIR/adaptive_purge.cfg" "$dest_dir/"
-    
-    log_success "Macros copied to $dest_dir"
-    log_info "Please add '[include katana_flow/*.cfg]' to your printer.cfg"
-    
-    # Optional: Automate 'include' insertion
-    if [ -f "$HOME/printer_data/config/printer.cfg" ]; then
-        if ! grep -q "katana_flow" "$HOME/printer_data/config/printer.cfg"; then
-            echo "" >> "$HOME/printer_data/config/printer.cfg"
-            echo "[include katana_flow/*.cfg]" >> "$HOME/printer_data/config/printer.cfg"
-            log_success "Added include line to printer.cfg"
-        fi
-    fi
-    
-    read -p "  Press Enter..."
 }

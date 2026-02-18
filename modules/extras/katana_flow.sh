@@ -1,14 +1,18 @@
 #!/bin/bash
 # modules/extras/katana_flow.sh
+# KATANA-FLOW: Print Lifecycle Macro System
+# 4 macros: FLOW_START → FLOW_PARK → FLOW_PURGE → FLOW_END
 
 source "$MODULES_DIR/extras/install_shaketune.sh"
 source "$MODULES_DIR/system/moonraker_update_manager.sh"
+
+FLOW_FILES="flow_start.cfg flow_park.cfg flow_purge.cfg flow_end.cfg"
 
 function install_katana_flow() {
     while true; do
         draw_header "🧩 EXTRAS & TUNING"
         echo ""
-        echo "  --- KATANA-FLOW (Smart Purge & Park) ---"
+        echo "  --- KATANA-FLOW (Print Lifecycle) ---"
         echo "  [1] Install KATANA-FLOW"
         echo "  [2] Remove KATANA-FLOW"
         echo ""
@@ -52,88 +56,64 @@ function remove_shaketune() {
 function do_install_flow() {
     draw_header "INSTALL KATANA-FLOW"
     echo ""
-    echo "  Select Include Method:"
-    echo "  [1] Variant A: Simple Include ([include katana_flow/*.cfg])"
-    echo "  [2] Variant B: With Section Header ([KatanaFlow])"
+    echo "  KATANA-FLOW is a complete print lifecycle system:"
     echo ""
-    read -p "  >> SELECT: " variant_ch
-    
-    local variant="A"
-    case $variant_ch in
-        1) variant="A" ;;
-        2) variant="B" ;;
-        *) log_error "Invalid selection."; return ;;
-    esac
+    echo "    FLOW_START  — Home, Heat, Park, Purge (replaces START_PRINT)"
+    echo "    FLOW_PARK   — Position near first object"
+    echo "    FLOW_PURGE  — X-Blade cross purge pattern"
+    echo "    FLOW_END    — Retract, Present, Cooldown (replaces END_PRINT)"
+    echo ""
+    read -p "  Install? [y/N]: " yn
+    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
     
     local cfg_dir="$HOME/printer_data/config"
     local flow_dir="$cfg_dir/katana_flow"
     local pcfg="$cfg_dir/printer.cfg"
+    local src_dir="$CONFIGS_DIR/katana_flow"
     
-    # 1. Check Config Directory
     if [ ! -d "$cfg_dir" ]; then
         draw_error "Config directory not found at $cfg_dir"
         read -p "  Press Enter..."
         return
     fi
     
-    # 2. Create Flow Directory
     mkdir -p "$flow_dir"
     
-    # 3. Copy Config Files
-    log_info "Deploying Macro files..."
-    cp "$CONFIGS_DIR/katana_flow/smart_purge.cfg" "$flow_dir/smart_purge.cfg"
-    cp "$CONFIGS_DIR/katana_flow/smart_park.cfg" "$flow_dir/smart_park.cfg"
+    # Deploy macro files
+    log_info "Deploying KATANA-FLOW macros..."
+    local failed=0
+    for f in $FLOW_FILES; do
+        if [ -f "$src_dir/$f" ]; then
+            cp "$src_dir/$f" "$flow_dir/$f"
+        else
+            log_error "Missing: $src_dir/$f"
+            failed=1
+        fi
+    done
     
-    # 4. Backup printer.cfg
-    if [ -f "$pcfg" ]; then
-        cp "$pcfg" "$pcfg.bak.katanaflow"
-        log_info "Backup created: printer.cfg.bak.katanaflow"
+    if [ "$failed" -eq 1 ]; then
+        draw_error "Some files missing. Check your KATANA installation."
+        read -p "  Press Enter..."
+        return
     fi
     
-    # 5. Add Include based on variant
+    # Backup + add include
     if [ -f "$pcfg" ]; then
-        # Check if already installed
         if grep -q "katana_flow" "$pcfg"; then
-            draw_warn "KATANA-FLOW already seems to be included!"
-            read -p "  Re-install anyway? [y/N]: " yn
-            if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
-        fi
-        
-        if [ "$variant" = "A" ]; then
-            # Variant A: Simple Include
+            draw_warn "KATANA-FLOW already included in printer.cfg"
+        else
+            cp "$pcfg" "$pcfg.bak.katanaflow"
             echo "" >> "$pcfg"
             echo "# --- KATANA-FLOW ---" >> "$pcfg"
             echo "[include katana_flow/*.cfg]" >> "$pcfg"
-            draw_success "Installed with Variant A (Simple Include)"
-        else
-            # Variant B: With Section Header
-            echo "" >> "$pcfg"
-            echo "# --- KATANA-FLOW ---" >> "$pcfg"
-            echo "[KatanaFlow]" >> "$pcfg"
-            echo "" >> "$pcfg"
-            echo "[include katana_flow/smart_purge.cfg]" >> "$pcfg"
-            echo "[include katana_flow/smart_park.cfg]" >> "$pcfg"
-            draw_success "Installed with Variant B (Section Header)"
-        fi
-    else
-        draw_error "printer.cfg not found!"
-        echo "  Please manually add the include to your printer.cfg:"
-        if [ "$variant" = "A" ]; then
-            echo "  [include katana_flow/*.cfg]"
-        else
-            echo "  [KatanaFlow]"
-            echo "  [include katana_flow/smart_purge.cfg]"
-            echo "  [include katana_flow/smart_park.cfg]"
+            log_info "Added include to printer.cfg (backup: printer.cfg.bak.katanaflow)"
         fi
     fi
     
-    # Register for Moonraker Update Manager
-    register_katana_flow_updates
-    
+    draw_success "KATANA-FLOW installed!"
     echo ""
-    echo "  [i] IMPORTANT: Add to your START_PRINT macro:"
-    echo "      FLOW_PARK    # Park near object"
-    echo "      FLOW_PURGE  # Blade-style purge"
+    echo "  Slicer Start G-Code:  FLOW_START BED=60 NOZZLE=210"
+    echo "  Slicer End G-Code:    FLOW_END"
     echo ""
     read -p "  Press Enter..."
 }
@@ -149,29 +129,18 @@ function do_remove_flow() {
     local flow_dir="$cfg_dir/katana_flow"
     local pcfg="$cfg_dir/printer.cfg"
     
-    # 1. Remove config files
     log_info "Removing config files..."
     rm -rf "$flow_dir"
     
-    # 2. Remove include lines from printer.cfg
     if [ -f "$pcfg" ]; then
         log_info "Cleaning printer.cfg..."
-        
-        # Create temp file and filter out KatanaFlow lines
-        local tmpfile=$(mktemp)
-        
-        # Remove: # --- KATANA-FLOW ---
-        # Remove: [include katana_flow/*.cfg]
-        # Remove: [include katana_flow/smart_purge.cfg]
-        # Remove: [include katana_flow/smart_park.cfg]
-        # Remove: [KatanaFlow]
-        
-        grep -v "katana_flow" "$pcfg" | grep -v "# --- KATANA-FLOW ---" | grep -v "^\[KatanaFlow\]" > "$tmpfile"
-        
+        local tmpfile
+        tmpfile=$(mktemp)
+        grep -v "katana_flow" "$pcfg" | grep -v "# --- KATANA-FLOW ---" > "$tmpfile"
         mv "$tmpfile" "$pcfg"
         draw_success "printer.cfg cleaned."
     fi
     
-    draw_success "KATANA-FLOW removed completely!"
+    draw_success "KATANA-FLOW removed!"
     read -p "  Press Enter..."
 }
