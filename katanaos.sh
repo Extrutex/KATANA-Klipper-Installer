@@ -7,7 +7,8 @@
 ################################################################################
 
 # --- VERSION ---
-VERSION="v2.5"
+# --- VERSION ---
+KATANA_VERSION="v2.5"
 BUILD="2026-02-18"
 
 # Fix terminal for proper display
@@ -25,7 +26,7 @@ INSTALL_PROFILE="standard"
 export INSTALL_PROFILE
 
 function show_help() {
-    echo "KATANAOS $VERSION - Usage:"
+    echo "KATANAOS $KATANA_VERSION - Usage:"
     echo ""
     echo "  ./katanaos.sh              Start interactive menu"
     echo "  ./katanaos.sh --profile    Set installation profile:"
@@ -51,7 +52,7 @@ function handle_args() {
             echo "Profile set to: $INSTALL_PROFILE"
             ;;
         --version)
-            echo "KATANAOS $VERSION ($BUILD)"
+            echo "KATANAOS $KATANA_VERSION ($BUILD)"
             exit 0
             ;;
         --help|-h)
@@ -106,11 +107,11 @@ function main() {
     fi
     
     # 1. Initialize System
-    log_info "KATANA $VERSION initializing..."
+    log_info "KATANA $KATANA_VERSION initializing..."
     check_environment
     
     echo ""
-    echo -e "  ${C_PURPLE}KATANAOS $VERSION${NC} | Profile: ${C_NEON}$INSTALL_PROFILE${NC}"
+    echo -e "  ${C_PURPLE}KATANAOS $KATANA_VERSION${NC} | Profile: ${C_NEON}$INSTALL_PROFILE${NC}"
     echo ""
     
     # 2. Main Loop
