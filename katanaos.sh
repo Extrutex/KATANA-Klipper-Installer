@@ -1,14 +1,14 @@
 #!/bin/bash
 ################################################################################
-#  ⚔️  KATANAOS - THE KLIPPER BLADE v2.3
+#  ⚔️  KATANAOS - THE KLIPPER BLADE v2.5
 # ------------------------------------------------------------------------------
 #  PRO-GRADE KLIPPER INSTALLATION & MANAGEMENT SUITE
 #  Modular Architecture | Native Flow | Multi-Engine
 ################################################################################
 
 # --- VERSION ---
-VERSION="v2.3"
-BUILD="2026-02-17"
+VERSION="v2.5"
+BUILD="2026-02-18"
 
 # Fix terminal for proper display
 export TERM=xterm-256color
