@@ -71,7 +71,7 @@ function validate_target() {
     # Check for Python 3 (KATANA Requirement)
     if [ ! -f "$env/bin/python3" ]; then
         log_warn "VirtualEnv does not appear to be Python 3: $env"
-        # We proceed but warn, as old envs might be structred differently
+        # Old envs may differ, proceed with warning
     fi
     
     log_success "Target Validated."

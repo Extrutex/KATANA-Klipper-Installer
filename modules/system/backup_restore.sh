@@ -19,8 +19,8 @@ function run_backup_menu() {
         draw_header "BACKUP & RESTORE"
         echo "  Location: $BACKUP_DIR"
         echo ""
-        echo "  [1] Erstelle Voll-Backup (Config + DB)"
-        echo "  [2] Zeige Backups"
+        echo "  [1] Create Full Backup (Config + DB)"
+        echo "  [2] List Backups"
         echo "  [3] Restore Backup from Archive"
         echo "  [4] GitHub Push (Config only)"
         echo ""
@@ -46,7 +46,7 @@ function create_backup() {
     local filename="katana_backup_$timestamp.zip"
     local target="$BACKUP_DIR/$filename"
     
-    # Verify sources
+    # Check source dirs
     local config_dir="$HOME/printer_data/config"
     local db_dir="$HOME/printer_data/database"
     
@@ -55,9 +55,7 @@ function create_backup() {
         return 1
     fi
     
-    # Create ZIP
-    # We zip config and database into the archive
-    # Exclude heavy files like gcodes if they are in config (should not be)
+    # Archive config + database
     
     log_info "Archiving System..."
     
@@ -112,7 +110,7 @@ function push_config_to_git() {
     git add .
     git commit -m "Auto-Backup: $(date)" || echo "Nothing to commit"
     
-    # Verify remote
+    # Push if remote exists
     if git remote -v | grep -q "origin"; then
         git push || log_error "Push failed. Check SSH keys/Auth."
     else
@@ -180,9 +178,8 @@ function restore_backup() {
         # Our create_backup zips "$config_dir" and "$db_dir" directly.
         # So inside zip we likely have full structure or flat files depending on zip command relative paths.
         
-        # Adjust logic based on zip structure:
-        # Assuming zip -r "$target" "$config_dir" creates absolute path structure or relative from CWD.
-        # Let's inspect what we have.
+
+        
         
         # Restore Config
         if [ -d "$temp_restore/home/$USER/printer_data/config" ]; then

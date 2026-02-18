@@ -50,7 +50,7 @@ function check_environment() {
         log_success "System Time: Synced (OK)"
     else
         log_warn "System Time NOT synced. This may cause SSL errors."
-        # We don't fail hard here, but warn the user
+        # Non-fatal, just warn
     fi
 
     # 6. Dependencies

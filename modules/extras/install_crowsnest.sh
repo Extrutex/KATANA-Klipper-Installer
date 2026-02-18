@@ -17,7 +17,7 @@ function install_crowsnest() {
     log_info "Running Crowsnest Installer..."
     # Crowsnest has a good Makefile/installer, let's use it but control the output
     cd "$repo_dir"
-    # We assume 'make install' or similar exists, but usually it's just a config setup
+    
     # Actually, Crowsnest install is best done via their install.sh if available, OR standard make install
     
     if [ -f "$repo_dir/Makefile" ]; then

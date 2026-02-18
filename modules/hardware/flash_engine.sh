@@ -138,7 +138,7 @@ function run_linux_wizard() {
     if make flash; then
         log_success "Installed!"
 
-        # Ensure service is set up
+        # Setup systemd service
         if [ ! -f "/etc/systemd/system/klipper-mcu.service" ]; then
             log_info "Registering klipper-mcu service..."
             sudo cp ./scripts/klipper-mcu.service /etc/systemd/system/

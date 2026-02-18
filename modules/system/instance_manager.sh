@@ -50,7 +50,7 @@ function list_instances() {
         local port=$(grep "^port =" "$inst/config/moonraker.conf" 2>/dev/null | awk '{print $3}')
         [ -z "$port" ] && port="??"
         
-        # Heuristic for service names
+        # Match service names by naming convention
         local svc_name=""
         if [ "$name" == "printer_data" ]; then
             svc_name="klipper"
@@ -93,7 +93,7 @@ function add_new_instance() {
     echo "  - Port:   $next_port"
     echo "  - Service: klipper-$next_num / moonraker-$next_num"
     echo ""
-    read -p "  Erstellen? [y/N]: " yn
+    read -p "  Create? [y/N]: " yn
     if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
 
     local data_dir="$HOME/printer_data_$next_num"

@@ -19,7 +19,7 @@ function do_install_klipperscreen() {
     # Needs system packages so we might need sudo
     cd "$repo_dir/scripts"
     
-    # Their installer handles venv creation + systemd service
+    # Runs venv + systemd setup
     if ./KlipperScreen-install.sh; then
         log_success "KlipperScreen Installed."
     else

@@ -19,14 +19,14 @@ function add_update_manager_entry() {
     
     local moonraker_conf="$HOME/printer_data/config/moonraker.conf"
     
-    # Ensure moonraker.conf directory and file exist
+    # Init moonraker.conf if missing
     if [ ! -f "$moonraker_conf" ]; then
         mkdir -p "$(dirname "$moonraker_conf")"
         touch "$moonraker_conf"
     fi
     
     # Check if entry already exists (Strict Check)
-    # We check for the exact section header [update_manager name]
+    # Check for existing section
     if grep -Fq "[update_manager $name]" "$moonraker_conf"; then
         log_info "Update manager entry for '$name' already exists. Skipping."
         return 0

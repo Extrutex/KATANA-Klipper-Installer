@@ -31,7 +31,7 @@ function install_happy_hare() {
     log_info "Launching Official Installer..."
     echo ""
     
-    # We run it directly. The user interacts with it.
+    # Interactive installer
     ./install.sh -i
 
     # 3. Post-Install Check

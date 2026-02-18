@@ -35,7 +35,7 @@ function repair_moonraker_config() {
         log_error "moonraker.conf is missing or corrupt!"
         log_info "Restoring from template..."
         
-        # Ensure template exists
+        # Check service template
         if [ ! -f "$template_file" ]; then
             log_error "Template not found at $template_file"
             return 1

@@ -48,7 +48,7 @@ function flash_nitehawk_rp2040() {
     
     # Try to find the mount point
     # On headless Pi, it might not auto-mount to /media. 
-    # We check sda1/sdb1 etc.
+    # Check sda1/sdb1 etc.
     
     local mount_point=""
     for dev in /dev/sd*[1-9]; do
@@ -103,7 +103,7 @@ function flash_sb2209_stm32g0() {
 
     echo "  [i] Flashing address 0x08000000..."
     
-    # The crucial command for G0B1
+    # Chip erase for G0B1
     sudo dfu-util -a 0 -s 0x08000000:leave -D out/klipper.bin
     
     if [ $? -eq 0 ]; then

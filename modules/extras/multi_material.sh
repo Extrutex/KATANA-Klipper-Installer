@@ -40,7 +40,7 @@ function install_happyhare() {
     read -p "  Press Enter to launch..."
     
     if [ -f "$install_dir/install.sh" ]; then
-        # We run this interactively as HH has a complex wizard
+        # HH has an interactive wizard
         cd "$install_dir"
         bash install.sh
     else
@@ -92,8 +92,8 @@ function install_stealthchanger() {
     
     # Clean up
     # actually we might want to keep the repo for updates via moonraker, so let's move it to a permanent place if not there
-    # The moonraker entry above points to temp_dir which is wrong if we delete it.
-    # Let's fix the pattern: 
+    # moonraker entry points to install dir, not temp
+    # Fix path pattern: 
     # 1. Clone to ~/StealthChanger (Code)
     # 2. Link/Copy to printer_data (Config)
     

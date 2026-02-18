@@ -16,7 +16,7 @@ function deploy_katana_webui() {
         sudo apt-get install -y nodejs
     fi
     
-    # Verify Node again
+    # Check Node.js
     if ! command -v npm &> /dev/null; then
         log_error "Failed to install Node.js. Aborting web ui deployment."
         return 1
@@ -49,7 +49,7 @@ function deploy_katana_webui() {
     # 3. Deploy
     log_info "Deploying to $webui_dest..."
     
-    # Ensure dest exists with correct permissions
+    # Create dest dir with correct perms
     sudo mkdir -p "$webui_dest"
     
     # Backup old version if exists

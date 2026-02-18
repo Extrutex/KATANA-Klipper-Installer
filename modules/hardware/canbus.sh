@@ -35,8 +35,7 @@ function configure_can_network() {
     fi
     
     # Generate content
-    # Note: indenting HEREDOC with <<- allows leading tabs, but we want spaces or specific format.
-    # We will write directly with sudo bash -c
+    # Write CAN0 config
     
     local config_content="allow-hotplug $can_iface
 iface $can_iface can static
@@ -139,7 +138,7 @@ function setup_config_stm32f446() {
     make clean
     
     # --- WRITE .CONFIG DIRECTLY ---
-    # This is rough and might break if Kconfig structure changes, but it's the automated way.
+    # Patch .config for CAN (fragile, depends on Kconfig structure)
     # Alternatives: use scripts/kconfig/merge_config.sh if available
     
     cat > .config <<EOF

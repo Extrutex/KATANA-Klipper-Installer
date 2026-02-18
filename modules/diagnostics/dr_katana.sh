@@ -1,7 +1,7 @@
 #!/bin/bash
 # --- DR. KATANA: DIAGNOSTICS & REPAIR ---
 
-# Ensure Environment
+# Init environment
 if [ -z "$KATANA_ROOT" ]; then
     KATANA_ROOT="$(dirname "$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")")"
     MODULES_DIR="$KATANA_ROOT/modules"

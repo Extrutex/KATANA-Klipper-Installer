@@ -777,7 +777,7 @@ function run_extras_system() {
         
         echo "  ${C_GREEN}[1]${NC}  Log2Ram                [$log2ram]"
         echo "  ${C_NEON}[2]${NC}  Backup erstellen"
-        echo "  ${C_NEON}[3]${NC}  Backup wiederherstellen"
+        echo "  ${C_NEON}[3]${NC}  Restore Backup"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -944,8 +944,8 @@ function run_settings_menu() {
 }
 
 function change_profile() {
-    draw_header "PROFIL ÄNDERN"
-    echo "  Aktuell: $INSTALL_PROFILE"
+    draw_header "CHANGE PROFILE"
+    echo "  Current: $INSTALL_PROFILE"
     echo "  [1] minimal   - Only Klipper + Moonraker"
     echo "  [2] standard  - Core + Mainsail (default)"
     echo "  [3] power     - Everything"
@@ -960,7 +960,7 @@ function change_profile() {
 
 function change_theme() {
     draw_header "THEME"
-    echo "  Theme-Funktion coming soon..."
+    echo "  Theme switching coming soon..."
     read -p "  Enter..."
 }
 

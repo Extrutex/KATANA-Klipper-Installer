@@ -25,7 +25,7 @@ function vault_create() {
     fi
 
     # 2. Create Zip
-    # We include config dir and moonraker db if it exists
+    # Include config + moonraker db if present
     local file_list="$CONFIG_DIR"
     if [ -f "$DB_FILE" ]; then
         file_list="$file_list $DB_FILE"
@@ -95,7 +95,7 @@ function vault_restore() {
             # Unzip to root ( since paths are absolute in zip? or relative? )
             # zip -r uses relative path if cd'd, or absolute if given absolute.
             # In vault_create we used absolute variables. zip usually strips leading slash.
-            # Let's test unsafe unzip.
+            
             
             unzip -o -q "$target" -d / 
             
