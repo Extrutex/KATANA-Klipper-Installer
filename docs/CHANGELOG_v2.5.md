@@ -8,3 +8,6 @@
 
 ## Bug Fixes
 - **v2.4.2 Included:** CAN persistence fix (`ifupdown`) and CAN menu fix (`can_manager.sh`) are included.
+
+## Documentation
+- **[NEW] CAN Toolhead Guide:** Added a step-by-step "How-To" in `README.md` explaining the optimal workflow (Katapult -> Klipper -> Save Config -> Flash via CAN) to enable One-Click Updates.
