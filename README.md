@@ -119,7 +119,7 @@ Real-time status display in the main menu.
 The fastest way to install or update KATANA. Just copy and paste this command into your terminal:
 
 ```bash
-curl -sSL [https://raw.githubusercontent.com/Extrutex/KATANA-Klipper-Installer/main/install.sh](https://raw.githubusercontent.com/Extrutex/KATANA-Klipper-Installer/main/install.sh) | bash
+curl -sSL https://raw.githubusercontent.com/Extrutex/KATANA-Klipper-Installer/main/install.sh | bash
 ```
 (This script will automatically install git, clone the repository, and start the installer.)
 
@@ -137,7 +137,7 @@ Step 2: Clone & run KATANA
 
 ```bash
 cd ~
-git clone [https://github.com/Extrutex/KATANA-Klipper-Installer.git](https://github.com/Extrutex/KATANA-Klipper-Installer.git)
+git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git 
 cd KATANA-Klipper-Installer
 chmod +x katanaos.sh
 ./katanaos.sh
