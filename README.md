@@ -119,8 +119,8 @@ Real-time status display in the main menu.
 
 **Step 1: Update system & install Git**
 ```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y git
+sudo apt-get update && sudo apt-get full-upgrade -y
+sudo apt-get install -y git
 ```
 
 **Step 2: Clone & run KATANA**
@@ -189,11 +189,11 @@ KATANA will rebuild and flash it automatically. **No boot buttons. No jumpers.**
 ### � Menu Structure
 
 ```
-╔══════════════════════════════════════════════════════════════════════╗
-╔══════════════════════════════════════════════════════════════════════╗
+
+╔════════════════════════════════════════════════════════════════════╗
 ║                    KATANAOS v2.6 - MAIN MENU                       ║
-╠══════════════════════════════════════════════════════════════════════╣
-╠══════════════════════════════════════════════════════════════════════╣
+╠════════════════════════════════════════════════════════════════════╣
+╠════════════════════════════════════════════════════════════════════╣
 ║                                                                    ║
 ║  [1]  QUICK START         Auto-Pilot Installation                  ║
 ║  [2]  FORGE               Build & Flash MCU Firmware               ║
@@ -203,7 +203,7 @@ KATANA will rebuild and flash it automatically. **No boot buttons. No jumpers.**
 ║  [6]  SETTINGS            Profile / Engine / CAN / Uninstall       ║
 ║                                                                    ║
 ║  [X]  EXIT                                                         ║
-╚══════════════════════════════════════════════════════════════════════╝
+╚════════════════════════════════════════════════════════════════════╝
 ```
 
 #### [1] Quick Start
