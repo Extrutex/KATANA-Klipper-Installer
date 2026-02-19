@@ -116,7 +116,11 @@ function main() {
     # 2. Main Loop
     while true; do
         draw_main_menu
-        read -p "  >> COMMAND: " choice
+        if ! read -p "  >> COMMAND: " choice; then
+            echo ""
+            log_info "EOF detected. Exiting..."
+            exit 0
+        fi
         
         case $choice in
             1) run_quick_start ;;

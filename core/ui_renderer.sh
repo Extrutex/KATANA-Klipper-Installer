@@ -434,7 +434,7 @@ function run_quick_start() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1) run_autopilot ;;
@@ -464,7 +464,7 @@ function run_update_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1) update_core_stack ;;
@@ -487,7 +487,7 @@ function update_klipper_only() {
     make olddefconfig
     make -j$(nproc)
     sudo make flash
-    read -p "  Enter..."
+    read -p "  Enter..." || return
 }
 
 function update_moonraker_only() {
@@ -496,7 +496,7 @@ function update_moonraker_only() {
     git pull
     ./scripts/install.sh
     sudo systemctl restart moonraker
-    read -p "  Enter..."
+    read -p "  Enter..." || return
 }
 
 function update_ui_only() {
@@ -504,12 +504,12 @@ function update_ui_only() {
     echo "  Select UI:"
     echo "  [1] Mainsail"
     echo "  [2] Fluidd"
-    read -p "  >> " ch
+    if ! read -p "  >> " ch; then return; fi
     case $ch in
         1) cd "$HOME/mainsail" && git pull ;;
         2) cd "$HOME/fluidd" && git pull ;;
     esac
-    read -p "  Enter..."
+    read -p "  Enter..." || return
 }
 
 function update_extras_only() {
@@ -531,7 +531,7 @@ function update_extras_only() {
     done
 
     log_success "Extras update check complete."
-    read -p "  Press Enter..."
+    read -p "  Press Enter..." || return
 }
 
 function check_updates_only() {
@@ -558,7 +558,7 @@ function check_updates_only() {
     done
 
     echo ""
-    read -p "  Press Enter..."
+    read -p "  Press Enter..." || return
 }
 
 # ============================================================
@@ -580,7 +580,7 @@ function run_extras_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1) run_extras_webui ;;
@@ -612,7 +612,7 @@ function run_extras_webui() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1) run_ui_installer ;;
@@ -655,7 +655,7 @@ function run_extras_vision() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1) install_crowsnest ;;
@@ -703,7 +703,7 @@ function run_extras_smartprobes() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1) run_smartprobe_menu ;;
@@ -722,8 +722,8 @@ function run_extras_beddistance() {
     echo "  Status: $status"
     echo "  [1] Install"
     echo "  [2] Remove"
-    read -p "  >> " ch
-    read -p "  Enter..."
+    if ! read -p "  >> " ch; then return; fi
+    read -p "  Enter..." || return
 }
 
 function run_extras_toolchanger() {
@@ -743,7 +743,7 @@ function run_extras_toolchanger() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1) run_multimaterial_menu ;;
@@ -771,7 +771,7 @@ function run_extras_tuning() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1) run_katana_flow ;;
@@ -797,7 +797,7 @@ function run_extras_system() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1)
@@ -853,7 +853,7 @@ function run_diagnose_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1) check_all_services ;;
@@ -870,7 +870,7 @@ function check_all_services() {
     draw_header "SERVICE STATUS"
     systemctl status klipper --no-pager || true
     systemctl status moonraker --no-pager || true
-    read -p "  Enter..."
+    read -p "  Enter..." || return
 }
 
 function show_logs_menu() {
@@ -880,14 +880,14 @@ function show_logs_menu() {
         echo "  [2] Moonraker Logs"
         echo "  [3] Dmesg (USB)"
         echo "  [B] Back"
-        read -p "  >> " ch
+        if ! read -p "  >> " ch; then return; fi
         case $ch in
             1) sudo journalctl -u klipper -n 50 ;;
             2) sudo journalctl -u moonraker -n 50 ;;
             3) dmesg | tail -30 ;;
             b|B) return ;;
         esac
-        read -p "  Enter..."
+        read -p "  Enter..." || return
     done
 }
 
@@ -898,7 +898,7 @@ function run_repair_menu() {
         echo "  [2] Restart Moonraker"
         echo "  [3] Configure Auto-Restart"
         echo "  [B] Back"
-        read -p "  >> " ch
+        if ! read -p "  >> " ch; then return; fi
         case $ch in
             1) sudo systemctl restart klipper ;;
             2) sudo systemctl restart moonraker ;;
@@ -914,7 +914,7 @@ function run_emergency_menu() {
         echo "  [1] Komplette Neuinstallation"
         echo "  [2] Vollstaendige Deinstallation"
         echo "  [B] Back"
-        read -p "  >> " ch
+        if ! read -p "  >> " ch; then return; fi
         case $ch in
             1) run_autopilot ;;
             2) run_uninstaller ;;
@@ -941,7 +941,7 @@ function run_settings_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> COMMAND: " ch
+        if ! read -p "  >> COMMAND: " ch; then return; fi
 
         case $ch in
             1) change_profile ;;
@@ -963,19 +963,19 @@ function change_profile() {
     echo "  [1] minimal   - Only Klipper + Moonraker"
     echo "  [2] standard  - Core + Mainsail (default)"
     echo "  [3] power     - Everything"
-    read -p "  >> " ch
+    if ! read -p "  >> " ch; then return; fi
     case $ch in
         1) INSTALL_PROFILE="minimal" ;;
         2) INSTALL_PROFILE="standard" ;;
         3) INSTALL_PROFILE="power" ;;
     esac
-    read -p "  Enter..."
+    read -p "  Enter..." || return
 }
 
 function change_theme() {
     draw_header "THEME"
     echo "  Theme switching coming soon..."
-    read -p "  Enter..."
+    read -p "  Enter..." || return
 }
 
 function show_info() {
@@ -983,7 +983,7 @@ function show_info() {
     echo "  Version: $VERSION"
     echo "  Build: $BUILD"
     echo "  Profile: $INSTALL_PROFILE"
-    read -p "  Enter..."
+    read -p "  Enter..." || return
 }
 
 # ============================================================

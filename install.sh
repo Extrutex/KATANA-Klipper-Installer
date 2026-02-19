@@ -29,6 +29,17 @@ fi
 cd "$INSTALL_DIR"
 chmod +x katanaos.sh
 
-# Das hier ist der Zaubertrick: < /dev/tty
-# Das zwingt das Skript, wieder auf den Benutzer zu hören statt auf curl.
-./katanaos.sh < /dev/tty
+# Das hier ist der Zaubertrick:
+# Wir nutzen 'exec', um den Input für das ganze Skript auf TTY zu biegen
+# (falls vorhanden), ansonsten lassen wir es wie es ist.
+if [ -t 0 ]; then
+    ./katanaos.sh
+else
+    # Nur wenn wir via Pipe (curl) kommen, erzwingen wir TTY
+    if [ -e /dev/tty ]; then
+        ./katanaos.sh < /dev/tty
+    else
+        echo "Error: No TTY available. Cannot run interactive menu."
+        exit 1
+    fi
+fi
