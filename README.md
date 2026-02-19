@@ -114,29 +114,40 @@ Real-time status display in the main menu.
 - OS: Raspberry Pi OS Lite (Bookworm/Bullseye) or Debian-based
 - User: Standard user with `sudo` privileges
 
+### 🚀 Installation (Recommended)
 
-### Installation
+The fastest way to install or update KATANA. Just copy and paste this command into your terminal:
 
-**Step 1: Update system & install Git**
 ```bash
+curl -sSL [https://raw.githubusercontent.com/Extrutex/KATANA-Klipper-Installer/main/install.sh](https://raw.githubusercontent.com/Extrutex/KATANA-Klipper-Installer/main/install.sh) | bash
+```
+(This script will automatically install git, clone the repository, and start the installer.)
+
+⚙️ Manual Installation (Alternative)
+If you prefer to install manually without the automated script:
+
+Step 1: Update system & install prerequisites
+
+````bash
 sudo apt-get update && sudo apt-get full-upgrade -y
 sudo apt-get install -y git
-```
+````
 
-**Step 2: Clone & run KATANA**
+Step 2: Clone & run KATANA
+
 ```bash
 cd ~
-git clone https://github.com/Extrutex/KATANA-Klipper-Installer.git
+git clone [https://github.com/Extrutex/KATANA-Klipper-Installer.git](https://github.com/Extrutex/KATANA-Klipper-Installer.git)
 cd KATANA-Klipper-Installer
 chmod +x katanaos.sh
 ./katanaos.sh
 ```
 
-**Optional: Remove legacy KIAUH**
+Optional: Remove legacy KIAUH
+
 ```bash
 rm -rf ~/kiauh
-```
-
+````
 
 ### 🚀 First Time Setup
 
