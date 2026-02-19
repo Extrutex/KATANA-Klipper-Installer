@@ -9,121 +9,218 @@ function run_hal_flasher() {
     while true; do
         draw_header "🔧 THE FORGE - Build & Flash Firmware"
         echo ""
-        echo "  ${C_GREEN}[1]${NC}  Build & Flash Firmware     (opens menuconfig)"
-        echo "  ${C_NEON}[2]${NC}  Linux Host MCU             (automatic, no config needed)"
-        echo "  ${C_NEON}[3]${NC}  Katapult (CanBoot) Manager"
-        echo "  ${C_NEON}[4]${NC}  Update All Saved MCUs"
+        echo "  ${C_GREEN}[1]${NC}  Build New Firmware         (Select MCU manually)"
+        echo "  ${C_NEON}[2]${NC}  Saved Boards Manager       (Manage your configs)"
+        echo "  ${C_NEON}[3]${NC}  Katapult Manager           (CanBoot)"
+        echo "  ${C_NEON}[4]${NC}  Linux Host MCU             (Raspberry Pi as MCU)"
         echo ""
         echo "  [B] Back"
         echo ""
-        read -p "  >> SELECT: " choice
+        if ! read -p "  >> SELECT: " choice; then return; fi
         case $choice in
             1) run_build_and_flash ;;
-            2) run_linux_wizard ;;
+            2) run_saved_boards_manager ;;
             3)
                if [ -f "$MODULES_DIR/hardware/katapult_manager.sh" ]; then
                    source "$MODULES_DIR/hardware/katapult_manager.sh"
                    run_katapult_menu
                else
                    log_error "Katapult module missing."
-                   read -p "  Press Enter..."
+                   read -p "  Press Enter..." || return
                fi
                ;;
-            4) run_mcu_update_all ;;
+            4) run_linux_wizard ;;
             b|B) return ;;
         esac
     done
 }
 
-# ... (existing functions) ...
+# === SAVED BOARDS MANAGER ===
 
-# === MCU BATCH UPDATE ===
+function run_saved_boards_manager() {
+    while true; do
+        draw_header "SAVED BOARDS MANAGER"
+        
+        if [ ! -d "$BOARD_REGISTRY_DIR" ]; then
+            mkdir -p "$BOARD_REGISTRY_DIR"
+        fi
 
-function run_mcu_update_all() {
-    draw_header "BATCH UPDATE SAVED MCUS"
-    
-    if [ ! -d "$BOARD_REGISTRY_DIR" ]; then
-        log_error "No saved boards found. Build and save one first!"
-        read -p "  Press Enter..."
-        return
-    fi
-    
-    local configs=("$BOARD_REGISTRY_DIR"/*.meta)
-    if [ ! -e "${configs[0]}" ]; then
-        log_error "No saved boards found."
-        read -p "  Press Enter..."
-        return
-    fi
-    
-    echo "  Found saved boards:"
-    for meta in "${configs[@]}"; do
-        source "$meta"
-        echo "  - $BOARD_NAME ($ARCH)"
-    done
-    
-    echo ""
-    read -p "  Update all these boards now? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
-    
-    for meta in "${configs[@]}"; do
-        source "$meta"
-        local config_file="$BOARD_REGISTRY_DIR/${BOARD_NAME}.config"
-        
-        draw_header "UPDATING: $BOARD_NAME"
-        log_info "Architecture: $ARCH"
-        
-        if [ ! -f "$config_file" ]; then
-            log_error "Config file missing for $BOARD_NAME"
-            continue
+        local configs=("$BOARD_REGISTRY_DIR"/*.meta)
+        if [ ! -e "${configs[0]}" ]; then
+            echo "  No saved boards found."
+            echo "  Build a new firmware [1] and save it to see it here."
+            echo ""
+            echo "  [B] Back"
+            echo ""
+            if ! read -p "  >> COMMAND: " ch; then return; fi
+            return
         fi
-        
-        # 1. Restore Config
-        cp "$config_file" "$HOME/klipper/.config"
-        cd "$HOME/klipper" || return
-        
-        # 2. Build
-        log_info "Building firmware..."
-        make olddefconfig > /dev/null
-        make clean > /dev/null
-        if make -j$(nproc); then
-            log_success "Build complete."
-        else
-            log_error "Build failed for $BOARD_NAME"
-            continue
-        fi
-        
-        # 3. Flash
-        log_info "Flashing ($FLASH_METHOD)..."
-        
-        case $FLASH_METHOD in
-            can)
-                flash_via_can
-                ;;
-            manual)
-                echo "  Skipping flash (Method: Manual/SD). Build is in out/."
-                ;;
-            usb|*)
-                # USB Default
-                if [ -f "out/klipper.uf2" ]; then flash_rp2040
-                elif [ -f "out/klipper.bin" ]; then flash_bin_artifact
-                elif [ -f "out/klipper.elf.hex" ]; then flash_avr_artifact
-                fi
-                ;;
-        esac
+
+        echo "  Select board to manage:"
+        echo ""
+        local i=1
+        local board_list=()
+        for meta in "${configs[@]}"; do
+             source "$meta"
+             echo "  [$i] $BOARD_NAME (${C_GREY}$ARCH${NC})"
+             board_list+=("$meta")
+             ((i++))
+        done
         
         echo ""
-        log_success "$BOARD_NAME finished."
-        sleep 2
+        echo "  [A] Update All Boards"
+        echo "  [B] Back"
+        echo ""
+        
+        if ! read -p "  >> COMMAND: " ch; then return; fi
+        
+        if [[ "$ch" =~ ^[0-9]+$ ]] && [ "$ch" -lt "$i" ] && [ "$ch" -ge 1 ]; then
+             local selected_meta="${board_list[$((ch-1))]}"
+             manage_single_board "$selected_meta"
+        elif [[ "$ch" =~ ^[aA]$ ]]; then
+             run_mcu_update_all
+        elif [[ "$ch" =~ ^[bB]$ ]]; then
+             return
+        else
+             log_error "Invalid selection."
+        fi
     done
-    
-    draw_success "All boards processed!"
-    read -p "  Press Enter..."
 }
 
+function manage_single_board() {
+    local meta="$1"
+    # Re-source to be sure
+    source "$meta"
+    local config_file="$BOARD_REGISTRY_DIR/${BOARD_NAME}.config"
 
-# === BUILD & FLASH (KIAUH-Style) ===
-# Opens menuconfig directly. User picks architecture + settings there.
-# After build, flash method is auto-detected from the build artifact.
+    while true; do
+        draw_header "MANAGE: $BOARD_NAME"
+        echo "  Arch:       $ARCH"
+        echo "  Method:     $FLASH_METHOD"
+        echo "  Last Built: $LAST_BUILT"
+        echo "  Config:     $config_file"
+        echo ""
+        echo "  ${C_GREEN}[1]${NC} Build & Flash"
+        echo "  ${C_NEON}[2]${NC} Edit Configuration (menuconfig)"
+        echo "  ${C_RED}[3]${NC} Delete Board"
+        echo ""
+        echo "  [B] Back"
+        echo ""
+        
+        if ! read -p "  >> COMMAND: " ch; then return; fi
+        
+        case $ch in
+            1) build_and_flash_saved "$meta"; return ;;
+            2) edit_saved_config "$meta" ;;
+            3) delete_saved_board "$meta"; return ;;
+            b|B) return ;;
+        esac
+    done
+}
+
+function build_and_flash_saved() {
+    local meta="$1"
+    source "$meta"
+    local config_file="$BOARD_REGISTRY_DIR/${BOARD_NAME}.config"
+    
+    draw_header "BUILDING: $BOARD_NAME"
+    
+    if [ ! -f "$config_file" ]; then
+        log_error "Config file missing!"
+        read -p "  Press Enter..." || return
+        return
+    fi
+    
+    # Restore
+    cp "$config_file" "$HOME/klipper/.config"
+    cd "$HOME/klipper" || return
+    
+    # Confirmation
+    echo "  Configuration loaded."
+    echo "  Ready to build and flash using method: $FLASH_METHOD"
+    echo ""
+    if ! read -p "  Start Build? [Y/n]: " yn; then return; fi
+    if [[ "$yn" =~ ^[nN] ]]; then return; fi
+    
+    # Build
+    log_info "Building..."
+    make olddefconfig > /dev/null
+    make clean > /dev/null
+    
+    if make -j$(nproc); then
+        log_success "Build complete."
+        
+        # Update timestamp
+        local now
+        now=$(date '+%Y-%m-%d %H:%M:%S')
+        # Simple sed replacement for timestamp
+        if [ "$(uname)" = "Darwin" ]; then
+            sed -i '' "s|LAST_BUILT=.*|LAST_BUILT=\"$now\"|" "$meta"
+        else
+            sed -i "s|LAST_BUILT=.*|LAST_BUILT=\"$now\"|" "$meta"
+        fi
+    else
+        log_error "Build failed."
+        read -p "  Press Enter..." || return
+        return
+    fi
+    
+    # Flash
+    case $FLASH_METHOD in
+        can) flash_via_can ;;
+        manual)
+            echo "  Manual Flash required."
+            echo "  Firmware is in $HOME/klipper/out/"
+            read -p "  Press Enter..." || return
+            ;;
+        usb|*)
+            if [ -f "out/klipper.uf2" ]; then flash_rp2040
+            elif [ -f "out/klipper.bin" ]; then flash_bin_artifact
+            elif [ -f "out/klipper.elf.hex" ]; then flash_avr_artifact
+            fi
+            ;;
+    esac
+    
+    read -p "  Press Enter to return..." || return
+}
+
+function edit_saved_config() {
+    local meta="$1"
+    source "$meta"
+    local config_file="$BOARD_REGISTRY_DIR/${BOARD_NAME}.config"
+    
+    cp "$config_file" "$HOME/klipper/.config"
+    cd "$HOME/klipper" || return
+    
+    draw_header "EDIT CONFIG: $BOARD_NAME"
+    echo "  Opening menuconfig..."
+    sleep 1
+    
+    if make menuconfig; then
+        # Save back
+        cp .config "$config_file"
+        log_success "Configuration updated and saved."
+    else
+        log_warn "Cancelled. Changes discarded."
+    fi
+    read -p "  Press Enter..." || return
+}
+
+function delete_saved_board() {
+    local meta="$1"
+    source "$meta"
+    local config_file="$BOARD_REGISTRY_DIR/${BOARD_NAME}.config"
+    
+    echo ""
+    echo -e "  ${C_RED}WARNING: This will delete '$BOARD_NAME' permanently.${NC}"
+    if ! read -p "  Are you sure? [y/N]: " yn; then return; fi
+    
+    if [[ "$yn" =~ ^[yY] ]]; then
+        rm "$meta" "$config_file" 2>/dev/null
+        log_success "Board deleted."
+        sleep 1
+    fi
+}
 
 function run_build_and_flash() {
     draw_header "BUILD & FLASH FIRMWARE"
@@ -132,7 +229,7 @@ function run_build_and_flash() {
         log_error "Klipper is not installed!"
         echo "  You need to install Klipper first via Quick Start [1]."
         echo ""
-        read -p "  Press Enter..."
+        read -p "  Press Enter..." || return
         return
     fi
 
@@ -153,15 +250,20 @@ function run_build_and_flash() {
     echo ""
     echo "  Step 2: Build"
     echo "  ---------------------------------------------------"
+    
+    # Confirmation
+    if ! read -p "  Start compilation? [Y/n]: " yn; then return; fi
+    if [[ "$yn" =~ ^[nN] ]]; then return; fi
+    
     log_info "Cleaning old build..."
     make clean > /dev/null
-
+    
     log_info "Compiling (make -j$(nproc))..."
     if make -j$(nproc); then
         log_success "Firmware compiled!"
     else
         log_error "Build failed."
-        read -p "  Press Enter..."
+        read -p "  Press Enter..." || return
         return
     fi
 
