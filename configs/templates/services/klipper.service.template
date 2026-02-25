@@ -1,0 +1,16 @@
+[Unit]
+Description=Klipper 3D Printer Firmware
+Documentation=https://www.klipper3d.org/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{USER}}
+RemainAfterExit=yes
+ExecStart={{HOME}}/klippy-env/bin/python {{HOME}}/klipper/klippy/klippy.py {{DATA_DIR}}/config/printer.cfg -l {{DATA_DIR}}/logs/klippy.log -a {{DATA_DIR}}/comms/klippy.sock
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

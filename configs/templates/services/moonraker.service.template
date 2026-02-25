@@ -1,0 +1,17 @@
+[Unit]
+Description=Moonraker API Server for Klipper
+Documentation=https://moonraker.readthedocs.io/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{USER}}
+SyslogIdentifier=moonraker
+WorkingDirectory={{HOME}}/moonraker
+ExecStart={{HOME}}/moonraker-env/bin/python {{HOME}}/moonraker/moonraker/moonraker.py -d {{DATA_DIR}}
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
