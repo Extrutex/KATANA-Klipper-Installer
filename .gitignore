@@ -11,9 +11,11 @@ backup_/
 configs/userspace/*.cfg
 !configs/userspace/overrides.cfg
 
-# System
-.DS_Store.agent/
-.agent/
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
 
 # System
 .DS_Store
@@ -21,4 +23,3 @@ configs/userspace/*.cfg
 .gemini/
 deploy_update.sh
 verify_install.sh
-
