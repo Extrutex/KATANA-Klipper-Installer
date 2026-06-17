@@ -9,6 +9,26 @@ if [ -z "$KATANA_ROOT" ]; then
     source "$KATANA_ROOT/core/logging.sh"
 fi
 
+function run_hardening_wizard() {
+    while true; do
+        draw_header "SYSTEM HARDENING"
+        echo "  Protect your Klipper system at the network level."
+        echo ""
+        echo "  ${C_NEON}[1]${NC}  Firewall (UFW)       Klipper-aware firewall rules"
+        echo "  ${C_NEON}[2]${NC}  Fail2Ban             Protect SSH against brute-force"
+        echo ""
+        echo "  [B] Back"
+        echo ""
+        read -r -p "  >> SELECT: " ch
+        case $ch in
+            1) install_security_stack ;;
+            2) install_fail2ban ;;
+            [bB]) return ;;
+            *) log_error "Invalid Selection." ;;
+        esac
+    done
+}
+
 function install_security_stack() {
     draw_header "SYSTEM HARDENING (UFW)"
     echo "  This will install and configure UFW (Uncomplicated Firewall)."

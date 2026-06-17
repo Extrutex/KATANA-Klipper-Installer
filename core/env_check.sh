@@ -1,6 +1,28 @@
 #!/bin/bash
 
 
+# Ensures a single command is available, installing its apt package if missing.
+# Usage: check_dependency <command> [apt_package]   (package defaults to command)
+# Used by the Vault (zip/unzip) and the Medic diagnostics packager.
+function check_dependency() {
+    local cmd="$1"
+    local pkg="${2:-$1}"
+
+    if command -v "$cmd" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    log_warn "Dependency '$cmd' is missing. Installing package '$pkg'..."
+    if sudo apt-get install -y "$pkg" >> "$LOG_FILE" 2>&1; then
+        log_success "Installed '$pkg'."
+        return 0
+    else
+        log_error "Failed to install '$pkg'. Please install it manually: sudo apt-get install $pkg"
+        return 1
+    fi
+}
+
+
 function check_environment() {
     draw_header "SYSTEM PREFLIGHT CHECK"
 
