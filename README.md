@@ -47,7 +47,8 @@ chmod +x katanaos.sh
 ```
 
 ## NUR ÖFFNEN 
-```bash
+
+```
 cd katana-os
 ./katanaos.sh
 ```
