@@ -288,6 +288,40 @@ function manage_single_board() {
     done
 }
 
+function run_mcu_update_all() {
+    draw_header "UPDATE ALL SAVED BOARDS"
+
+    if [ ! -d "$BOARD_REGISTRY_DIR" ]; then
+        log_error "No board registry found."
+        read -r -p "  Press Enter..." || return
+        return
+    fi
+
+    local configs=("$BOARD_REGISTRY_DIR"/*.meta)
+    if [ ! -e "${configs[0]}" ]; then
+        log_warn "No saved boards to update."
+        read -r -p "  Press Enter..." || return
+        return
+    fi
+
+    echo "  The following boards will be rebuilt & reflashed:"
+    echo ""
+    for meta in "${configs[@]}"; do
+        ( source "$meta"; echo "    - $BOARD_NAME ($ARCH)" )
+    done
+    echo ""
+    if ! read -r -p "  Proceed with ALL? [y/N]: " yn; then return; fi
+    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+
+    for meta in "${configs[@]}"; do
+        log_info "═══ Updating $(basename "$meta" .meta) ═══"
+        build_and_flash_saved "$meta"
+    done
+
+    log_success "All saved boards processed."
+    read -r -p "  Press Enter..." || return
+}
+
 function build_and_flash_saved() {
     local meta="$1"
     source "$meta"

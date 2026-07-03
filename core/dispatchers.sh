@@ -482,9 +482,9 @@ function run_repair_menu() {
         case "$ch" in
             1) sudo systemctl restart klipper ;;
             2) sudo systemctl restart moonraker ;;
-            3) 
-                if declare -f run_auto_restart > /dev/null; then
-                    run_auto_restart
+            3)
+                if declare -f run_service_manager_menu > /dev/null; then
+                    run_service_manager_menu
                 else
                     log_error "Auto-Restart modul nicht geladen"
                     sleep 2
