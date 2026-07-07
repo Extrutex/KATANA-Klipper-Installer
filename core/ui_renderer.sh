@@ -724,13 +724,19 @@ function run_extras_tuning() {
         case $ch in
             1) run_katana_flow ;;
             2) run_tuning_tools ;;
-            3) run_tuning_tools ;;
+            3) install_octoprint ;;
             b|B) return ;;
         esac
     done
 }
 
-function install_octoprint() { run_octoprint_install; }
+function install_octoprint() {
+    if declare -f run_octoprint_install > /dev/null; then
+        run_octoprint_install
+    else
+        log_error "Module missing: extras/tuning.sh (run_octoprint_install)"
+    fi
+}
 
 function run_extras_system() {
     while true; do

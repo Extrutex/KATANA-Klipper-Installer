@@ -6,7 +6,7 @@
 
 if [ -z "$KATANA_ROOT" ]; then
     KATANA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-    source "$KATANA_ROOT/core/logger.sh"
+    source "$KATANA_ROOT/core/logging.sh"
     source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh"
 fi
 
@@ -126,7 +126,66 @@ function remove_log2ram() {
 }
 
 # ============================================================
-# 3. TUNING MENU
+# 3. OCTOPRINT
+# ============================================================
+function run_octoprint_install() {
+    draw_header "INSTALL OCTOPRINT"
+    echo "  OctoPrint — alternative web interface (runs alongside Moonraker)."
+    echo ""
+    read -r -p "  Install OctoPrint? [y/N]: " yn
+    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+
+    if [ -d "$HOME/OctoPrint" ]; then
+        log_warn "OctoPrint is already installed."
+        read -r -p "  Press Enter..."
+        return
+    fi
+
+    log_info "Installing system dependencies..."
+    sudo apt-get update -qq
+    sudo apt-get install -y python3-pip python3-dev python3-setuptools \
+        python3-virtualenv git libyaml-dev build-essential || {
+        log_error "Dependency install failed."
+        return 1
+    }
+
+    log_info "Creating OctoPrint virtualenv..."
+    virtualenv -p python3 "$HOME/OctoPrint" || { log_error "virtualenv failed."; return 1; }
+
+    log_info "Installing OctoPrint (this can take a while)..."
+    "$HOME/OctoPrint/bin/pip" install --upgrade pip wheel >/dev/null 2>&1
+    if ! "$HOME/OctoPrint/bin/pip" install OctoPrint; then
+        log_error "OctoPrint pip install failed."
+        return 1
+    fi
+
+    log_info "Creating systemd service..."
+    sudo tee /etc/systemd/system/octoprint.service > /dev/null <<EOF
+[Unit]
+Description=OctoPrint
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=$USER
+ExecStart=$HOME/OctoPrint/bin/octoprint serve
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable octoprint
+    sudo systemctl start octoprint
+
+    log_success "OctoPrint installed and started."
+    echo "  [i] Access at http://<printer-ip>:5000"
+    read -r -p "  Press Enter..."
+}
+
+# ============================================================
+# 4. TUNING MENU
 # ============================================================
 function run_tuning_menu() {
     while true; do

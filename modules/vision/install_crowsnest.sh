@@ -50,6 +50,31 @@ function do_install_crowsnest() {
     read -r -p "  Press Enter..."
 }
 
+function do_install_klipperscreen() {
+    log_info "Installing KlipperScreen..."
+
+    local repo_dir="$HOME/KlipperScreen"
+    if [ -d "$repo_dir" ]; then
+        log_info "KlipperScreen repo exists. Pulling..."
+        cd "$repo_dir" && git pull
+    else
+        exec_silent "Cloning KlipperScreen" "git clone https://github.com/KlipperScreen/KlipperScreen.git $repo_dir"
+    fi
+
+    cd "$repo_dir" || { log_error "KlipperScreen directory not found"; return 1; }
+    log_info "Running KlipperScreen Installer..."
+
+    if [ -f "scripts/KlipperScreen-install.sh" ]; then
+        bash scripts/KlipperScreen-install.sh
+    else
+        log_error "KlipperScreen install script not found."
+        return 1
+    fi
+
+    log_success "KlipperScreen Installed."
+    read -r -p "  Press Enter..."
+}
+
 function do_remove_crowsnest() {
     log_info "Removing Crowsnest..."
     cd "$HOME/crowsnest" 2>/dev/null && make uninstall

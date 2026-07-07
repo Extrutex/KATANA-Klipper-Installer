@@ -34,7 +34,7 @@ function install_core_stack() {
             2) do_install_moonraker ;;
             3) do_install_kalico ;;
             4) do_install_ratos ;;
-            5) run_mcu_builder ;;
+            5) run_quick_build_menu ;;
             [bB]) return ;;
         esac
     done
@@ -60,6 +60,29 @@ function do_install_ratos() {
     fi
     
     log_success "RatOS installed. Use 'Engine Manager' to switch to it."
+    read -r -p "  Press Enter..."
+}
+
+function do_install_kalico() {
+    log_info "Installing Kalico (High-Performance Klipper fork)..."
+
+    # 1. Clone
+    local repo_dir="$HOME/kalico"
+    if [ -d "$repo_dir" ]; then
+        log_info "Kalico repo already exists. Pulling..."
+        cd "$repo_dir" && git pull
+    else
+        exec_silent "Cloning Kalico" "git clone https://github.com/KalicoCrew/kalico.git $repo_dir"
+    fi
+
+    # 2. VirtualEnv (shared klippy-env; Kalico is Klipper-compatible)
+    local env_dir="$HOME/klippy-env"
+    if [ ! -d "$env_dir" ]; then
+        exec_silent "Creating VirtualEnv" "virtualenv -p python3 $env_dir"
+    fi
+    exec_silent "Installing Dependencies" "$env_dir/bin/pip install -r $repo_dir/scripts/klippy-requirements.txt"
+
+    log_success "Kalico installed. Use 'Engine Manager' to switch to it."
     read -r -p "  Press Enter..."
 }
 
@@ -202,9 +225,10 @@ function do_install_moonraker() {
     mkdir -p "$data_dir/config" "$data_dir/logs" "$data_dir/comms" "$data_dir/gcodes" "$data_dir/systemd"
 
     # 5. Instance Config (moonraker.conf) — regenerate if broken
+    # Validation via Python core (katana_core.config_check), grep fallback.
     local moonraker_conf="$data_dir/config/moonraker.conf"
-    if [ -f "$moonraker_conf" ] && ! grep -q "\[server\]" "$moonraker_conf" 2>/dev/null; then
-        log_warn "Existing moonraker.conf is broken (no [server] section). Regenerating..."
+    if [ -f "$moonraker_conf" ] && ! katana_moonraker_conf_valid "$moonraker_conf"; then
+        log_warn "Existing moonraker.conf is broken. Regenerating..."
         mv "$moonraker_conf" "${moonraker_conf}.broken.$(date +%s)"
     fi
     if [ ! -f "$moonraker_conf" ]; then

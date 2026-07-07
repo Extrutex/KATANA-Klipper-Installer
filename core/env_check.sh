@@ -1,7 +1,118 @@
 #!/bin/bash
 
 
+# Ensures a single command is available, installing its apt package if missing.
+# Usage: check_dependency <command> [apt_package]   (package defaults to command)
+# Used by the Vault (zip/unzip) and the Medic diagnostics packager.
+function check_dependency() {
+    local cmd="$1"
+    local pkg="${2:-$1}"
+
+    if command -v "$cmd" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    log_warn "Dependency '$cmd' is missing. Installing package '$pkg'..."
+    if sudo apt-get install -y "$pkg" >> "$LOG_FILE" 2>&1; then
+        log_success "Installed '$pkg'."
+        return 0
+    else
+        log_error "Failed to install '$pkg'. Please install it manually: sudo apt-get install $pkg"
+        return 1
+    fi
+}
+
+
+# ==============================================================================
+# STRANGLER PHASE 1 (docs/PYTHON_CORE_STRATEGY.md):
+# Delegate the preflight to the Python core when it is importable.
+# Contract: Python REPORTS (JSON on stdout), Bash DECIDES (install/abort).
+# ==============================================================================
+
+function katana_py_core_available() {
+    PYTHONPATH="$KATANA_ROOT" python3 -c "import katana_core.env_check" 2>/dev/null
+}
+
+# STRANGLER PHASE 2: moonraker.conf validation via Python core.
+# Falls back to the legacy [server]-grep when the Python core is unavailable.
+function katana_moonraker_conf_valid() {
+    local conf="$1"
+    if katana_py_core_available; then
+        PYTHONPATH="$KATANA_ROOT" python3 -m katana_core.config_check \
+            --moonraker "$conf" --json >/dev/null 2>>"$LOG_FILE"
+    else
+        grep -q "\[server\]" "$conf" 2>/dev/null
+    fi
+}
+
 function check_environment() {
+    if katana_py_core_available; then
+        check_environment_python
+    else
+        check_environment_bash
+    fi
+}
+
+function check_environment_python() {
+    draw_header "SYSTEM PREFLIGHT CHECK"
+    log_info "Preflight via Python core (katana_core.env_check)..."
+
+    local report rc=0
+    report=$(PYTHONPATH="$KATANA_ROOT" python3 -m katana_core.env_check --json 2>>"$LOG_FILE") || rc=$?
+
+    # rc: 0 = ready, 1 = fatal findings. Anything else / bad JSON => core broken,
+    # fall back to the battle-tested Bash path.
+    if [ "$rc" -gt 1 ] || ! printf '%s' "$report" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
+        log_warn "Python core unavailable or invalid output. Falling back to Bash checks."
+        check_environment_bash
+        return $?
+    fi
+
+    # Render verdicts in the existing log style (no UI change)
+    printf '%s' "$report" | python3 -c '
+import json, sys
+for c in json.load(sys.stdin)["checks"]:
+    state = "ok" if c["ok"] else ("fatal" if c["fatal"] else "warn")
+    print("%s\t%s: %s" % (state, c["name"], c["detail"]))' | \
+    while IFS=$'\t' read -r state line; do
+        case "$state" in
+            ok)    log_success "$line" ;;
+            fatal) log_error   "$line" ;;
+            *)     log_warn    "$line" ;;
+        esac
+    done || true
+
+    # Fatal findings -> abort (mirrors legacy Bash behavior)
+    if [ "$rc" -ne 0 ]; then
+        log_error "PREFLIGHT CHECK FAILED. Aborting."
+        return 1
+    fi
+
+    # Non-fatal missing dependencies -> Bash installs (Python only reports)
+    local missing
+    missing=$(printf '%s' "$report" | python3 -c '
+import json, sys
+r = json.load(sys.stdin)
+print(" ".join(sum((c.get("missing", []) for c in r["checks"]), [])))') || missing=""
+
+    if [ -n "$missing" ]; then
+        log_warn "Missing dependencies: $missing"
+        log_info "Attempting minimal install (requires sudo)..."
+        # shellcheck disable=SC2086
+        if sudo apt-get update && sudo apt-get install -y $missing; then
+            log_success "Dependencies installed."
+        else
+            log_error "Dependency installation failed. Check $LOG_FILE."
+            return 1
+        fi
+    fi
+
+    echo ""
+    log_info "System is ready for KATANA."
+    sleep 1
+}
+
+function check_environment_bash() {
     draw_header "SYSTEM PREFLIGHT CHECK"
 
     local fatal_error=0

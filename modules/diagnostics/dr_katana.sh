@@ -39,6 +39,37 @@ function run_dr_katana() {
     done
 }
 
+function run_healer() {
+    draw_header "AUTO-HEALER - ONE-CLICK FIX"
+    echo "  Applies the most common fixes for a broken Klipper setup:"
+    echo "    - Fix ownership/permissions on printer_data, klipper, moonraker"
+    echo "    - Reload systemd and restart core services"
+    echo ""
+    if ! read -r -p "  Run Auto-Healer now? [y/N]: " yn; then return; fi
+    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+
+    # 1. Permissions
+    log_info "Fixing ownership & permissions..."
+    for d in "$HOME/printer_data" "$HOME/klipper" "$HOME/moonraker"; do
+        [ -e "$d" ] && sudo chown -R "$USER":"$USER" "$d" 2>/dev/null
+    done
+    log_success "Permissions normalized."
+
+    # 2. Reload systemd
+    log_info "Reloading systemd daemon..."
+    sudo systemctl daemon-reload 2>/dev/null
+
+    # 3. Restart core services (only if they exist)
+    for svc in klipper moonraker; do
+        if systemctl list-unit-files "${svc}.service" 2>/dev/null | grep -q "${svc}.service"; then
+            exec_silent "Restarting $svc" "sudo systemctl restart $svc"
+        fi
+    done
+
+    log_success "Auto-Healer complete. Check DIAGNOSE for remaining issues."
+    read -r -p "  Press Enter..."
+}
+
 function service_control_menu() {
     while true; do
         draw_header "SERVICE MANAGER"

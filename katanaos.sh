@@ -169,6 +169,11 @@ main() {
     sleep 1 # Kurzer Delay für Sichtbarkeit
     
     # 3. Main Loop (Bulletproof)
+    # Der globale ERR-Trap schützt Ladephase & Preflight. Im interaktiven
+    # Betrieb darf ein Unterbefehl mit 'return 1' (z.B. abgebrochene oder
+    # fehlgeschlagene Installation) das Tool nicht beenden — solche Fehler
+    # werden in den Modulen bereits via log_error gemeldet.
+    trap - ERR
     while true; do
         draw_main_menu
         

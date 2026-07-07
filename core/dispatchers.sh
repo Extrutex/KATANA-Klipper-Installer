@@ -475,16 +475,18 @@ function run_repair_menu() {
         echo "  [1] Restart Klipper"
         echo "  [2] Restart Moonraker"
         echo "  [3] Configure Auto-Restart"
+        echo "  [4] Validate printer.cfg / moonraker.conf"
         echo "  [B] Back"
-        
+
         local ch
         if ! read -r -p "  >> " ch; then return; fi
         case "$ch" in
             1) sudo systemctl restart klipper ;;
             2) sudo systemctl restart moonraker ;;
-            3) 
-                if declare -f run_auto_restart > /dev/null; then
-                    run_auto_restart
+            4) run_config_validator ;;
+            3)
+                if declare -f run_service_manager_menu > /dev/null; then
+                    run_service_manager_menu
                 else
                     log_error "Auto-Restart modul nicht geladen"
                     sleep 2
@@ -494,6 +496,70 @@ function run_repair_menu() {
             *) log_error "Invalid Selection" ; sleep 1 ;;
         esac
     done
+}
+
+# STRANGLER PHASE 2: config validation via Python core (katana_core.config_check)
+function run_config_validator() {
+    draw_header "CONFIG VALIDATOR"
+    local pcfg="$HOME/printer_data/config/printer.cfg"
+    local mconf="$HOME/printer_data/config/moonraker.conf"
+
+    if ! katana_py_core_available; then
+        log_warn "Python core not available — basic checks only."
+        if [ -f "$pcfg" ] && grep -q "\[printer\]" "$pcfg"; then
+            log_success "printer.cfg: [printer] section found"
+        else
+            log_error "printer.cfg: missing or no [printer] section"
+        fi
+        if [ -f "$mconf" ] && grep -q "\[server\]" "$mconf"; then
+            log_success "moonraker.conf: [server] section found"
+        else
+            log_error "moonraker.conf: missing or no [server] section"
+        fi
+        read -r -p "  Press Enter..."
+        return
+    fi
+
+    local args=()
+    [ -f "$pcfg" ] && args+=(--printer "$pcfg")
+    [ -f "$mconf" ] && args+=(--moonraker "$mconf")
+    if [ ${#args[@]} -eq 0 ]; then
+        log_error "No configs found in ~/printer_data/config."
+        read -r -p "  Press Enter..."
+        return
+    fi
+
+    local report rc=0
+    report=$(PYTHONPATH="$KATANA_ROOT" python3 -m katana_core.config_check \
+        "${args[@]}" --json 2>>"$LOG_FILE") || rc=$?
+
+    if [ "$rc" -gt 1 ] || [ -z "$report" ]; then
+        log_error "Validator failed to run. Check $LOG_FILE."
+        read -r -p "  Press Enter..."
+        return
+    fi
+
+    # Render verdicts in the existing log style
+    printf '%s' "$report" | python3 -c '
+import json, sys
+for c in json.load(sys.stdin)["checks"]:
+    state = "ok" if c["ok"] else ("fatal" if c["fatal"] else "warn")
+    print("%s\t%s: %s" % (state, c["name"], c["detail"]))' | \
+    while IFS=$'\t' read -r state line; do
+        case "$state" in
+            ok)    log_success "$line" ;;
+            fatal) log_error   "$line" ;;
+            *)     log_warn    "$line" ;;
+        esac
+    done || true
+
+    echo ""
+    if [ "$rc" -eq 0 ]; then
+        log_success "Configuration is valid."
+    else
+        log_error "Fatal config problems found. Fix them before starting Klipper."
+    fi
+    read -r -p "  Press Enter..."
 }
 
 function run_emergency_menu() {
