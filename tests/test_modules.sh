@@ -175,10 +175,29 @@ assert {c["name"] for c in r["checks"]} >= {"not_root", "disk_space", "connectiv
             fail "katana_core.env_check nicht importierbar"
         fi
     fi
-    # 4b) pytest-Suite, falls vorhanden
+    # 4b) config_check End-to-End: valide + kaputte Config gegen die CLI
+    CFG_TMP=$(mktemp -d)
+    printf '[server]\nport = 7125\n[authorization]\ntrusted_clients =\n    127.0.0.1\n' > "$CFG_TMP/moonraker.conf"
+    printf '[mcu]\nserial: /dev/serial/by-id/usb-x\n[stepper_x]\nstep_pin: PA2\n[printer]\nkinematics: cartesian\nmax_velocity: 300\nmax_accel: 3000\n' > "$CFG_TMP/printer.cfg"
+    if PYTHONPATH="$KATANA_ROOT" python3 -m katana_core.config_check \
+        --moonraker "$CFG_TMP/moonraker.conf" --printer "$CFG_TMP/printer.cfg" --json >/dev/null 2>&1; then
+        pass "config_check: valide Config -> exit 0"
+    else
+        fail "config_check: valide Config faelschlich abgelehnt"
+    fi
+    printf '[file_manager]\n' > "$CFG_TMP/moonraker.conf"
+    if PYTHONPATH="$KATANA_ROOT" python3 -m katana_core.config_check \
+        --moonraker "$CFG_TMP/moonraker.conf" --json >/dev/null 2>&1; then
+        fail "config_check: kaputte Config (kein [server]) NICHT erkannt"
+    else
+        pass "config_check: kaputte Config -> exit 1 (erkannt)"
+    fi
+    rm -rf "$CFG_TMP"
+
+    # 4c) pytest-Suite, falls vorhanden
     if command -v pytest >/dev/null 2>&1 || [ -x /root/.local/bin/pytest ]; then
         PYTEST_BIN=$(command -v pytest || echo /root/.local/bin/pytest)
-        if (cd "$KATANA_ROOT" && "$PYTEST_BIN" -q tests/test_env_check.py >/tmp/katana_pytest.out 2>&1); then
+        if (cd "$KATANA_ROOT" && "$PYTEST_BIN" -q tests >/tmp/katana_pytest.out 2>&1); then
             pass "pytest: $(grep -oE '[0-9]+ passed' /tmp/katana_pytest.out | head -1)"
         else
             fail "pytest-Suite fehlgeschlagen:"

@@ -225,9 +225,10 @@ function do_install_moonraker() {
     mkdir -p "$data_dir/config" "$data_dir/logs" "$data_dir/comms" "$data_dir/gcodes" "$data_dir/systemd"
 
     # 5. Instance Config (moonraker.conf) — regenerate if broken
+    # Validation via Python core (katana_core.config_check), grep fallback.
     local moonraker_conf="$data_dir/config/moonraker.conf"
-    if [ -f "$moonraker_conf" ] && ! grep -q "\[server\]" "$moonraker_conf" 2>/dev/null; then
-        log_warn "Existing moonraker.conf is broken (no [server] section). Regenerating..."
+    if [ -f "$moonraker_conf" ] && ! katana_moonraker_conf_valid "$moonraker_conf"; then
+        log_warn "Existing moonraker.conf is broken. Regenerating..."
         mv "$moonraker_conf" "${moonraker_conf}.broken.$(date +%s)"
     fi
     if [ ! -f "$moonraker_conf" ]; then

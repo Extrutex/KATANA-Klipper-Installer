@@ -33,6 +33,18 @@ function katana_py_core_available() {
     PYTHONPATH="$KATANA_ROOT" python3 -c "import katana_core.env_check" 2>/dev/null
 }
 
+# STRANGLER PHASE 2: moonraker.conf validation via Python core.
+# Falls back to the legacy [server]-grep when the Python core is unavailable.
+function katana_moonraker_conf_valid() {
+    local conf="$1"
+    if katana_py_core_available; then
+        PYTHONPATH="$KATANA_ROOT" python3 -m katana_core.config_check \
+            --moonraker "$conf" --json >/dev/null 2>>"$LOG_FILE"
+    else
+        grep -q "\[server\]" "$conf" 2>/dev/null
+    fi
+}
+
 function check_environment() {
     if katana_py_core_available; then
         check_environment_python
