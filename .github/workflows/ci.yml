@@ -1,0 +1,36 @@
+# KATANA CI — strangler phase 0 (docs/PYTHON_CORE_STRATEGY.md)
+# Gate: pytest (katana_core) + module integrity harness + shellcheck.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    name: pytest + module harness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pytest
+        run: pip install pytest
+      - name: Python unit tests (katana_core)
+        run: pytest -q
+      - name: Module integrity harness
+        run: bash tests/test_modules.sh
+
+  shellcheck:
+    name: shellcheck (error severity)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
+      - name: Lint all shell modules
+        run: |
+          find . -name '*.sh' -not -path './.git/*' -print0 \
+            | xargs -0 shellcheck -S error
