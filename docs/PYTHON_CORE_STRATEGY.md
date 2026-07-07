@@ -29,10 +29,10 @@
 
 | Phase | Deliverable | Exit criterion |
 |---|---|---|
-| 0 | `katana_core/` package skeleton + CI (pytest + shellcheck) | CI green on main |
+| 0 | ✅ `katana_core/` package skeleton + CI (pytest + shellcheck) | CI green on main |
 | 1 | ✅ `env_check` ported, Bash delegates when Python present | identical verdicts on 3 reference hosts |
 | 2 | ✅ config parser/validator (`moonraker.conf`, `printer.cfg`) | replaces v2.6 `[server]`-section check |
-| 3 | flash registry + board detection | katapult flow uses Python data source |
+| 3 | ✅ flash registry + board detection | katapult flow uses Python data source |
 | 4 | Python TUI (`textual`/stdlib curses) as alternative front end | menu parity for install path |
 | 5 | Desktop/mobile shell (e.g. Tauri/PWA) **on top of the same core** | out of scope until Phase 4 ships |
 

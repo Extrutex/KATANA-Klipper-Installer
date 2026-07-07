@@ -34,6 +34,31 @@ function clear_workflow_state() {
     unset WORKFLOW_STEP WORKFLOW_BOARD WORKFLOW_DETAILS WORKFLOW_TIMESTAMP 2>/dev/null
 }
 
+# --- SAFE BOARD META LOADER (strangler phase 3) ---
+# .meta files were previously executed via 'source' — any shell code inside
+# ran with user privileges. Parse via the Python core instead; sourcing
+# remains only as legacy fallback when the Python core is unavailable.
+function katana_load_board_meta() {
+    local meta="$1"
+    BOARD_NAME=""; ARCH="unknown"; FLASH_METHOD="usb"; LAST_BUILT=""
+    if declare -f katana_py_core_available > /dev/null && katana_py_core_available; then
+        local line
+        line=$(PYTHONPATH="$KATANA_ROOT" python3 -c '
+import sys
+from katana_core.flash_registry import parse_meta
+f = parse_meta(sys.argv[1])
+print("\t".join((f.get("BOARD_NAME", ""), f.get("ARCH", "unknown"),
+                 f.get("FLASH_METHOD", "usb"), f.get("LAST_BUILT", ""))))' "$meta" 2>/dev/null) || line=""
+        if [ -n "$line" ]; then
+            IFS=$'\t' read -r BOARD_NAME ARCH FLASH_METHOD LAST_BUILT <<< "$line"
+        fi
+        [ -n "$BOARD_NAME" ] || BOARD_NAME=$(basename "$meta" .meta)
+        return 0
+    fi
+    # Legacy fallback: execute the meta file (pre-phase-3 behavior)
+    source "$meta"
+}
+
 # === MCU SCANNER — Alle angeschlossenen MCUs anzeigen ===
 function run_mcu_scanner() {
     draw_header "MCU SCANNER"
@@ -231,7 +256,7 @@ function run_saved_boards_manager() {
         local i=1
         local board_list=()
         for meta in "${configs[@]}"; do
-             source "$meta"
+             katana_load_board_meta "$meta"
              echo "  [$i] $BOARD_NAME (${C_GREY}$ARCH${NC})"
              board_list+=("$meta")
              ((i++))
@@ -260,7 +285,7 @@ function run_saved_boards_manager() {
 function manage_single_board() {
     local meta="$1"
     # Re-source to be sure
-    source "$meta"
+    katana_load_board_meta "$meta"
     local config_file="$BOARD_REGISTRY_DIR/${BOARD_NAME}.config"
 
     while true; do
@@ -307,7 +332,7 @@ function run_mcu_update_all() {
     echo "  The following boards will be rebuilt & reflashed:"
     echo ""
     for meta in "${configs[@]}"; do
-        ( source "$meta"; echo "    - $BOARD_NAME ($ARCH)" )
+        ( katana_load_board_meta "$meta"; echo "    - $BOARD_NAME ($ARCH)" )
     done
     echo ""
     if ! read -r -p "  Proceed with ALL? [y/N]: " yn; then return; fi
@@ -324,7 +349,7 @@ function run_mcu_update_all() {
 
 function build_and_flash_saved() {
     local meta="$1"
-    source "$meta"
+    katana_load_board_meta "$meta"
     local config_file="$BOARD_REGISTRY_DIR/${BOARD_NAME}.config"
     
     draw_header "BUILDING: $BOARD_NAME"
@@ -390,7 +415,7 @@ function build_and_flash_saved() {
 
 function edit_saved_config() {
     local meta="$1"
-    source "$meta"
+    katana_load_board_meta "$meta"
     local config_file="$BOARD_REGISTRY_DIR/${BOARD_NAME}.config"
     
     cp "$config_file" "$HOME/klipper/.config"
@@ -412,7 +437,7 @@ function edit_saved_config() {
 
 function delete_saved_board() {
     local meta="$1"
-    source "$meta"
+    katana_load_board_meta "$meta"
     local config_file="$BOARD_REGISTRY_DIR/${BOARD_NAME}.config"
     
     echo ""
