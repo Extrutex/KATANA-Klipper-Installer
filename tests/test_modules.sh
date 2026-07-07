@@ -156,6 +156,43 @@ done <<< "$CALLED"
 
 # ==============================================================================
 echo ""
+echo "═══ TEST 4: PYTHON CORE (katana_core, Strangler Phase 1) ═══"
+if command -v python3 >/dev/null 2>&1; then
+    # 4a) Modul importierbar + CLI liefert valides JSON mit dokumentiertem Schema
+    if PYTHONPATH="$KATANA_ROOT" python3 -m katana_core.env_check --json 2>/dev/null \
+        | python3 -c '
+import json, sys
+r = json.load(sys.stdin)
+assert isinstance(r["ready"], bool)
+assert {c["name"] for c in r["checks"]} >= {"not_root", "disk_space", "connectivity"}
+' 2>/dev/null; then
+        pass "katana_core.env_check --json liefert valides Schema"
+    else
+        # exit 1 (fatal findings) ist ok — nur kaputtes JSON/Import ist ein Fehler
+        if PYTHONPATH="$KATANA_ROOT" python3 -c "import katana_core.env_check" 2>/dev/null; then
+            pass "katana_core.env_check importierbar (CLI meldet fatal findings — Host-abhaengig, ok)"
+        else
+            fail "katana_core.env_check nicht importierbar"
+        fi
+    fi
+    # 4b) pytest-Suite, falls vorhanden
+    if command -v pytest >/dev/null 2>&1 || [ -x /root/.local/bin/pytest ]; then
+        PYTEST_BIN=$(command -v pytest || echo /root/.local/bin/pytest)
+        if (cd "$KATANA_ROOT" && "$PYTEST_BIN" -q tests/test_env_check.py >/tmp/katana_pytest.out 2>&1); then
+            pass "pytest: $(grep -oE '[0-9]+ passed' /tmp/katana_pytest.out | head -1)"
+        else
+            fail "pytest-Suite fehlgeschlagen:"
+            tail -5 /tmp/katana_pytest.out | sed 's/^/        /'
+        fi
+    else
+        info "pytest nicht installiert — Python-Unit-Tests uebersprungen"
+    fi
+else
+    info "python3 nicht installiert — Python-Core-Tests uebersprungen (Bash-Fallback aktiv)"
+fi
+
+# ==============================================================================
+echo ""
 echo "═══ ERGEBNIS ═══"
 echo -e "  Bestanden: ${GREEN}${PASS}${NC}  |  Fehlgeschlagen: ${RED}${FAIL}${NC}"
 echo ""

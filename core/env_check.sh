@@ -23,7 +23,84 @@ function check_dependency() {
 }
 
 
+# ==============================================================================
+# STRANGLER PHASE 1 (docs/PYTHON_CORE_STRATEGY.md):
+# Delegate the preflight to the Python core when it is importable.
+# Contract: Python REPORTS (JSON on stdout), Bash DECIDES (install/abort).
+# ==============================================================================
+
+function katana_py_core_available() {
+    PYTHONPATH="$KATANA_ROOT" python3 -c "import katana_core.env_check" 2>/dev/null
+}
+
 function check_environment() {
+    if katana_py_core_available; then
+        check_environment_python
+    else
+        check_environment_bash
+    fi
+}
+
+function check_environment_python() {
+    draw_header "SYSTEM PREFLIGHT CHECK"
+    log_info "Preflight via Python core (katana_core.env_check)..."
+
+    local report rc=0
+    report=$(PYTHONPATH="$KATANA_ROOT" python3 -m katana_core.env_check --json 2>>"$LOG_FILE") || rc=$?
+
+    # rc: 0 = ready, 1 = fatal findings. Anything else / bad JSON => core broken,
+    # fall back to the battle-tested Bash path.
+    if [ "$rc" -gt 1 ] || ! printf '%s' "$report" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
+        log_warn "Python core unavailable or invalid output. Falling back to Bash checks."
+        check_environment_bash
+        return $?
+    fi
+
+    # Render verdicts in the existing log style (no UI change)
+    printf '%s' "$report" | python3 -c '
+import json, sys
+for c in json.load(sys.stdin)["checks"]:
+    state = "ok" if c["ok"] else ("fatal" if c["fatal"] else "warn")
+    print("%s\t%s: %s" % (state, c["name"], c["detail"]))' | \
+    while IFS=$'\t' read -r state line; do
+        case "$state" in
+            ok)    log_success "$line" ;;
+            fatal) log_error   "$line" ;;
+            *)     log_warn    "$line" ;;
+        esac
+    done || true
+
+    # Fatal findings -> abort (mirrors legacy Bash behavior)
+    if [ "$rc" -ne 0 ]; then
+        log_error "PREFLIGHT CHECK FAILED. Aborting."
+        return 1
+    fi
+
+    # Non-fatal missing dependencies -> Bash installs (Python only reports)
+    local missing
+    missing=$(printf '%s' "$report" | python3 -c '
+import json, sys
+r = json.load(sys.stdin)
+print(" ".join(sum((c.get("missing", []) for c in r["checks"]), [])))') || missing=""
+
+    if [ -n "$missing" ]; then
+        log_warn "Missing dependencies: $missing"
+        log_info "Attempting minimal install (requires sudo)..."
+        # shellcheck disable=SC2086
+        if sudo apt-get update && sudo apt-get install -y $missing; then
+            log_success "Dependencies installed."
+        else
+            log_error "Dependency installation failed. Check $LOG_FILE."
+            return 1
+        fi
+    fi
+
+    echo ""
+    log_info "System is ready for KATANA."
+    sleep 1
+}
+
+function check_environment_bash() {
     draw_header "SYSTEM PREFLIGHT CHECK"
 
     local fatal_error=0
