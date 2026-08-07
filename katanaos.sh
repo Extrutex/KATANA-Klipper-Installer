@@ -25,6 +25,28 @@ export MODULES_DIR="$KATANA_ROOT/modules"
 export CONFIGS_DIR="$KATANA_ROOT/configs"
 export LOG_FILE="$KATANA_ROOT/katana.log"
 
+# --- HATCH RESOLUTION (Firmware/Board-Authority — see hatch/README once extracted) ---
+# HATCH resolution order:
+#   1. Embedded hatch/ (present in this repo, preferred when hatch/hatch.sh exists)
+#   2. External repo via KATANA_HATCH_REPO_DIR env variable (set before calling katanaos.sh)
+#   3. Managed install at ~/.local/share/katana/hatch (auto-cloned by a future hatch_runtime.sh)
+# When HATCH is extracted to its own repo, set KATANA_HATCH_PROVIDER_MODE=external
+# and KATANA_HATCH_REPO_DIR=/path/to/HATCH — no other change needed here.
+_HATCH_EMBEDDED="$KATANA_ROOT/hatch"
+_HATCH_EXTERNAL="${KATANA_HATCH_REPO_DIR:-}"
+_HATCH_MANAGED="$HOME/.local/share/katana/hatch"
+
+if [[ -f "$_HATCH_EMBEDDED/hatch.sh" && "${KATANA_HATCH_PROVIDER_MODE:-auto}" != "external" ]]; then
+    HATCH_DIR="$_HATCH_EMBEDDED"
+elif [[ -n "$_HATCH_EXTERNAL" && -f "$_HATCH_EXTERNAL/hatch.sh" ]]; then
+    HATCH_DIR="$_HATCH_EXTERNAL"
+elif [[ -f "$_HATCH_MANAGED/hatch.sh" ]]; then
+    HATCH_DIR="$_HATCH_MANAGED"
+else
+    HATCH_DIR=""
+fi
+export HATCH_DIR
+
 # --- PROFILE HANDLER ---
 # Standardprofil, überschreibbar via CLI
 INSTALL_PROFILE="standard"
@@ -143,6 +165,15 @@ for opt_module in \
     "$MODULES_DIR/vision/install_crowsnest.sh"; do
     [[ -f "$opt_module" ]] && source "$opt_module"
 done
+
+# --- HATCH ENGINE (Firmware/Board-Authority — conditional, graceful degradation) ---
+if [[ -n "$HATCH_DIR" && -f "$HATCH_DIR/hatch.sh" ]]; then
+    source "$HATCH_DIR/hatch.sh"
+else
+    function init_hatch_menu() {
+        log_error "HATCH ist nicht verfuegbar. Setze KATANA_HATCH_REPO_DIR=/pfad/zu/HATCH oder installiere HATCH (bash install.sh --hatch)."
+    }
+fi
 
 
 # ==============================================================================
