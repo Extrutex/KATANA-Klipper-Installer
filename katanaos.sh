@@ -86,38 +86,80 @@ require_module() {
 show_help() {
     echo "KATANAOS $KATANA_VERSION - Usage:"
     echo ""
-    echo "  ./katanaos.sh              Startet das interaktive Menü"
-    echo "  ./katanaos.sh --profile    Setzt das Installations-Profil:"
-    echo "      minimal   - Nur Klipper + Moonraker"
-    echo "      standard  - Core + Mainsail (Standard)"
-    echo "      power     - Alles (CAN, Toolchanger, etc.)"
-    echo "  ./katanaos.sh --version    Zeigt die Version an"
-    echo "  ./katanaos.sh --help       Zeigt diese Hilfe an"
+    echo "  ./katanaos.sh                     Startet das interaktive Menü"
+    echo "  ./katanaos.sh install [OPTIONEN]  Unbeaufsichtigte Installation"
+    echo "  ./katanaos.sh --version           Zeigt die Version an"
+    echo "  ./katanaos.sh --help              Zeigt diese Hilfe an"
+    echo ""
+    echo "  Optionen:"
+    echo "    --profile <p>   minimal | standard | power   (Default: standard)"
+    echo "    --ui <u>        mainsail | fluidd | none     (Default: mainsail)"
+    echo "    --yes, -y       Ohne Rueckfrage installieren (fuer 'install' Pflicht)"
+    echo "    --dry-run       Nur den Plan ausgeben, nichts veraendern"
+    echo ""
+    echo "  Beispiele:"
+    echo "    ./katanaos.sh install --profile standard --dry-run"
+    echo "    ./katanaos.sh install --profile minimal --ui none --yes"
+    echo ""
+    echo "  Exit-Codes: 0 ok | 1 Schritt fehlgeschlagen | 2 Aufruf falsch |"
+    echo "              3 --yes fehlt"
     echo ""
 }
 
+# Parses the whole command line, not just $1. The previous version inspected
+# one argument, so "--profile power --help" silently ignored --help and an
+# unknown flag was accepted as if it had been understood — the worst failure
+# mode for a tool meant to run unattended, because the script reports success
+# for something it never did.
+#
+# Sets HEADLESS_* for main() to act on. Exits directly only for the flags that
+# produce output and nothing else (--version, --help) or for a usage error.
+HEADLESS_MODE=0
+HEADLESS_UI="mainsail"
+HEADLESS_CONFIRMED=0
+HEADLESS_DRY_RUN=0
+
 handle_args() {
-    case "$1" in
-        --profile)
-            if [[ -z "${2:-}" ]]; then
-                echo "Fehler: --profile benötigt ein Argument (minimal|standard|power)"
-                exit 1
-            fi
-            case "$2" in
-                minimal|standard|power) INSTALL_PROFILE="$2" ;;
-                *) echo "Ungültiges Profil: $2"; exit 1 ;;
-            esac
-            echo "Profil erfolgreich gesetzt auf: $INSTALL_PROFILE"
-            ;;
-        --version)
-            echo "KATANAOS $KATANA_VERSION ($BUILD)"
-            exit 0
-            ;;
-        --help|-h)
-            show_help
-            exit 0
-            ;;
-    esac
+    if [[ "${1:-}" == "install" ]]; then
+        HEADLESS_MODE=1
+        shift
+    fi
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --profile)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Fehler: --profile benoetigt ein Argument (minimal|standard|power)" >&2
+                    exit 2
+                fi
+                case "$2" in
+                    minimal|standard|power) INSTALL_PROFILE="$2" ;;
+                    *) echo "Ungueltiges Profil: $2 (minimal|standard|power)" >&2; exit 2 ;;
+                esac
+                shift 2
+                ;;
+            --ui)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Fehler: --ui benoetigt ein Argument (mainsail|fluidd|none)" >&2
+                    exit 2
+                fi
+                case "$2" in
+                    mainsail|fluidd|none) HEADLESS_UI="$2" ;;
+                    *) echo "Ungueltige UI: $2 (mainsail|fluidd|none)" >&2; exit 2 ;;
+                esac
+                shift 2
+                ;;
+            --yes|-y)   HEADLESS_CONFIRMED=1; shift ;;
+            --dry-run)  HEADLESS_DRY_RUN=1; shift ;;
+            --version)  echo "KATANAOS $KATANA_VERSION ($BUILD)"; exit 0 ;;
+            --help|-h)  show_help; exit 0 ;;
+            *)
+                echo "Unbekannte Option: $1" >&2
+                echo "Hilfe: ./katanaos.sh --help" >&2
+                exit 2
+                ;;
+        esac
+    done
 }
 
 
@@ -133,6 +175,7 @@ require_module "$CORE_DIR/engine_manager.sh"
 
 # Dispatcher & Service Module (Logik aus ui_renderer extrahiert)
 require_module "$CORE_DIR/dispatchers.sh"
+require_module "$CORE_DIR/headless.sh"
 require_module "$CORE_DIR/service_manager.sh"
 
 # Optionale Module (werden nur geladen, wenn sie existieren)
@@ -185,7 +228,17 @@ main() {
     if [[ $# -gt 0 ]]; then
         handle_args "$@"
     fi
-    
+
+    # 1b. Unbeaufsichtigter Lauf: kein Menue, kein Prompt, sprechender Exit-Code.
+    #     Der Env-Check laeuft in run_headless_install, damit --dry-run auch auf
+    #     einer Nicht-Zielplattform den Plan ausgeben kann.
+    if [[ "$HEADLESS_MODE" == "1" ]]; then
+        trap - ERR
+        run_headless_install "$INSTALL_PROFILE" "$HEADLESS_UI" \
+            "$HEADLESS_CONFIRMED" "$HEADLESS_DRY_RUN"
+        exit $?
+    fi
+
     # 2. System initialisieren (Root-Check & Env-Validation)
     log_info "KATANA $KATANA_VERSION wird initialisiert..."
     if ! check_environment; then

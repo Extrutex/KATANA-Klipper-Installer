@@ -135,6 +135,32 @@ All extras support both **Install and Remove**:
 - Uninstall
 
 
+### 🤖 Unattended Installation (Headless)
+
+Provision a machine without the menu — for fleets, reimages and CI.
+
+```bash
+./katanaos.sh install --profile standard --dry-run          # show the plan only
+./katanaos.sh install --profile standard --ui mainsail --yes
+./katanaos.sh install --profile minimal --ui none --yes     # core only
+```
+
+| Flag | Values | Default |
+|---|---|---|
+| `--profile` | `minimal` · `standard` · `power` | `standard` |
+| `--ui` | `mainsail` · `fluidd` · `none` | `mainsail` |
+| `--yes`, `-y` | required for an actual install | — |
+| `--dry-run` | print the plan, change nothing | — |
+
+Exit codes: `0` success · `1` a step failed (named on stderr) · `2` bad
+invocation · `3` `--yes` missing. An unknown flag aborts instead of being
+ignored — for an unattended tool, silently ignoring an option is the worst
+failure mode, because it reports success for something it never did.
+
+> KIAUH has carried this as issue #594 (“Make a headless mode”) for years.
+> See `docs/KATANAOS_vs_KIAUH.md` for the verified comparison — including the
+> points where KIAUH is ahead.
+
 ## 🚀 First Time Setup
 
 Follow this order for a clean installation:

@@ -6,7 +6,7 @@
 - **Decoupling Architecture:** Strictest separation between business domains. 3D-Windt is the operative user/reference implementation; Agentic Gateway is the commercialized integration competence. No direct code coupling between these domains.
 
 ## 2. ACTIVE MASTER PROJECTS & ARCHITECTURE
-1. **KATANA (`/KATANA`):** Open-Source Klipper Installation & Orchestration CLI (Bash/Python). Fully replaces KIAUH. Deterministic, modular loader architecture (v2.6+).
+1. **KATANA (`/KATANA`):** Open-Source Klipper Installation & Orchestration CLI (Bash/Python). Overlaps KIAUH on the install path and goes beyond it on Katapult, CAN, RatOS/Kalico and unattended provisioning — it does NOT replace it wholesale, and KIAUH does build and flash firmware (verified 2026-08-29, see KATANA/docs/KATANAOS_vs_KIAUH.md). Deterministic, modular loader architecture (v2.6+).
 2. **HATCH (`/HATCH`):** Hardware Authority & Board Firmware Registry. Delivered as an isolated Python CLI with atomic writes, JSON output (`--json`), and zero auto-detection guessing. SSoT for board states.
 3. **PrintOps (`/PrintOps`):** Custom B2B ERP & Master Data Automation Tool (Python, SQLite). Features Moonraker auto-presence detection.
 4. **HORIZON (`/HORIZON`):** Direct Machine Control UI Frontend (React, Tailwind). Purpose-built Mainsail replacement.
