@@ -1,1 +1,9 @@
+# Line-ending policy (issue #1: a CRLF checkout breaks every shell script).
+# Force LF in the repo AND in the working tree for everything bash/python/
+# Klipper-config parses, so a Windows clone with core.autocrlf=true can
+# never produce a broken katanaos.sh again.
+* text=auto
 *.sh text eol=lf
+*.py text eol=lf
+*.cfg text eol=lf
+*.conf text eol=lf

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# --- CRLF GUARD (issue #1) ---
+# Windows line endings (git autocrlf / ZIP download) make bash fail with
+# cryptic errors ("$'\r': command not found"). Detect and explain instead.
+# The check MUST stay on a single line ending in a comment: a multi-line
+# if/then/fi does not parse once the file itself is CRLF (verified).
+if [[ "$(head -c 200 "${BASH_SOURCE[0]}" | tr -d '\0')" == *$'\r'* ]]; then echo "ERROR: ${BASH_SOURCE[0]} has Windows line endings (CRLF) and cannot run." >&2; echo "Fix:   sed -i 's/\r\$//' ${BASH_SOURCE[0]}   (or re-clone after: git config --global core.autocrlf false)" >&2; exit 1; fi  # single line by design: must parse even when this file is CRLF
+
 ################################################################################
 #  ⚔️  KATANAOS - THE KLIPPER BLADE v2.6 (B2B Refactored)
 # ------------------------------------------------------------------------------
