@@ -12,6 +12,7 @@
 
 NEXUS_FILES="nexus_azm.cfg"
 NEXUS_CFG_SUBDIR="nexus_azm"
+NEXUS_COMPAT_FILE="nexus_kamp_compat.cfg"
 NEXUS_MARKER="# --- NEXUS A.Z.M. ---"
 
 function install_nexus_azm() {
@@ -26,9 +27,15 @@ function install_nexus_azm() {
         echo ""
         echo "  Status: [$nexus_status]"
         echo ""
+        local compat_status="NOT INSTALLED"
+        if [ -f "$HOME/printer_data/config/$NEXUS_CFG_SUBDIR/$NEXUS_COMPAT_FILE" ]; then
+            compat_status="${C_GREEN}INSTALLED${NC}"
+        fi
+
         echo "  ${C_NEON}[1]${NC}  Install NEXUS A.Z.M."
         echo "  ${C_NEON}[2]${NC}  Show prerequisites"
-        echo "  ${C_RED}[3]${NC}  Remove NEXUS A.Z.M."
+        echo "  ${C_NEON}[3]${NC}  KAMP migration layer   [$compat_status]"
+        echo "  ${C_RED}[4]${NC}  Remove NEXUS A.Z.M."
         echo ""
         echo "  [B] Back"
         echo ""
@@ -37,7 +44,8 @@ function install_nexus_azm() {
         case $ch in
             1) do_install_nexus ;;
             2) do_show_nexus_requirements ;;
-            3) do_remove_nexus ;;
+            3) do_toggle_kamp_compat ;;
+            4) do_remove_nexus ;;
             [bB]) return ;;
             *) log_error "Invalid Selection" ;;
         esac
@@ -222,6 +230,78 @@ function do_install_nexus() {
     echo "  Slicer End G-Code:"
     echo "    NEXUS_END_PRINT"
     echo ""
+    read -r -p "  Press Enter..."
+}
+
+# ------------------------------------------------------------------------------
+# KAMP migration layer
+#
+# Forwards LINE_PURGE, VORON_PURGE, SMART_PARK and ADAPTIVE_BED_MESH to their
+# NEXUS equivalents so existing slicer profiles keep working during a
+# migration. Klipper rejects duplicate macro names, so this must never be
+# deployed while KAMP is still included - the check below is not cosmetic, it
+# prevents a config that fails to start.
+# ------------------------------------------------------------------------------
+function do_toggle_kamp_compat() {
+    draw_header "KAMP MIGRATION LAYER"
+
+    local cfg_dir="$HOME/printer_data/config"
+    local nexus_dir="$cfg_dir/$NEXUS_CFG_SUBDIR"
+    local pcfg="$cfg_dir/printer.cfg"
+    local src="$CONFIGS_DIR/$NEXUS_CFG_SUBDIR/$NEXUS_COMPAT_FILE"
+    local dst="$nexus_dir/$NEXUS_COMPAT_FILE"
+
+    echo ""
+    if [ -f "$dst" ]; then
+        echo "  The migration layer is installed."
+        echo ""
+        read -r -p "  Remove it? [y/N]: " yn
+        if [[ "$yn" =~ ^[yY]$ ]]; then
+            rm -f "$dst"
+            log_success "Migration layer removed. Slicer profiles must now call NEXUS_START_PRINT."
+        fi
+        read -r -p "  Press Enter..."
+        return
+    fi
+
+    if [ ! -d "$nexus_dir" ]; then
+        log_error "Install NEXUS A.Z.M. first."
+        read -r -p "  Press Enter..."
+        return
+    fi
+
+    # KAMP still active -> duplicate macro names -> Klipper refuses to start.
+    if [ -f "$pcfg" ] && grep -qiE "^[[:space:]]*\[include[[:space:]]+.*KAMP" "$pcfg"; then
+        log_error "KAMP is still included in printer.cfg."
+        echo ""
+        echo "  Klipper rejects duplicate macro names. Remove the KAMP include"
+        echo "  first, then install this layer."
+        echo ""
+        read -r -p "  Press Enter..."
+        return
+    fi
+
+    echo "  Forwards the KAMP entry points to NEXUS:"
+    echo ""
+    echo "    LINE_PURGE        -> NEXUS_ADAPTIVE_PURGE PATTERN=line"
+    echo "    VORON_PURGE       -> NEXUS_ADAPTIVE_PURGE PATTERN=double"
+    echo "    SMART_PARK        -> NEXUS_SMART_PARK"
+    echo "    ADAPTIVE_BED_MESH -> NEXUS_ADAPTIVE_MESH"
+    echo ""
+    echo "  Existing slicer profiles keep working while the machine is"
+    echo "  migrated. Remove the layer once they call NEXUS_START_PRINT."
+    echo ""
+    read -r -p "  Install? [y/N]: " yn
+    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+
+    if [ ! -f "$src" ]; then
+        log_error "Missing: $src"
+        read -r -p "  Press Enter..."
+        return
+    fi
+
+    cp "$src" "$dst"
+    log_success "Migration layer installed. RESTART Klipper, then KAMP_MIGRATION_STATUS."
     read -r -p "  Press Enter..."
 }
 
