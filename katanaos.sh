@@ -207,6 +207,7 @@ for opt_module in \
     "$MODULES_DIR/extras/smart_probes.sh" \
     "$MODULES_DIR/extras/multi_material.sh" \
     "$MODULES_DIR/extras/katana_flow.sh" \
+    "$MODULES_DIR/extras/nexus_azm.sh" \
     "$MODULES_DIR/extras/tuning.sh" \
     "$MODULES_DIR/extras/toolchanger.sh" \
     "$MODULES_DIR/extras/timelapse.sh" \

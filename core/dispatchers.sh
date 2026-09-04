@@ -218,6 +218,16 @@ function run_katana_flow() {
     fi
 }
 
+# 8b. NEXUS A.Z.M. (Adaptive Z-Offset & Meshing)
+function run_nexus_azm() {
+    if [ -f "$MODULES_DIR/extras/nexus_azm.sh" ]; then
+        source "$MODULES_DIR/extras/nexus_azm.sh"
+        install_nexus_azm
+    else
+         log_error "Module missing: extras/nexus_azm.sh"
+    fi
+}
+
 # 9. SECURITY & BACKUP → Handled by security/menu.sh (run_security_menu)
 
 # 11. SMART PROBES

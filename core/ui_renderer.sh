@@ -226,6 +226,14 @@ function check_katanaflow_status() {
     fi
 }
 
+function check_nexus_azm_status() {
+    if [ -d "$HOME/printer_data/config/nexus_azm" ]; then
+        echo "INSTALLED"
+    else
+        echo "NOT INSTALLED"
+    fi
+}
+
 function check_shaketune_status() {
     if [ -d "$HOME/klippain_shaketune" ]; then
         echo "INSTALLED"
@@ -419,6 +427,10 @@ function draw_main_menu() {
     # Tuning & Extras
     if [ -d "$HOME/printer_data/config/katana_flow" ]; then
         box_row "${C_GREEN}●${NC} KATANA Flow"
+        has_installed=1
+    fi
+    if [ -d "$HOME/printer_data/config/nexus_azm" ]; then
+        box_row "${C_GREEN}●${NC} NEXUS A.Z.M."
         has_installed=1
     fi
     if [ -d "$HOME/klippain_shaketune" ]; then
@@ -709,6 +721,8 @@ function run_extras_tuning() {
 
         local katanaflow
         katanaflow=$(check_katanaflow_status)
+        local nexusazm
+        nexusazm=$(check_nexus_azm_status)
         local shaketune
         shaketune=$(check_shaketune_status)
         local octoprint
@@ -717,6 +731,7 @@ function run_extras_tuning() {
         echo "  ${C_GREEN}[1]${NC}  KATANA Flow            [$katanaflow]"
         echo "  ${C_NEON}[2]${NC}  ShakeTune              [$shaketune]"
         echo "  ${C_NEON}[3]${NC}  OctoPrint              [$octoprint]"
+        echo "  ${C_GREEN}[4]${NC}  NEXUS A.Z.M.           [$nexusazm]"
         echo ""
         echo "  [B] Back"
         echo ""
@@ -726,6 +741,7 @@ function run_extras_tuning() {
             1) run_katana_flow ;;
             2) run_tuning_tools ;;
             3) install_octoprint ;;
+            4) run_nexus_azm ;;
             b|B) return ;;
         esac
     done

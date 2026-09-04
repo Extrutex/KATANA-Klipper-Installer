@@ -44,7 +44,7 @@ OPT_MODULES=(
     modules/system/mcu_builder.sh modules/system/moonraker_update_manager.sh
     modules/system/instance_manager.sh
     modules/extras/smart_probes.sh modules/extras/multi_material.sh
-    modules/extras/katana_flow.sh modules/extras/tuning.sh
+    modules/extras/katana_flow.sh modules/extras/nexus_azm.sh modules/extras/tuning.sh
     modules/extras/toolchanger.sh modules/extras/timelapse.sh
     modules/engine/install_klipper.sh modules/ui/install_ui.sh
     modules/vision/install_crowsnest.sh
