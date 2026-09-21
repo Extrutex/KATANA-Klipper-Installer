@@ -65,6 +65,10 @@ META
 mkdir -p "$PROBE_HOME/katana_backups"
 : > "$PROBE_HOME/katana_backups/katana_backup_19700101_000000.zip"
 
+# An alternative engine repo, so switch_core gets past its "target repo not
+# found" check and reaches the confirmation that guards the rm -rf.
+mkdir -p "$PROBE_HOME/kalico_repo" "$PROBE_HOME/kalico_env"
+
 # ------------------------------------------------------------------------------
 # Command stubs.
 #

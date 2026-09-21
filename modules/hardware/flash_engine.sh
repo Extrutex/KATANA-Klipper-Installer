@@ -738,8 +738,16 @@ function save_board_config() {
         echo "  [1] USB (DFU/Serial) - Standard"
         echo "  [2] CAN Bus (Katapult) - Bridge required"
         echo "  [3] SD Card / Manual"
-        katana_read_menu f_method "  >> Method: " "FLASH METHOD" || return
-        
+        # Pre-set to the documented default BEFORE asking. The .meta file is
+        # already half-written at this point (BOARD_NAME, LAST_BUILT, ARCH), so
+        # returning on an unanswered prompt would leave a registry entry with no
+        # FLASH_METHOD line. Nothing crashes on that — katana_load_board_meta
+        # defaults it to "usb" — but a file that is complete is better than a
+        # file that relies on a reader's default, and this one is read by the
+        # update path months later.
+        local f_method="1"
+        katana_read_menu f_method "  >> Method: " "FLASH METHOD" || f_method="1"
+
         case $f_method in
             2) echo "FLASH_METHOD=\"can\"" >> "$meta_dest" ;;
             3) echo "FLASH_METHOD=\"manual\"" >> "$meta_dest" ;;

@@ -62,7 +62,18 @@ function enable_moonraker_auto_restart() {
 
 function setup_service_restart() {
     local service="$1"
-    
+
+    # Symmetry with disable_auto_restart, which gates on `reset`. Gating only
+    # the teardown and not the setup is worse than gating neither: it implies
+    # the writing half is the safe one, when this is the half that writes a
+    # systemd drop-in under /etc and changes how the machine behaves after a
+    # crash. Both halves, one operation name.
+    if ! katana_confirm_destructive \
+        "  systemd-Override fuer '${service}' schreiben? [y/N]: " reset; then
+        log_info "Auto-Restart fuer '${service}' nicht konfiguriert."
+        return 1
+    fi
+
     # Create override directory
     sudo mkdir -p /etc/systemd/system/${service}.service.d
     

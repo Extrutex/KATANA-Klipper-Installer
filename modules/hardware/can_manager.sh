@@ -218,6 +218,18 @@ EOF
     echo "  (Hold BOOT button + press RESET)"
     katana_pause "  Press Enter when ready..."
     
+    # The RP2040 branch flashes nothing — it prints a path and asks the
+    # operator to copy the .uf2 by hand — so it is handled before the gate.
+    # Asking "flash now?" and then answering "copy it yourself" would train
+    # people to click through a confirmation that decides nothing, which is how
+    # confirmations stop being read.
+    if [[ "$board" == "sb2209_rp2040" ]]; then
+        log_warn "RP2040: Use mass storage copy instead."
+        echo "  File: $katapult_dir/out/katapult.uf2"
+        katana_pause "  Press Enter..."
+        return 0
+    fi
+
     # Same defect as katapult_manager: the "PUT MCU IN DFU MODE" pause reads
     # like a confirmation and is not one, so unattended this reached dfu-util
     # and rewrote flash at 0x08000000 on any board in DFU mode.
@@ -227,12 +239,6 @@ EOF
     fi
 
     log_info "Flashing bootloader..."
-    if [[ "$board" == "sb2209_rp2040" ]]; then
-        log_warn "RP2040: Use mass storage copy instead."
-        echo "  File: $katapult_dir/out/katapult.uf2"
-        katana_pause "  Press Enter..."
-        return 0
-    fi
 
     # Tested directly instead of via `[ $? -eq 0 ]` two lines later, which read
     # the status of the preceding `fi` on the RP2040 branch and always said 0.

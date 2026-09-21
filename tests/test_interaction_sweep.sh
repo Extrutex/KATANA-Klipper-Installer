@@ -208,6 +208,17 @@ assert_refuses "disable_auto_restart" disable_auto_restart
 assert_refuses "do_remove_ui"         do_remove_ui
 assert_refuses "do_remove_crowsnest"  do_remove_crowsnest
 
+# switch_core replaces ~/klipper and ~/klippy-env with symlinks, deleting
+# whatever is there first. On a plain installation that is a working Klipper
+# checkout, so an engine switch destroys it — and nothing on the path from the
+# settings menu to the rm asked anything.
+assert_refuses "switch_core (engine switch)" switch_core "kalico"
+
+# setup_service_restart writes a systemd drop-in under /etc. Its counterpart
+# disable_auto_restart is gated; gating only the teardown would imply the
+# writing half is the safe one.
+assert_refuses "setup_service_restart" setup_service_restart "klipper"
+
 # ------------------------------------------------------------------------------
 # The refusals above must not be an accident of "nothing is installed". These
 # two run against a populated prefix and assert the files are still there

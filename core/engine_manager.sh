@@ -71,6 +71,20 @@ function switch_core() {
         return 1
     fi
 
+    # Gate before anything is removed. `rm -rf "$HOME/klipper"` below is
+    # harmless when that path is a symlink into a repo — which is the case the
+    # engine switcher creates — but it is a real deletion when the user has a
+    # plain Klipper checkout there, which is what every non-switched
+    # installation has. Switching engines then destroys the working tree,
+    # including any local modifications, with no prompt anywhere on the path
+    # from the settings menu to here.
+    if ! katana_confirm_destructive \
+        "  Engine auf '$target' umstellen? ~/klipper und ~/klippy-env werden ersetzt. [y/N]: " \
+        overwrite; then
+        log_info "Engine-Wechsel abgebrochen — nichts veraendert."
+        return 1
+    fi
+
     # 1. Stop Service
     exec_silent "Stopping Klipper Service" "sudo systemctl stop klipper"
 
