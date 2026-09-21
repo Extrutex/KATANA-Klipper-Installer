@@ -325,9 +325,22 @@ function update_klipper_only() {
     log_info "Building Klipper Firmware..."
     make -j"$(nproc)"
     
+    # An MCU flash hidden inside a menu entry called "Klipper Only — Firmware".
+    # Nothing on the way here said a board would be written to: the operator
+    # picked "update", and the update reflashed whatever MCU answered on USB,
+    # mid-print if one was running. The flash is now a separate decision from
+    # the update, and declining it still leaves the host updated.
+    if ! katana_confirm_destructive \
+        "  Gebaute Firmware jetzt auf den MCU flashen? [y/N]: " flash; then
+        log_info "Klipper aktualisiert und gebaut. Firmware NICHT geflasht."
+        log_info "Flashen spaeter ueber FORGE -> Build & Flash."
+        katana_pause "  Drücke Enter..."
+        return 0
+    fi
+
     log_info "Attempting to flash (assuming USB/default make flash)..."
     sudo make flash || log_warn "Automated flash failed or not applicable."
-    
+
     katana_pause "  Drücke Enter..."
 }
 

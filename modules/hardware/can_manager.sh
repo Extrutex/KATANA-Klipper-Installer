@@ -218,15 +218,31 @@ EOF
     echo "  (Hold BOOT button + press RESET)"
     katana_pause "  Press Enter when ready..."
     
+    # Same defect as katapult_manager: the "PUT MCU IN DFU MODE" pause reads
+    # like a confirmation and is not one, so unattended this reached dfu-util
+    # and rewrote flash at 0x08000000 on any board in DFU mode.
+    if ! katana_confirm_destructive "  Katapult-Bootloader jetzt flashen? [y/N]: " flash; then
+        log_info "Flash abgebrochen — Board unveraendert."
+        return 1
+    fi
+
     log_info "Flashing bootloader..."
     if [[ "$board" == "sb2209_rp2040" ]]; then
         log_warn "RP2040: Use mass storage copy instead."
         echo "  File: $katapult_dir/out/katapult.uf2"
-    else
-        sudo dfu-util -a 0 -d 0483:df11 -D out/katapult.bin -s 0x08000000:leave
+        katana_pause "  Press Enter..."
+        return 0
     fi
-    
-    [ $? -eq 0 ] && draw_success "Katapult installed successfully!" || log_error "Flash failed!"
+
+    # Tested directly instead of via `[ $? -eq 0 ]` two lines later, which read
+    # the status of the preceding `fi` on the RP2040 branch and always said 0.
+    if sudo dfu-util -a 0 -d 0483:df11 -D out/katapult.bin -s 0x08000000:leave; then
+        draw_success "Katapult installed successfully!"
+    else
+        log_error "Flash failed!"
+        katana_pause "  Press Enter..."
+        return 1
+    fi
     katana_pause "  Press Enter..."
 }
 

@@ -86,6 +86,12 @@ EOF
 }
 
 function disable_auto_restart() {
+    # Deletes systemd drop-in directories under /etc. Reversible by re-running
+    # the enable path, but it silently changes how a printer behaves after a
+    # crash, so it is not something an unattended run should decide.
+    if ! katana_confirm_destructive "  Auto-Restart fuer alle Dienste deaktivieren? [y/N]: " reset; then
+        return 1
+    fi
     log_info "Disabling auto-restart for all services..."
     
     for service in klipper moonraker crowsnest KlipperScreen; do

@@ -283,6 +283,9 @@ function uninstall_all_ui() {
 }
 
 function do_remove_ui() {
+    # Had no confirmation at all, while the three functions above it did —
+    # and it deletes the same directories they do.
+    if ! katana_confirm_destructive "  Mainsail und Fluidd entfernen? [y/N]: " uninstall; then return 1; fi
     log_info "Removing UI..."
     rm -rf "$HOME/mainsail" "$HOME/fluidd"
     log_success "UI Removed."

@@ -76,6 +76,7 @@ function do_install_klipperscreen() {
 }
 
 function do_remove_crowsnest() {
+    if ! katana_confirm_destructive "  Crowsnest entfernen? [y/N]: " uninstall; then return 1; fi
     log_info "Removing Crowsnest..."
     cd "$HOME/crowsnest" 2>/dev/null && make uninstall
     rm -rf "$HOME/crowsnest"
@@ -84,6 +85,7 @@ function do_remove_crowsnest() {
 }
 
 function do_remove_klipperscreen() {
+    if ! katana_confirm_destructive "  KlipperScreen entfernen? [y/N]: " uninstall; then return 1; fi
     log_info "Removing KlipperScreen..."
     cd "$HOME/KlipperScreen" 2>/dev/null && make uninstall
     rm -rf "$HOME/KlipperScreen"

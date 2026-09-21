@@ -81,8 +81,17 @@ function flash_katapult_dfu() {
     echo ""
     katana_pause "  Press Enter when ready..."
     
-    cd "$KATAPULT_DIR" || return
-    
+    cd "$KATAPULT_DIR" || return 1
+
+    # The pause above ("Press Enter when ready") is not consent — it returns 0
+    # unconditionally by contract, so unattended this function walked straight
+    # into `make flash` and overwrote the bootloader of whatever board happened
+    # to be in DFU mode. This is the gate.
+    if ! katana_confirm_destructive "  Katapult-Bootloader jetzt flashen? [y/N]: " flash; then
+        log_info "Flash abgebrochen — Board unveraendert."
+        return 1
+    fi
+
     log_info "Flashing via DFU..."
     if make flash; then
         log_success "Katapult geflasht!"
