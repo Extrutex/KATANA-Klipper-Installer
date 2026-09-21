@@ -256,8 +256,19 @@ done
 if [[ -n "$HATCH_DIR" && -f "$HATCH_DIR/hatch.sh" ]]; then
     source "$HATCH_DIR/hatch.sh"
 else
+    # Fallback stub. The message names the resolution paths that are actually
+    # implemented above — there is no `install.sh --hatch`, and KATANA does not
+    # install HATCH: HATCH is the hardware/board authority and owns its own
+    # provisioning (see CLAUDE.md, responsibility matrix).
     function init_hatch_menu() {
-        log_error "HATCH ist nicht verfuegbar. Setze KATANA_HATCH_REPO_DIR=/pfad/zu/HATCH oder installiere HATCH (bash install.sh --hatch)."
+        log_error "HATCH ist nicht verfuegbar (Firmware-/Board-Funktionen sind deaktiviert)."
+        log_info  "HATCH wird in dieser Reihenfolge gesucht:"
+        log_info  "  1. $KATANA_ROOT/hatch/hatch.sh            (eingebettet)"
+        log_info  "  2. \$KATANA_HATCH_REPO_DIR/hatch.sh        (externes Repo)"
+        log_info  "  3. $HOME/.local/share/katana/hatch/hatch.sh  (managed)"
+        log_info  "Vorgehen: HATCH klonen und den Pfad setzen, z.B."
+        log_info  "  export KATANA_HATCH_REPO_DIR=/pfad/zu/HATCH && ./katanaos.sh"
+        return 1
     }
 fi
 
