@@ -94,9 +94,7 @@ function vault_restore() {
         local target="${backups[$((choice-1))]}"
         log_warn "You are about to restore: $(basename "$target")"
         log_warn "Current config will be OVERWRITTEN."
-        read -r -p "  Are you sure? (y/N): " confirm
-        
-        if [[ "$confirm" =~ ^[yY]$ ]]; then
+        if katana_confirm_destructive "  Are you sure? (y/N): " restore; then
             log_info "Restoring..."
             check_dependency "unzip" "unzip"
             

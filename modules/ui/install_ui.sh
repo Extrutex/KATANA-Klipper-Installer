@@ -240,8 +240,10 @@ function do_install_fluidd() {
 function uninstall_mainsail() {
     draw_header "UNINSTALL MAINSAIL"
     echo ""
-    # Destructive and never implied by --yes: without a human, the answer is no.
-    if ! katana_confirm "  Uninstall Mainsail? [y/N]: " no; then return 0; fi
+    # Destructive and never implied by --yes. Phase 0 gave this a defaulted
+    # "no"; it now refuses out loud, like every other uninstall path, so an
+    # unattended caller learns why nothing was removed.
+    if ! katana_confirm_destructive "  Uninstall Mainsail? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing Mainsail..."
     rm -rf "$HOME/mainsail"
@@ -254,8 +256,8 @@ function uninstall_mainsail() {
 function uninstall_fluidd() {
     draw_header "UNINSTALL FLUIDD"
     echo ""
-    # Destructive and never implied by --yes: without a human, the answer is no.
-    if ! katana_confirm "  Uninstall Fluidd? [y/N]: " no; then return 0; fi
+    # Same rule as uninstall_mainsail.
+    if ! katana_confirm_destructive "  Uninstall Fluidd? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing Fluidd..."
     rm -rf "$HOME/fluidd"
@@ -268,8 +270,8 @@ function uninstall_fluidd() {
 function uninstall_all_ui() {
     draw_header "UNINSTALL ALL UIs"
     echo ""
-    # Destructive and never implied by --yes: without a human, the answer is no.
-    if ! katana_confirm "  Uninstall ALL web interfaces? [y/N]: " no; then return 0; fi
+    # Same rule as uninstall_mainsail.
+    if ! katana_confirm_destructive "  Uninstall ALL web interfaces? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing all UIs..."
     rm -rf "$HOME/mainsail" "$HOME/fluidd" "$HOME/horizon"

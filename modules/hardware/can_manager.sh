@@ -37,8 +37,7 @@ function setup_can_network() {
     echo "  - Bitrate: $bitrate"
     echo "  - TX Queue Length: $txqueuelen"
     echo ""
-    read -r -p "  Write configuration? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    if ! katana_confirm_destructive "  Write configuration? [y/N]: " overwrite; then return 1; fi
 
     # Ensure ifupdown is installed (required for /etc/network/interfaces on Bookworm)
     if ! command -v ifup &> /dev/null; then
@@ -250,8 +249,7 @@ function flash_via_katapult_wizard() {
     
     if [ ${#uuids[@]} -eq 0 ]; then
         log_warn "No CAN devices found in flash mode."
-        read -r -p "  Enter UUID manually? [y/N]: " yn
-        if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+        if ! katana_confirm "  Enter UUID manually? [y/N]: " no; then return; fi
         # Same rule as flash_via_can: a UUID names which board gets
         # overwritten and is never defaulted.
         katana_read_value selected_uuid "  UUID: " "" \
@@ -279,19 +277,30 @@ function flash_via_katapult_wizard() {
         selected_uuid="${uuids[$((choice-1))]}"
     fi
     
-    if [ -z "$selected_uuid" ]; then return; fi
-    
+    if [ -z "$selected_uuid" ]; then return 1; fi
+
     echo ""
+    # The gate that was missing entirely. Every other branch above now asks
+    # something, but the single-device branch does not: with exactly one board
+    # in Katapult mode, the scan picked it and the flash started with no
+    # confirmation at all. Unattended that is a board erased because it
+    # happened to be the only one plugged in. The gate sits here rather than in
+    # the branches so all three paths pass through it.
+    if ! katana_confirm_destructive \
+        "  ${selected_uuid} jetzt mit ${firmware} flashen? [y/N]: " flash; then
+        log_info "Flash abgebrochen — Board unveraendert."
+        return 1
+    fi
+
     log_info "Flashing $firmware to $selected_uuid..."
-    python3 "$HOME/katapult/scripts/flashtool.py" -i can0 -u "$selected_uuid" -f "$firmware"
-    
-    if [ $? -eq 0 ]; then
+    # `if [ $? -eq 0 ]` on the line after was already fragile; the call is
+    # tested directly so nothing can come between it and its status.
+    if python3 "$HOME/katapult/scripts/flashtool.py" -i can0 -u "$selected_uuid" -f "$firmware"; then
         draw_success "FLASH SUCCESSFUL!"
         echo ""
         echo -e "${C_CYAN}UUID: $selected_uuid${NC}"
         echo ""
-        read -r -p "  Add this UUID to printer.cfg? [y/N]: " inject_yn
-        if [[ "$inject_yn" =~ ^[yY]$ ]]; then
+        if katana_confirm_destructive "  Add this UUID to printer.cfg? [y/N]: " overwrite; then
             # 2. Select target instance
             local instances=($(ls -d $HOME/printer_data* 2>/dev/null))
             if [ ${#instances[@]} -eq 1 ]; then

@@ -187,8 +187,7 @@ function remove_toolchanger() {
     echo "  Files to remove:"
     ls "$macro_dir/" 2>/dev/null
     echo ""
-    read -r -p "  Remove all toolchanger configs? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Remove all toolchanger configs? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing toolchanger macros..."
     rm -rf "$macro_dir"

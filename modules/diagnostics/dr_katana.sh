@@ -45,8 +45,7 @@ function run_healer() {
     echo "    - Fix ownership/permissions on printer_data, klipper, moonraker"
     echo "    - Reload systemd and restart core services"
     echo ""
-    if ! read -r -p "  Run Auto-Healer now? [y/N]: " yn; then return; fi
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Run Auto-Healer now? [y/N]: " repair; then return 1; fi
 
     # 1. Permissions
     log_info "Fixing ownership & permissions..."

@@ -43,8 +43,9 @@ function run_quick_build_menu() {
         b|B) return ;;
         *) 
             echo ""
-            echo "  Invalid selection. Press Enter to continue."
-            read
+            # Bare `read` with the prompt in the preceding echo — a pause the
+            # `read -p` inventory could not see. Same class, same treatment.
+            katana_pause "  Invalid selection. Press Enter to continue."
             ;;
     esac
 }

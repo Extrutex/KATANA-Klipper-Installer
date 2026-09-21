@@ -45,8 +45,7 @@ function do_install_flow() {
     echo "    FLOW_PURGE  — X-Blade cross purge pattern"
     echo "    FLOW_END    — Retract, Present, Cooldown (replaces END_PRINT)"
     echo ""
-    read -r -p "  Install? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    if ! katana_confirm "  Install? [y/N]: " no; then return; fi
     
     local cfg_dir="$HOME/printer_data/config"
     local flow_dir="$cfg_dir/katana_flow"
@@ -101,9 +100,7 @@ function do_install_flow() {
 function do_remove_flow() {
     draw_header "REMOVE KATANA-FLOW"
     echo ""
-    read -r -p "  Remove KATANA-FLOW completely? [y/N]: " yn
-    
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    if ! katana_confirm_destructive "  Remove KATANA-FLOW completely? [y/N]: " uninstall; then return 1; fi
     
     local cfg_dir="$HOME/printer_data/config"
     local flow_dir="$cfg_dir/katana_flow"

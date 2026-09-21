@@ -617,8 +617,7 @@ function dispatch_klipperscreen() {
     draw_header "KLIPPERSCREEN"
     echo "  KlipperScreen is a touchscreen UI for Klipper."
     echo ""
-    read -r -p "  Install KlipperScreen? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm "  Install KlipperScreen? [y/N]: " no; then return; fi
     
     if [ -d "$HOME/KlipperScreen" ]; then
         log_warn "KlipperScreen already installed."

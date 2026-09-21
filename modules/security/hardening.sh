@@ -37,8 +37,7 @@ function install_security_stack() {
     echo "  ${C_RED}[!] WARNING:${NC} Configuring a firewall via SSH carries a risk."
     echo "  We have implemented safety checks, but please be careful."
     echo ""
-    read -r -p "  Proceed with Firewall Setup? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm "  Proceed with Firewall Setup? [y/N]: " no; then return; fi
     
     # 1. Install UFW
     log_info "Installing UFW..."
@@ -96,8 +95,7 @@ function install_fail2ban() {
     draw_header "INSTALL FAIL2BAN"
     echo "  Protect SSH against brute-force attacks."
     echo ""
-    read -r -p "  Install Fail2Ban? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm "  Install Fail2Ban? [y/N]: " no; then return; fi
     
     log_info "Installing Fail2Ban..."
     sudo apt-get update

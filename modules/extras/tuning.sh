@@ -25,8 +25,7 @@ function install_shaketune() {
     
     if [ -d "$install_dir" ]; then
         log_warn "ShakeTune already exists."
-        read -r -p "  Reinstall? [y/N]: " yn
-        if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+        if ! katana_confirm_destructive "  Reinstall? [y/N]: " reinstall; then return 1; fi
         rm -rf "$install_dir"
     fi
     
@@ -66,8 +65,7 @@ function remove_shaketune() {
         return
     fi
     
-    read -r -p "  Remove ShakeTune completely? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    if ! katana_confirm_destructive "  Remove ShakeTune completely? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing ShakeTune..."
     rm -rf "$install_dir" "$venv_dir"
@@ -87,8 +85,7 @@ function install_log2ram() {
     
     if dpkg -s log2ram >/dev/null 2>&1; then
         log_warn "Log2Ram is already installed."
-        read -r -p "  Reinstall? [y/N]: " yn
-        if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+        if ! katana_confirm_destructive "  Reinstall? [y/N]: " reinstall; then return 1; fi
     fi
     
     log_info "Adding Repository..."
@@ -116,8 +113,7 @@ function remove_log2ram() {
         return
     fi
     
-    read -r -p "  Remove Log2Ram? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Remove Log2Ram? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing Log2Ram..."
     sudo apt-get remove -y log2ram
@@ -132,8 +128,7 @@ function run_octoprint_install() {
     draw_header "INSTALL OCTOPRINT"
     echo "  OctoPrint — alternative web interface (runs alongside Moonraker)."
     echo ""
-    read -r -p "  Install OctoPrint? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm "  Install OctoPrint? [y/N]: " no; then return; fi
 
     if [ -d "$HOME/OctoPrint" ]; then
         log_warn "OctoPrint is already installed."

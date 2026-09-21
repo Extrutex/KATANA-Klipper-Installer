@@ -93,8 +93,7 @@ function push_config_to_git() {
     if [ ! -d "$config_dir/.git" ]; then
         log_warn "No Git repository found in $config_dir"
         echo "  Would you like to initialize one?"
-        read -r -p "  [y/N]: " yn
-        if [[ "$yn" =~ ^[yY] ]]; then
+        if katana_confirm "  [y/N]: " no; then
             cd "$config_dir" || return 1
             git init
             git add .
@@ -162,11 +161,12 @@ function restore_backup() {
     echo ""
     log_warn "WARNING: This will OVERWRITE your current configuration!"
     echo "  Restoring: $backup_name"
-    read -r -p "  Type 'RESTORE' to confirm: " confirm
-    
-    if [ "$confirm" != "RESTORE" ]; then
+    # The typed token is kept, not downgraded to a keystroke: the friction is
+    # the feature. katana_confirm_destructive demands the exact string from a
+    # human and refuses outright without one.
+    if ! katana_confirm_destructive "  Type 'RESTORE' to confirm: " restore "RESTORE"; then
         log_info "Restore cancelled."
-        return
+        return 1
     fi
     
     log_info "Stopping services..."

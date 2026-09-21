@@ -93,8 +93,7 @@ function add_new_instance() {
     echo "  - Port:      $next_port"
     echo "  - Service:   klipper-$next_num / moonraker-$next_num"
     echo ""
-    read -r -p "  Create? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    if ! katana_confirm "  Create? [y/N]: " no; then return; fi
 
     local data_dir="$HOME/printer_data_$next_num"
     local k_svc="klipper-$next_num"
@@ -157,8 +156,12 @@ function remove_instance() {
     fi
 
     echo -e "${C_RED}!!! WARNING: This will delete all configs and service files for $name !!!${NC}"
-    read -r -p "  Confirm? Type 'DELETE': " confirm
-    if [ "$confirm" != "DELETE" ]; then return; fi
+    # Typed token preserved for the same reason as the restore path: what
+    # follows is `rm -rf "$target"` plus systemd unit removal.
+    if ! katana_confirm_destructive "  Confirm? Type 'DELETE': " delete "DELETE"; then
+        log_info "Abgebrochen — Instanz '$name' unveraendert."
+        return 1
+    fi
 
     log_info "Removing services..."
     local k_svc="klipper"; local m_svc="moonraker"

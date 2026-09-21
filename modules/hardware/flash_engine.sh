@@ -157,8 +157,7 @@ function run_hal_flasher() {
                     echo "  ${C_ORANGE}│${NC}  ${C_GREEN}→ Nächster Schritt: KLIPPER BAUEN & FLASHEN${NC}"
                     echo "  ${C_ORANGE}└────────────────────────────────────────────────┘${NC}"
                     echo ""
-                    read -r -p "  Klipper-Flash jetzt fortsetzen? [Y/n]: " resume
-                    if [[ ! "$resume" =~ ^[nN] ]]; then
+                    if katana_confirm_destructive "  Klipper-Flash jetzt fortsetzen? [y/N]: " flash; then
                         run_build_and_flash
                         continue
                     fi
@@ -168,8 +167,7 @@ function run_hal_flasher() {
                     echo "  ${C_ORANGE}│${NC}  ${C_GREEN}→ Nächster Schritt: FIRMWARE FLASHEN${NC}"
                     echo "  ${C_ORANGE}└────────────────────────────────────────────────┘${NC}"
                     echo ""
-                    read -r -p "  Flash-Vorgang jetzt fortsetzen? [Y/n]: " resume
-                    if [[ ! "$resume" =~ ^[nN] ]]; then
+                    if katana_confirm_destructive "  Flash-Vorgang jetzt fortsetzen? [y/N]: " flash; then
                         run_build_and_flash
                         continue
                     fi
@@ -338,8 +336,7 @@ function run_mcu_update_all() {
         ( katana_load_board_meta "$meta"; echo "    - $BOARD_NAME ($ARCH)" )
     done
     echo ""
-    if ! read -r -p "  Proceed with ALL? [y/N]: " yn; then return; fi
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Proceed with ALL? [y/N]: " flash; then return 1; fi
 
     for meta in "${configs[@]}"; do
         log_info "═══ Updating $(basename "$meta" .meta) ═══"
@@ -371,8 +368,7 @@ function build_and_flash_saved() {
     echo "  Configuration loaded."
     echo "  Ready to build and flash using method: $FLASH_METHOD"
     echo ""
-    if ! read -r -p "  Start Build? [Y/n]: " yn; then return; fi
-    if [[ "$yn" =~ ^[nN] ]]; then return; fi
+    if ! katana_confirm_destructive "  Start Build? [y/N]: " flash; then return 1; fi
     
     # Build
     log_info "Building..."
@@ -445,9 +441,7 @@ function delete_saved_board() {
     
     echo ""
     echo -e "  ${C_RED}WARNING: This will delete '$BOARD_NAME' permanently.${NC}"
-    if ! read -r -p "  Are you sure? [y/N]: " yn; then return; fi
-    
-    if [[ "$yn" =~ ^[yY] ]]; then
+    if katana_confirm_destructive "  Are you sure? [y/N]: " delete; then
         rm "$meta" "$config_file" 2>/dev/null
         log_success "Board deleted."
         sleep 1
@@ -476,14 +470,15 @@ function run_build_and_flash() {
     log_info "Pre-Flight Check..."
     if systemctl is-active --quiet klipper 2>/dev/null; then
         log_warn "Klipper läuft. Muss gestoppt werden vor dem Flash."
-        read -r -p "  Klipper jetzt stoppen? [Y/n]: " yn
-        if [[ ! "$yn" =~ ^[nN] ]]; then
+        if katana_confirm_destructive "  Klipper jetzt stoppen? [y/N]: " flash; then
             sudo systemctl stop klipper
             log_success "Klipper gestoppt."
         else
+            # `return` (0) here reported "phase 1 complete" for a run that
+            # stopped before doing anything — the same lie about its own
+            # outcome that this branch exists to remove.
             log_error "Abbruch: Klipper blockiert die MCU-Verbindung."
-            sleep 2
-            return
+            return 1
         fi
     else
         log_success "Klipper ist bereits gestoppt."
@@ -534,8 +529,7 @@ function run_build_and_flash() {
     echo ""
     echo "  2c) Firmware kompilieren"
     echo "  ─────────────────────────────────────────"
-    if ! read -r -p "  Kompilierung starten? [Y/n]: " yn; then return; fi
-    if [[ "$yn" =~ ^[nN] ]]; then return; fi
+    if ! katana_confirm_destructive "  Kompilierung starten? [y/N]: " flash; then return 1; fi
     
     log_info "Alte Build-Dateien entfernen..."
     make clean > /dev/null
@@ -562,8 +556,7 @@ function run_build_and_flash() {
     # 3a) Config speichern
     echo "  3a) Board-Konfiguration speichern"
     echo "  ─────────────────────────────────────────"
-    read -r -p "  Config für spätere Updates speichern? [y/N]: " save_yn
-    if [[ "$save_yn" =~ ^[yY] ]]; then
+    if katana_confirm "  Config für spätere Updates speichern? [y/N]: " no; then
         save_board_config
     fi
 
@@ -777,8 +770,7 @@ function run_linux_wizard() {
     echo "  This will compile & install Klipper for the Raspberry Pi itself."
     echo "  No configuration needed - fully automatic."
     echo ""
-    read -r -p "  Start? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Start? [y/N]: " flash; then return 1; fi
 
     cd ~/klipper || { log_error "Klipper directory not found"; return 1; }
 
@@ -839,10 +831,18 @@ function flash_rp2040() {
 
     if [ -n "$rp2_mount" ]; then
         log_success "Found RP2040 at: $rp2_mount"
-        read -r -p "  Copy firmware now? [Y/n]: " yn
-        if [[ ! "$yn" =~ ^[nN] ]]; then
-            cp out/klipper.uf2 "$rp2_mount/" && log_success "Firmware copied! Board will reboot."
+        # Copying the .uf2 onto the mounted RP2040 IS the flash — the board
+        # reboots into the new firmware the moment the write completes. It is
+        # gated as a flash and its outcome is reported, because a caller that
+        # sees 0 here is entitled to believe the board is running new firmware.
+        if ! katana_confirm_destructive "  Copy firmware now? [y/N]: " flash; then
+            return 1
         fi
+        if ! cp out/klipper.uf2 "$rp2_mount/"; then
+            log_error "Kopieren nach $rp2_mount fehlgeschlagen."
+            return 1
+        fi
+        log_success "Firmware copied! Board will reboot."
     else
         echo "  ${C_YELLOW}RP2040 not detected as USB drive.${NC}"
         echo "  Put board in BOOTSEL mode and try again,"
