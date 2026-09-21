@@ -81,12 +81,24 @@ export INSTALL_PROFILE
 # 1. ERROR HANDLING & VALIDATION
 # ==============================================================================
 
-# Globaler Error Trap: Fängt alle unerwarteten Abstürze ab
+# Globaler Error Trap: Faengt unerwartete Abstuerze waehrend der LADEPHASE ab.
+#
+# Scope note, because both productive paths switch this off further down and
+# that reads like an oversight: this trap covers the window between here and
+# main() — sourcing the core and optional modules, and argument parsing. In
+# that window any non-zero status really is unexpected and aborting is right.
+#
+# It is NOT the error handling of the two productive paths:
+#   - the unattended path replaces it with checked returns and per-step
+#     `set -euo pipefail` (see main(), and headless_run_step in core/headless.sh)
+#   - the interactive loop replaces it with per-command log_error, because a
+#     submenu returning 1 (a cancelled install) must not kill the session
+# Both are argued at their respective `trap - ERR`.
 error_trap() {
     local exit_code=$?
-    local line_no=$1
-    echo -e "\n\033[38;5;196m[CRITICAL ERROR] Das Skript ist unerwartet in Zeile ${line_no} mit Exit-Code ${exit_code} abgestürzt!\033[0m"
-    echo "Bitte überprüfe die Log-Datei: $LOG_FILE"
+    local line_no="${1:-?}"
+    echo -e "\n\033[38;5;196m[CRITICAL ERROR] Das Skript ist unerwartet in Zeile ${line_no} mit Exit-Code ${exit_code} abgestürzt!\033[0m" >&2
+    echo "Bitte überprüfe die Log-Datei: ${LOG_FILE:-<nicht gesetzt>}" >&2
     exit "$exit_code"
 }
 trap 'error_trap $LINENO' ERR
@@ -263,11 +275,36 @@ main() {
     # 1b. Unbeaufsichtigter Lauf: kein Menue, kein Prompt, sprechender Exit-Code.
     #     Der Env-Check laeuft in run_headless_install, damit --dry-run auch auf
     #     einer Nicht-Zielplattform den Plan ausgeben kann.
+    #
+    # Why the ERR trap is disarmed here, and what replaces it:
+    #
+    # A generic ERR trap and an exit-code contract cannot both own the status of
+    # this call. error_trap prints a crash banner and exits with whatever code
+    # fired it, while run_headless_install returns 0/1/2/3 as its documented
+    # API. With the trap armed, a deliberate refusal ("--yes missing", exit 3)
+    # reaches the operator as "Das Skript ist unerwartet abgestuerzt" — the tool
+    # would lie about its own behaviour. So disarming is correct.
+    #
+    # What was wrong was disarming it without putting anything in its place:
+    # the entire unattended install then ran with no error handling at all,
+    # which is how a failed step could reach `log_success`. The replacement is
+    # not another trap but checked returns, which catch strictly more:
+    #
+    #   - each step runs in a subshell under `set -euo pipefail`
+    #     (headless_run_step), so an unchecked command failure inside a legacy
+    #     install function aborts that step instead of falling through to its
+    #     closing success message
+    #   - each step's status is checked and the failing step is named on stderr
+    #   - the run's status is the documented exit code, produced in one place
+    #
+    # A crash reporter firing on those same conditions would add a banner and
+    # take away the exit code. It is not reinstated for that reason.
     if [[ "$HEADLESS_MODE" == "1" ]]; then
         trap - ERR
+        local headless_rc=0
         run_headless_install "$INSTALL_PROFILE" "$HEADLESS_UI" \
-            "$HEADLESS_CONFIRMED" "$HEADLESS_DRY_RUN"
-        exit $?
+            "$HEADLESS_CONFIRMED" "$HEADLESS_DRY_RUN" || headless_rc=$?
+        exit "$headless_rc"
     fi
 
     # 2. System initialisieren (Root-Check & Env-Validation)
