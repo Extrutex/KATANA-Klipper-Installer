@@ -60,12 +60,19 @@ OPT_MODULES=(
 echo ""
 echo "═══ TEST 1: SYNTAX CHECK (bash -n) ═══"
 SYNTAX_OK=1
+# A fixed path under /tmp was used here. Two problems, both real: on a shared
+# or containerised host the file may already exist owned by another uid, and
+# then every single syntax check "fails" with a redirection error instead of a
+# result — observed, and it reported 40 phantom syntax errors. And a predictable
+# name in a world-writable directory is a symlink target waiting to happen.
+SYN_ERR="$(mktemp "${TMPDIR:-/tmp}/katana-syn.XXXXXX")"
+trap 'rm -f "$SYN_ERR"' EXIT
 while IFS= read -r f; do
-    if bash -n "$f" 2>/tmp/katana_syn.err; then
+    if bash -n "$f" 2>"$SYN_ERR"; then
         :
     else
         fail "Syntaxfehler: ${f#$KATANA_ROOT/}"
-        sed 's/^/        /' /tmp/katana_syn.err
+        sed 's/^/        /' "$SYN_ERR"
         SYNTAX_OK=0
     fi
 done < <(find "$KATANA_ROOT" -name '*.sh' -not -path '*/.git/*')

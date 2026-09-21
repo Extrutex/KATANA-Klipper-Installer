@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# KATANA — INTERACTION PROBE HARNESS
+# ------------------------------------------------------------------------------
+# Loads the full module chain into a throwaway prefix and calls ONE function,
+# then prints a single machine-readable line:
+#
+#     PROBE <function> rc=<exit code>
+#
+# Invoked by tests/test_interaction_sweep.sh, once per function, under
+# `timeout`. It is a separate file because each probe must run in its own
+# process: the functions under test call `return` at depths the caller cannot
+# unwind, several of them `cd`, and a hang in one must not take the suite down
+# with it.
+#
+# Usage:  interaction_probe_harness.sh <function> [args...]
+#
+# Environment the caller is expected to set:
+#   KATANA_NONINTERACTIVE   1 for the unattended case, unset for the pty case
+#   KATANA_ALLOW_DESTRUCTIVE  operation allow-list, when testing the switch
+#   PROBE_CALLLOG           file the command stubs append to
+# ==============================================================================
+
+set -uo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export KATANA_ROOT="$REPO_ROOT"
+export CORE_DIR="$REPO_ROOT/core"
+export MODULES_DIR="$REPO_ROOT/modules"
+export CONFIGS_DIR="$REPO_ROOT/configs"
+export KATANA_VERSION="probe"
+export INSTALL_PROFILE="standard"
+export TERM="${TERM:-dumb}"
+
+# A prefix that is not the developer's home. Everything the functions under
+# test touch below $HOME lands here and dies with the process.
+PROBE_HOME="$(mktemp -d "${TMPDIR:-/tmp}/katana-probe.XXXXXX")"
+export HOME="$PROBE_HOME"
+export LOG_FILE="$PROBE_HOME/katana.log"
+trap 'rm -rf "$PROBE_HOME"' EXIT
+
+# Minimal plausible installation, so the functions reach their prompt instead
+# of returning early on "Klipper is not installed".
+mkdir -p "$PROBE_HOME/klipper/out" \
+         "$PROBE_HOME/printer_data/config" \
+         "$PROBE_HOME/katapult/scripts" \
+         "$PROBE_HOME/printer_data/config/katana_boards"
+: > "$PROBE_HOME/klipper/out/klipper.bin"
+: > "$PROBE_HOME/klipper/out/klipper.uf2"
+: > "$PROBE_HOME/klipper/.config"
+printf '[printer]\nkinematics: none\n' > "$PROBE_HOME/printer_data/config/printer.cfg"
+
+# A saved board, for the registry-driven paths.
+cat > "$PROBE_HOME/printer_data/config/katana_boards/probe_board.meta" <<'META'
+BOARD_NAME="probe_board"
+ARCH="stm32"
+FLASH_METHOD="usb"
+LAST_BUILT="1970-01-01"
+META
+: > "$PROBE_HOME/printer_data/config/katana_boards/probe_board.config"
+
+# A backup archive, so restore_backup reaches its RESTORE confirmation instead
+# of returning early on "no backups found". The file only has to exist and be
+# listed; the gate fires before anything reads it.
+mkdir -p "$PROBE_HOME/katana_backups"
+: > "$PROBE_HOME/katana_backups/katana_backup_19700101_000000.zip"
+
+# ------------------------------------------------------------------------------
+# Command stubs.
+#
+# The assertion this suite is built on is not "the function returned 1" — a
+# function can return 1 after already erasing a board. It is "the flash tool was
+# never invoked". So every command capable of writing to hardware, to system
+# state or to the network is replaced by a stub that records the call and fails.
+#
+# Recording AND failing is deliberate: if a refusal ever regresses, the test
+# sees both the call log entry and a non-zero result, and the log says which
+# tool would have run.
+# ------------------------------------------------------------------------------
+STUBDIR="$PROBE_HOME/.stubs"
+mkdir -p "$STUBDIR"
+: "${PROBE_CALLLOG:=$PROBE_HOME/calls.log}"
+export PROBE_CALLLOG
+: > "$PROBE_CALLLOG"
+
+for cmd in dfu-util make sudo systemctl apt-get git picotool avrdude \
+           stm32flash ip ifup ifdown modprobe curl wget dpkg; do
+    cat > "$STUBDIR/$cmd" <<STUB
+#!/usr/bin/env bash
+printf '%s %s\n' "$cmd" "\$*" >> "\$PROBE_CALLLOG"
+exit 87
+STUB
+    chmod +x "$STUBDIR/$cmd"
+done
+
+# python3 is needed for real (the Python core and the meta parser use it), so it
+# is wrapped rather than stubbed: only flashtool.py / flash_can.py invocations
+# are intercepted, everything else is passed through.
+REAL_PYTHON3="$(command -v python3 || true)"
+cat > "$STUBDIR/python3" <<STUB
+#!/usr/bin/env bash
+for arg in "\$@"; do
+    case "\$arg" in
+        *flashtool.py|*flash_can.py)
+            printf 'flashtool %s\n' "\$*" >> "\$PROBE_CALLLOG"
+            exit 87
+            ;;
+    esac
+done
+exec "$REAL_PYTHON3" "\$@"
+STUB
+chmod +x "$STUBDIR/python3"
+
+export PATH="$STUBDIR:$PATH"
+
+# ------------------------------------------------------------------------------
+# Load the chain in katanaos.sh's order.
+# ------------------------------------------------------------------------------
+for m in core/logging.sh core/interaction.sh core/ui_renderer.sh core/env_check.sh \
+         core/engine_manager.sh core/dispatchers.sh core/headless.sh \
+         core/service_manager.sh; do
+    # shellcheck disable=SC1090
+    source "$REPO_ROOT/$m" || { echo "PROBE load-error $m"; exit 90; }
+done
+for m in "$REPO_ROOT"/modules/*/*.sh; do
+    # shellcheck disable=SC1090
+    source "$m" 2>/dev/null || true
+done
+
+FN="${1:?function name required}"
+shift || true
+
+if ! declare -f "$FN" > /dev/null; then
+    echo "PROBE $FN rc=91 (not defined)"
+    exit 91
+fi
+
+rc=0
+"$FN" "$@" || rc=$?
+echo "PROBE $FN rc=$rc"
+exit 0
