@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# katana_is_interactive() lives in core/interaction.sh, which katanaos.sh
+# sources before this file. The guard is for the isolated case — tests and
+# tooling that load env_check.sh on its own — so a missing primitive is a
+# resolvable dependency rather than a "command not found" mid-preflight.
+if ! declare -f katana_is_interactive > /dev/null 2>&1; then
+    _katana_env_check_dir="${CORE_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+    if [[ -f "$_katana_env_check_dir/interaction.sh" ]]; then
+        # shellcheck source=core/interaction.sh
+        source "$_katana_env_check_dir/interaction.sh"
+    fi
+    unset _katana_env_check_dir
+fi
+
 
 # Ensures a single command is available, installing its apt package if missing.
 # Usage: check_dependency <command> [apt_package]   (package defaults to command)
@@ -109,9 +122,31 @@ print(" ".join(sum((c.get("missing", []) for c in r["checks"]), [])))') || missi
 
     echo ""
     log_info "System is ready for KATANA."
-    sleep 1
+    # Same reason as in check_environment_bash below: the verdict is stated,
+    # not inherited from whatever cosmetic command happens to be last.
+    katana_is_interactive && sleep 1
+    return 0
 }
 
+# Preflight, Bash implementation.
+#
+# Returns 0 when the host is fit to install on, 1 when it is not. It does NOT
+# call exit, and that is the whole point of this function's contract:
+#
+# It used to. Three `exit 1` statements sat inside it — root check, dependency
+# install after a fatal finding, and the final verdict — and every one of them
+# killed the process from inside a sourced module function. Both call sites
+# already do the right thing with a return value (katanaos.sh aborts with its
+# own message, run_headless_install returns KATANA_EXIT_STEP_FAILED), and
+# neither ever got the chance: the module decided the process's fate before its
+# caller could translate it into the documented exit-code contract. A headless
+# run that failed preflight exited 1 by accident rather than by contract, and a
+# future caller wanting to try a second profile could not, because there was no
+# "after" to run in.
+#
+# `exit` from a module function is also what makes the function untestable:
+# a test harness sourcing this file cannot assert on a preflight verdict that
+# takes the test process down with it. See tests/test_headless_install.sh.
 function check_environment_bash() {
     draw_header "SYSTEM PREFLIGHT CHECK"
 
@@ -120,22 +155,38 @@ function check_environment_bash() {
     # 1. Root Check
     if [ "$EUID" -eq 0 ]; then
         log_error "Do NOT run KATANA as root. Run as regular user (e.g., pi/biqu)."
-        exit 1
+        return 1
     fi
 
     # 2. OS Check
     if [ -f /etc/os-release ]; then
+        # Sourced in a subshell-free context on purpose (the values are needed
+        # here), but the names it sets are NOT guaranteed: ID_LIKE is absent on
+        # plain Debian, and under `set -u` referencing it unguarded aborts the
+        # preflight on precisely the platform KATANA targets. The `${x:-}`
+        # defaults are what let this run under -u at all.
         . /etc/os-release
-        if [[ "$ID" != "debian" && "$ID" != "raspbian" && "$ID_LIKE" != *"debian"* ]]; then
-            log_warn "Unsupported OS detected: $ID. KATANA is optimized for Debian/Raspbian."
+        local os_id="${ID:-unknown}"
+        local os_id_like="${ID_LIKE:-}"
+        if [[ "$os_id" != "debian" && "$os_id" != "raspbian" && "$os_id_like" != *"debian"* ]]; then
+            log_warn "Unsupported OS detected: $os_id. KATANA is optimized for Debian/Raspbian."
             echo "  (Continuing anyway as requested by architecture)"
         fi
     fi
 
     # 3. Disk Space Check (>2GB required for compilation)
-    # Using df -h / to get available space
-    local available_space=$(df -BG / | awk 'NR==2 {print $4}' | tr -d 'G')
-    if [ "$available_space" -lt 2 ]; then
+    #
+    # Declaration and assignment are split (SC2155): `local x=$(...)` makes the
+    # exit status that of `local`, which is always 0, so a failing df was
+    # invisible. The value is then range-checked before it is compared —
+    # a non-numeric result (df unavailable, unexpected locale) used to make
+    # `[ "$x" -lt 2 ]` itself fail, which under `set -e` aborts the step with
+    # an arithmetic error instead of a readable verdict.
+    local available_space
+    available_space="$(df -BG / 2>/dev/null | awk 'NR==2 {print $4}' | tr -d 'G')"
+    if [[ ! "$available_space" =~ ^[0-9]+$ ]]; then
+        log_warn "Disk Space: could not be determined (df returned '${available_space}'). Skipping check."
+    elif [ "$available_space" -lt 2 ]; then
         log_error "Insufficient Disk Space! Only ${available_space}GB free. KATANA requires >2GB."
         fatal_error=1
     else
@@ -153,10 +204,15 @@ function check_environment_bash() {
     fi
 
     # 5. Time Synchronization Check
-    # Important for SSL/APT
-    local ntp_status=$(timedatectl show -p NTP --value)
-    local synced_status=$(timedatectl show -p NTPSynchronized --value)
-    
+    # Important for SSL/APT.
+    #
+    # timedatectl is absent in a container and on a host without systemd, where
+    # the unredirected call wrote an error to the terminal and, under `set -e`,
+    # aborted the whole preflight over a check that is explicitly non-fatal.
+    # ntp_status was assigned and never read; it is gone rather than silenced.
+    local synced_status
+    synced_status="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
+
     if [ "$synced_status" == "yes" ]; then
         log_success "System Time: Synced (OK)"
     else
@@ -175,20 +231,42 @@ function check_environment_bash() {
 
     if [ ${#missing[@]} -ne 0 ]; then
         log_warn "Missing dependencies: ${missing[*]}"
-        
+
         if [ $fatal_error -eq 1 ]; then
              log_error "Cannot install dependencies due to network/disk errors."
-             exit 1
+             return 1
         fi
 
         log_info "Attempting minimal install (requires sudo)..."
-        
-        # Simple check to avoid blocking prompt if sudo is not passwordless or user is not watching
+
+        # The two branches used to differ only in the message: both then ran a
+        # bare `sudo apt-get`, so the "no passwordless sudo" path printed a
+        # warning and immediately did the thing it had just warned about —
+        # opening a password prompt. On an unattended run that prompt has
+        # nobody to answer it and the provisioning blocks indefinitely, which
+        # is the same defect class this branch is closing for `read`.
+        #
+        # Passwordless sudo is therefore a precondition, not a preference, and
+        # its absence is reported as a refusal with the command the operator
+        # can run by hand.
         if sudo -n true 2>/dev/null; then
-             sudo apt-get update && sudo apt-get install -y "${missing[@]}"
+            if ! sudo -n apt-get update || ! sudo -n apt-get install -y "${missing[@]}"; then
+                log_error "Dependency installation failed. Check $LOG_FILE."
+                return 1
+            fi
+            log_success "Dependencies installed."
+        elif katana_is_interactive; then
+            echo "  [!] Sudo password required for dependency installation."
+            if ! sudo apt-get update || ! sudo apt-get install -y "${missing[@]}"; then
+                log_error "Dependency installation failed. Check $LOG_FILE."
+                return 1
+            fi
+            log_success "Dependencies installed."
         else
-             echo "  [!] Sudo password required for dependency installation."
-             sudo apt-get update && sudo apt-get install -y "${missing[@]}"
+            log_error "Missing dependencies and no passwordless sudo on an unattended run."
+            log_error "Install them first, then re-run:"
+            log_error "  sudo apt-get update && sudo apt-get install -y ${missing[*]}"
+            return 1
         fi
     else
         log_success "Core Dependencies: Installed (OK)"
@@ -197,10 +275,13 @@ function check_environment_bash() {
     # Final Decision
     if [ $fatal_error -eq 1 ]; then
         log_error "PREFLIGHT CHECK FAILED. Aborting."
-        exit 1
+        return 1
     fi
-    
+
     echo ""
     log_info "System is ready for KATANA."
-    sleep 1
+    # Stated rather than inherited from `sleep`: this function's return value is
+    # its entire contract and must not depend on the last cosmetic command.
+    katana_is_interactive && sleep 1
+    return 0
 }
