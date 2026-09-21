@@ -84,5 +84,5 @@ function install_bed_distance_sensor() {
     echo "  Repo: $repo_dir"
     echo "  Configs: $cfg_dir"
     echo "  [!] Adjust pin settings for your setup."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

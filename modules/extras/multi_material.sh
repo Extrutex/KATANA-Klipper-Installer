@@ -36,7 +36,7 @@ function install_happyhare() {
     log_info "Starting Happy Hare Installer..."
     echo "  [!] Interactive installer will launch."
     echo ""
-    read -r -p "  Press Enter to launch..."
+    katana_pause "  Press Enter to launch..."
     
     if [ -f "$install_dir/install.sh" ]; then
         cd "$install_dir" || return 1
@@ -47,7 +47,7 @@ function install_happyhare() {
     fi
     
     log_success "Happy Hare installation finished."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_happyhare() {
@@ -56,7 +56,7 @@ function remove_happyhare() {
     
     if [ ! -d "$install_dir" ]; then
         log_warn "Happy Hare is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -74,7 +74,7 @@ function remove_happyhare() {
     fi
     
     log_success "Happy Hare removed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================
@@ -113,7 +113,7 @@ function install_stealthchanger() {
     
     log_success "StealthChanger macros installed to $install_dir"
     echo "  [!] Include the .cfg files in your printer.cfg"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_stealthchanger() {
@@ -123,7 +123,7 @@ function remove_stealthchanger() {
     
     if [ ! -d "$install_dir" ] && [ ! -d "$repo_dir" ]; then
         log_warn "StealthChanger is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -134,7 +134,7 @@ function remove_stealthchanger() {
     rm -rf "$install_dir" "$repo_dir"
     log_success "StealthChanger removed."
     echo "  [!] Remove StealthChanger includes from printer.cfg manually."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================
@@ -183,7 +183,7 @@ function install_madmax() {
     echo "  Repo: $install_dir"
     echo "  Configs: $config_dir"
     echo "  [!] Include the relevant .cfg files in your printer.cfg"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_madmax() {
@@ -193,7 +193,7 @@ function remove_madmax() {
 
     if [ ! -d "$install_dir" ] && [ ! -d "$config_dir" ]; then
         log_warn "MADMAX is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -204,7 +204,7 @@ function remove_madmax() {
     rm -rf "$install_dir" "$config_dir"
     log_success "MADMAX removed."
     echo "  [!] Remove MADMAX includes from printer.cfg manually."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================

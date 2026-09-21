@@ -57,7 +57,7 @@ function build_mcu() {
     # Check if Klipper is installed
     if [ ! -d "$KLIPPER_DIR" ]; then
         draw_error "Klipper not installed! Install Klipper first (Option 2 → 1)."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return 1
     fi
     
@@ -68,7 +68,7 @@ function build_mcu() {
     
     if [ -z "$config_map" ]; then
         draw_error "Board not found in database: $board_key"
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return 1
     fi
     
@@ -112,7 +112,7 @@ function build_mcu() {
         draw_error "Build FAILED! Exit code: $build_result"
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function get_board_config() {

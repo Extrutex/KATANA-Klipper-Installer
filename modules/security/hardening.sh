@@ -89,7 +89,7 @@ function install_security_stack() {
     
     echo ""
     echo "  [i] Note: You can check status anytime with 'sudo ufw status'."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function install_fail2ban() {
@@ -104,5 +104,5 @@ function install_fail2ban() {
     sudo apt-get install -y fail2ban
     
     log_success "Fail2Ban installed and running."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

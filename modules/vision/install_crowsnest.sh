@@ -47,7 +47,7 @@ function do_install_crowsnest() {
     fi
     
     log_success "Crowsnest Installed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function do_install_klipperscreen() {
@@ -72,7 +72,7 @@ function do_install_klipperscreen() {
     fi
 
     log_success "KlipperScreen Installed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function do_remove_crowsnest() {
@@ -80,7 +80,7 @@ function do_remove_crowsnest() {
     cd "$HOME/crowsnest" 2>/dev/null && make uninstall
     rm -rf "$HOME/crowsnest"
     log_success "Crowsnest Removed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function do_remove_klipperscreen() {
@@ -90,5 +90,5 @@ function do_remove_klipperscreen() {
     sudo rm -f /etc/systemd/system/KlipperScreen.service
     sudo systemctl daemon-reload
     log_success "KlipperScreen Removed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

@@ -50,7 +50,7 @@ function full_uninstall() {
     uninstall_klipper
     
     log_success "Full uninstall complete."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function uninstall_klipper() {
@@ -68,7 +68,7 @@ function uninstall_klipper() {
     rm -rf "$HOME/printer_data"
     
     log_success "Klipper uninstalled."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function uninstall_moonraker() {
@@ -85,7 +85,7 @@ function uninstall_moonraker() {
     rm -rf "$HOME/.moonraker"
     
     log_success "Moonraker uninstalled."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function uninstall_webui() {
@@ -114,7 +114,7 @@ function uninstall_webui() {
     sudo systemctl restart nginx 2>/dev/null
     
     log_success "WebUI uninstalled."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function uninstall_nginx() {
@@ -145,5 +145,5 @@ function remove_katana_files() {
     sed -i '/katanaos.sh/d' "$HOME/.bashrc" 2>/dev/null
     
     log_success "KATANA files removed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

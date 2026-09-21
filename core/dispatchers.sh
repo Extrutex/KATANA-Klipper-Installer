@@ -313,7 +313,7 @@ function update_klipper_only() {
     log_info "Pulling latest Klipper changes..."
     if ! git pull; then
         log_error "Git pull failed. Please check your config."
-        read -r -p "  Drücke Enter..."
+        katana_pause "  Drücke Enter..."
         return 1
     fi
     
@@ -325,7 +325,7 @@ function update_klipper_only() {
     log_info "Attempting to flash (assuming USB/default make flash)..."
     sudo make flash || log_warn "Automated flash failed or not applicable."
     
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function update_moonraker_only() {
@@ -340,14 +340,14 @@ function update_moonraker_only() {
     log_info "Pulling latest Moonraker changes..."
     if ! git pull; then
         log_error "Git pull failed."
-        read -r -p "  Drücke Enter..."
+        katana_pause "  Drücke Enter..."
         return 1
     fi
     
     ./scripts/install.sh
     sudo systemctl restart moonraker
     log_success "Moonraker updated and restarted."
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function update_ui_only() {
@@ -363,7 +363,7 @@ function update_ui_only() {
         *) return ;;
     esac
     log_success "UI Updated."
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function update_extras_only() {
@@ -385,7 +385,7 @@ function update_extras_only() {
     done
 
     log_success "Extras update check complete."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function check_updates_only() {
@@ -412,7 +412,7 @@ function check_updates_only() {
     done
 
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # 15. DIAGNOSE DISPATCHER
@@ -453,7 +453,7 @@ function check_all_services() {
     draw_header "SERVICE STATUS"
     systemctl status klipper --no-pager || true
     systemctl status moonraker --no-pager || true
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function show_logs_menu() {
@@ -473,7 +473,7 @@ function show_logs_menu() {
             [bB]) return ;;
             *) log_error "Invalid Selection" ; sleep 1 ; continue ;;
         esac
-        read -r -p "  Drücke Enter..."
+        katana_pause "  Drücke Enter..."
     done
 }
 
@@ -524,7 +524,7 @@ function run_config_validator() {
         else
             log_error "moonraker.conf: missing or no [server] section"
         fi
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -533,7 +533,7 @@ function run_config_validator() {
     [ -f "$mconf" ] && args+=(--moonraker "$mconf")
     if [ ${#args[@]} -eq 0 ]; then
         log_error "No configs found in ~/printer_data/config."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -543,7 +543,7 @@ function run_config_validator() {
 
     if [ "$rc" -gt 1 ] || [ -z "$report" ]; then
         log_error "Validator failed to run. Check $LOG_FILE."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -567,7 +567,7 @@ for c in json.load(sys.stdin)["checks"]:
     else
         log_error "Fatal config problems found. Fix them before starting Klipper."
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function run_emergency_menu() {
@@ -665,18 +665,18 @@ function change_profile() {
         *) log_error "Abbruch." ; sleep 1 ; return ;;
     esac
     log_success "Profile Changed to $INSTALL_PROFILE"
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function change_theme() {
     draw_header "THEME"
     echo "  Theme switching coming soon..."
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function show_info() {
     draw_header "KATANAOS INFO"
     echo "  Building modern deployments."
     echo "  Profile: $INSTALL_PROFILE"
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }

@@ -50,7 +50,7 @@ function install_shaketune() {
     
     log_success "ShakeTune installed."
     echo "  [!] Initialize with 'AXES_MAP_CALIBRATION' in Klipper."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_shaketune() {
@@ -62,7 +62,7 @@ function remove_shaketune() {
     
     if [ ! -d "$install_dir" ]; then
         log_warn "ShakeTune is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -74,7 +74,7 @@ function remove_shaketune() {
     rm -f "$HOME/klipper/klippy/extras/shaketune.py"
     
     log_success "ShakeTune removed!"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================
@@ -104,7 +104,7 @@ function install_log2ram() {
     
     log_success "Log2Ram installed."
     echo "  [!] A reboot is required to activate."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_log2ram() {
@@ -112,7 +112,7 @@ function remove_log2ram() {
     
     if ! dpkg -s log2ram >/dev/null 2>&1; then
         log_warn "Log2Ram is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -122,7 +122,7 @@ function remove_log2ram() {
     log_info "Removing Log2Ram..."
     sudo apt-get remove -y log2ram
     log_success "Log2Ram removed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================
@@ -137,7 +137,7 @@ function run_octoprint_install() {
 
     if [ -d "$HOME/OctoPrint" ]; then
         log_warn "OctoPrint is already installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -181,7 +181,7 @@ EOF
 
     log_success "OctoPrint installed and started."
     echo "  [i] Access at http://<printer-ip>:5000"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================

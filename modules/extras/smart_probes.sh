@@ -51,7 +51,7 @@ function install_beacon() {
     log_success "Beacon installed successfully."
     echo ""
     echo "  [!] ACTION REQUIRED: Add '[beacon]' to your printer.cfg"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_beacon() {
@@ -60,7 +60,7 @@ function remove_beacon() {
     
     if [ ! -d "$install_dir" ]; then
         log_warn "Beacon is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -71,7 +71,7 @@ function remove_beacon() {
     rm -rf "$install_dir"
     log_success "Beacon removed."
     echo "  [!] Remove '[beacon]' section from printer.cfg manually."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================
@@ -113,7 +113,7 @@ function install_cartographer() {
     
     log_success "Cartographer installed."
     echo "  [!] Remember to run the survey script if needed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_cartographer() {
@@ -122,7 +122,7 @@ function remove_cartographer() {
     
     if [ ! -d "$install_dir" ]; then
         log_warn "Cartographer is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -133,7 +133,7 @@ function remove_cartographer() {
     rm -rf "$install_dir"
     log_success "Cartographer removed."
     echo "  [!] Remove Cartographer sections from printer.cfg manually."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================
@@ -183,7 +183,7 @@ function install_btt_eddy() {
     
     echo ""
     echo "  [!] ACTION REQUIRED: Include the relevant .cfg in printer.cfg"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_btt_eddy() {
@@ -193,7 +193,7 @@ function remove_btt_eddy() {
     
     if [ ! -d "$repo_dir" ] && [ ! -d "$config_dir" ]; then
         log_warn "BTT Eddy is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -204,7 +204,7 @@ function remove_btt_eddy() {
     rm -rf "$repo_dir" "$config_dir"
     log_success "BTT Eddy removed."
     echo "  [!] Remove BTT Eddy sections from printer.cfg manually."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================

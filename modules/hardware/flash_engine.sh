@@ -137,7 +137,7 @@ function run_mcu_scanner() {
     fi
 
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function run_hal_flasher() {
@@ -201,7 +201,7 @@ function run_hal_flasher() {
                    run_katapult_menu
                else
                    log_error "Katapult module missing."
-                   read -r -p "  Press Enter..." || return
+                   katana_pause "  Press Enter..."
                fi
                ;;
             2) run_build_and_flash ;;
@@ -216,11 +216,11 @@ function run_hal_flasher() {
                        run_can_setup
                    else
                        log_error "CAN Modul geladen, aber keine Setup-Funktion gefunden."
-                       read -r -p "  Press Enter..."
+                       katana_pause "  Press Enter..."
                    fi
                else
                    log_error "CAN Manager Modul nicht gefunden."
-                   read -r -p "  Press Enter..." || return
+                   katana_pause "  Press Enter..."
                fi
                ;;
             6) run_mcu_scanner ;;
@@ -318,14 +318,14 @@ function run_mcu_update_all() {
 
     if [ ! -d "$BOARD_REGISTRY_DIR" ]; then
         log_error "No board registry found."
-        read -r -p "  Press Enter..." || return
+        katana_pause "  Press Enter..."
         return
     fi
 
     local configs=("$BOARD_REGISTRY_DIR"/*.meta)
     if [ ! -e "${configs[0]}" ]; then
         log_warn "No saved boards to update."
-        read -r -p "  Press Enter..." || return
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -344,7 +344,7 @@ function run_mcu_update_all() {
     done
 
     log_success "All saved boards processed."
-    read -r -p "  Press Enter..." || return
+    katana_pause "  Press Enter..."
 }
 
 function build_and_flash_saved() {
@@ -356,7 +356,7 @@ function build_and_flash_saved() {
     
     if [ ! -f "$config_file" ]; then
         log_error "Config file missing!"
-        read -r -p "  Press Enter..." || return
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -390,7 +390,7 @@ function build_and_flash_saved() {
         fi
     else
         log_error "Build failed."
-        read -r -p "  Press Enter..." || return
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -400,7 +400,7 @@ function build_and_flash_saved() {
         manual)
             echo "  Manual Flash required."
             echo "  Firmware is in $HOME/klipper/out/"
-            read -r -p "  Press Enter..." || return
+            katana_pause "  Press Enter..."
             ;;
         usb|*)
             if [ -f "out/klipper.uf2" ]; then flash_rp2040
@@ -410,7 +410,7 @@ function build_and_flash_saved() {
             ;;
     esac
     
-    read -r -p "  Press Enter to return..." || return
+    katana_pause "  Press Enter to return..."
 }
 
 function edit_saved_config() {
@@ -432,7 +432,7 @@ function edit_saved_config() {
     else
         log_warn "Cancelled. Changes discarded."
     fi
-    read -r -p "  Press Enter..." || return
+    katana_pause "  Press Enter..."
 }
 
 function delete_saved_board() {
@@ -465,7 +465,7 @@ function run_build_and_flash() {
         log_error "Klipper ist nicht installiert!"
         echo "  Zuerst Quick Start [1] ausführen."
         echo ""
-        read -r -p "  Press Enter..." || return
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -498,11 +498,11 @@ function run_build_and_flash() {
     echo "  2a) MCU konfigurieren (menuconfig)"
     echo "      Wähle Architektur, Prozessor, Kommunikation."
     echo ""
-    read -r -p "  Enter drücken für menuconfig..."
+    katana_pause "  Enter drücken für menuconfig..."
 
     if ! make menuconfig; then
         log_error "Menuconfig abgebrochen."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -520,7 +520,7 @@ function run_build_and_flash() {
         lsusb
         echo ""
         echo "  (Suche nach: DFU Mode, STM32, RP2040, Klipper)"
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
     fi
 
     echo ""
@@ -538,7 +538,7 @@ function run_build_and_flash() {
         save_workflow_state "KLIPPER_BUILT" "klipper" "Firmware kompiliert, bereit zum Flashen"
     else
         log_error "Build fehlgeschlagen."
-        read -r -p "  Press Enter..." || return
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -685,7 +685,7 @@ function run_build_and_flash() {
         fi
     fi
 
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # === BOARD REGISTRY (MCU Persistence) ===
@@ -757,7 +757,7 @@ function run_linux_wizard() {
         log_error "Klipper is not installed!"
         echo "  You need to install Klipper first via Quick Start [1]."
         echo ""
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -781,7 +781,7 @@ function run_linux_wizard() {
         log_success "Build complete!"
     else
         log_error "Build failed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -802,7 +802,7 @@ function run_linux_wizard() {
     else
         log_error "Installation failed."
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # === FLASH METHODS (Auto-Selected by Artifact) ===
@@ -956,7 +956,7 @@ function flash_bin_artifact() {
             else
                 log_info "Flashing..."
                 echo "  Ensure device is in bootloader/DFU mode!"
-                read -r -p "  Press Enter when ready..."
+                katana_pause "  Press Enter when ready..."
                 make flash
             fi
             ;;
@@ -983,7 +983,7 @@ function flash_avr_artifact() {
     echo "  ${C_GREEN}Detected: AVR (hex)${NC}"
     echo "  ---------------------------------------------------"
     echo "  Ensure board is connected via USB."
-    read -r -p "  Press Enter to flash..."
+    katana_pause "  Press Enter to flash..."
     make flash
 }
 

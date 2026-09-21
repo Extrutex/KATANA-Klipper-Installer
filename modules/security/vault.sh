@@ -57,7 +57,7 @@ function vault_create() {
 
     echo ""
     echo "  [i] Backup stored in: ~/katana_backups"
-    read -r -p "  Press [Enter] to continue..."
+    katana_pause "  Press [Enter] to continue..."
 }
 
 function vault_restore() {
@@ -107,5 +107,5 @@ function vault_restore() {
             fi
         fi
     fi
-    read -r -p "  Press [Enter]..."
+    katana_pause "  Press [Enter]..."
 }

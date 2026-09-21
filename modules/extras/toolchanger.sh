@@ -100,7 +100,7 @@ EOF
     log_success "$num_tools tools configured!"
     echo "  Macros: $macro_dir"
     echo "  Use T0, T1, T2... to switch tools"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function custom_toolchanger() {
@@ -130,7 +130,7 @@ EOF
     
     log_success "$num_tools tools configured!"
     echo "  Edit the macros in: $macro_dir"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function tool_calibration() {
@@ -167,7 +167,7 @@ EOF
         [bB]) return ;;
     esac
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_toolchanger() {
@@ -177,7 +177,7 @@ function remove_toolchanger() {
     
     if [ ! -d "$macro_dir" ]; then
         log_warn "No toolchanger config found."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -201,5 +201,5 @@ function remove_toolchanger() {
     fi
     
     log_success "Toolchanger removed!"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

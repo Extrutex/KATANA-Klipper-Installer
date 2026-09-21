@@ -55,7 +55,7 @@ function do_install_flow() {
     
     if [ ! -d "$cfg_dir" ]; then
         log_error "Config directory not found at $cfg_dir"
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -74,7 +74,7 @@ function do_install_flow() {
     
     if [ "$failed" -eq 1 ]; then
         log_error "Some files missing. Check your KATANA installation."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -95,7 +95,7 @@ function do_install_flow() {
     echo "  Slicer Start G-Code:  FLOW_START BED=60 NOZZLE=210"
     echo "  Slicer End G-Code:    FLOW_END"
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function do_remove_flow() {
@@ -122,5 +122,5 @@ function do_remove_flow() {
     fi
     
     log_success "KATANA-FLOW removed!"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

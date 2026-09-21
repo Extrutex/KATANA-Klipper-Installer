@@ -45,7 +45,7 @@ function enable_all_auto_restart() {
     fi
     
     draw_success "Auto-restart enabled for all services!"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function enable_klipper_auto_restart() {
@@ -98,7 +98,7 @@ function disable_auto_restart() {
     sudo systemctl daemon-reload
     
     draw_success "Auto-restart disabled for all services."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function view_service_health() {
@@ -154,5 +154,5 @@ function view_service_health() {
     fi
     
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

@@ -76,14 +76,14 @@ function create_backup() {
         log_error "Backup failed!"
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function list_backups() {
     draw_header "AVAILABLE BACKUPS"
     ls -lh "$BACKUP_DIR"
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function push_config_to_git() {
@@ -118,7 +118,7 @@ function push_config_to_git() {
     fi
     
 
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function restore_backup() {
@@ -129,7 +129,7 @@ function restore_backup() {
     
     if [ ${#backups[@]} -eq 0 ]; then
         log_warn "No backups found in $BACKUP_DIR."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -221,5 +221,5 @@ function restore_backup() {
         log_error "Unzip failed."
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

@@ -120,7 +120,7 @@ screw4: 100:190
 EOF
     
     log_success "Created $config_dir/printer.cfg"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function create_ender3_printer_cfg() {
@@ -222,7 +222,7 @@ gcode:
 EOF
     
     draw_success "Created Ender-3 config at $config_dir/printer.cfg"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function create_voron_printer_cfg() {
@@ -346,7 +346,7 @@ gcode:
 EOF
     
     draw_success "Created Voron config at $config_dir/printer.cfg"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function create_custom_printer_cfg() {
@@ -355,7 +355,7 @@ function create_custom_printer_cfg() {
     echo "  This will create a minimal printer.cfg template"
     echo "  You will need to fill in your specific pinout"
     echo ""
-    read -r -p "  Press Enter to continue..."
+    katana_pause "  Press Enter to continue..."
     
     local config_dir="$HOME/printer_data/config"
     mkdir -p "$config_dir"
@@ -434,5 +434,5 @@ EOF
     
     draw_success "Created custom template at $config_dir/printer.cfg"
     echo "  Please edit the file and add your board-specific pins!"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

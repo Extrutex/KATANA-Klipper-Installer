@@ -47,7 +47,7 @@ function install_katapult_repo() {
     if ! pip3 show pyserial >/dev/null 2>&1; then
         pip3 install pyserial
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function build_katapult() {
@@ -59,7 +59,7 @@ function build_katapult() {
     
     draw_header "BUILD KATAPULT"
     echo "  Select your architecture in menuconfig."
-    read -r -p "  Press Enter to configure..."
+    katana_pause "  Press Enter to configure..."
     
     make menuconfig
     make clean
@@ -71,7 +71,7 @@ function build_katapult() {
     else
         log_error "Build failed."
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function flash_katapult_dfu() {
@@ -79,7 +79,7 @@ function flash_katapult_dfu() {
     echo "  Ensure your device is in DFU Mode!"
     echo "  (Press Boot button + Reset)"
     echo ""
-    read -r -p "  Press Enter when ready..."
+    katana_pause "  Press Enter when ready..."
     
     cd "$KATAPULT_DIR" || return
     
@@ -93,5 +93,5 @@ function flash_katapult_dfu() {
     else
         log_warn "Flash möglicherweise fehlgeschlagen. Device-ID prüfen."
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

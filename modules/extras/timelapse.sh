@@ -32,7 +32,7 @@ function install_timelapse() {
     # Check if Moonraker is installed
     if [ ! -d "$HOME/moonraker" ]; then
         log_error "Moonraker not installed. Install it first."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -66,7 +66,7 @@ function install_timelapse() {
     echo "  Config: $conf_file"
     echo "  Files: $HOME/timelapse"
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function configure_timelapse() {
@@ -77,7 +77,7 @@ function configure_timelapse() {
     
     if [ ! -f "$conf_file" ]; then
         log_error "Moonraker config not found."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -128,7 +128,7 @@ function configure_timelapse() {
     sudo systemctl restart moonraker
     log_info "Moonraker restarted."
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function view_timelapse_files() {
@@ -139,7 +139,7 @@ function view_timelapse_files() {
     
     if [ ! -d "$timelapse_dir" ]; then
         log_error "Timelapse directory not found."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -163,5 +163,5 @@ function view_timelapse_files() {
         echo "  To view, use: http://<pi-ip>/timelapse/"
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

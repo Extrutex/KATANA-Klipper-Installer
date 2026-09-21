@@ -67,7 +67,7 @@ function switch_core() {
     # Check if target exists
     if [ ! -d "$target_repo" ]; then
         log_error "Target repo not found at $target_repo. Please install it first using the Installer menu."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return 1
     fi
 
@@ -93,5 +93,5 @@ function switch_core() {
     exec_silent "Restarting Klipper Service" "sudo systemctl start klipper"
     
     log_success "Successfully switched to $target."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

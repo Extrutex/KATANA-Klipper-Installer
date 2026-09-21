@@ -634,7 +634,7 @@ function dispatch_klipperscreen() {
     cd KlipperScreen
     ./scripts/KlipperScreen-install.sh
     log_success "KlipperScreen installed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function run_extras_smartprobes() {
@@ -677,7 +677,7 @@ function run_extras_beddistance() {
     echo "  [1] Install"
     echo "  [2] Remove"
     if ! read -r -p "  >> " ch; then return; fi
-    read -r -p "  Enter..." || return
+    katana_pause "  Enter..."
 }
 
 function run_extras_toolchanger() {

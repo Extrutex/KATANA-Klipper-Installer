@@ -114,7 +114,7 @@ function add_new_instance() {
         log_error "Installer module not found."
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_instance() {
@@ -123,7 +123,7 @@ function remove_instance() {
     local instances=$(ls -d "$HOME"/printer_data* 2>/dev/null)
     if [ -z "$instances" ]; then
         log_error "No instances found to remove."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -165,5 +165,5 @@ function remove_instance() {
     rm -rf "$target"
     
     draw_success "$name removed completely."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

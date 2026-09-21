@@ -105,7 +105,7 @@ function scan_can_devices() {
     fi
     
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function install_katapult_wizard() {
@@ -210,14 +210,14 @@ EOF
     
     if [ ! -f "out/katapult.bin" ] && [ ! -f "out/katapult.uf2" ]; then
         log_error "Build failed!"
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
     echo ""
     echo -e "${C_YELLOW}!!! PUT MCU IN DFU MODE !!!${NC}"
     echo "  (Hold BOOT button + press RESET)"
-    read -r -p "  Press Enter when ready..."
+    katana_pause "  Press Enter when ready..."
     
     log_info "Flashing bootloader..."
     if [[ "$board" == "sb2209_rp2040" ]]; then
@@ -228,7 +228,7 @@ EOF
     fi
     
     [ $? -eq 0 ] && draw_success "Katapult installed successfully!" || log_error "Flash failed!"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function flash_via_katapult_wizard() {
@@ -239,7 +239,7 @@ function flash_via_katapult_wizard() {
     
     if [ ! -f "$firmware" ]; then
         log_error "No firmware found! Build it first via 'The Forge -> Manual Build'."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -297,7 +297,7 @@ function flash_via_katapult_wizard() {
         log_error "Flash failed."
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function inject_uuid_to_config() {

@@ -67,7 +67,7 @@ function run_healer() {
     done
 
     log_success "Auto-Healer complete. Check DIAGNOSE for remaining issues."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function service_control_menu() {
@@ -115,7 +115,7 @@ function view_logs() {
     else
         echo "  [!] Analyzer script missing."
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function repair_system() {
@@ -155,5 +155,5 @@ function repair_system() {
             ;;
         [bB]) return ;;
     esac
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
