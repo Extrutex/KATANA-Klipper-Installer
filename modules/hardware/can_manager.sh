@@ -252,7 +252,11 @@ function flash_via_katapult_wizard() {
         log_warn "No CAN devices found in flash mode."
         read -r -p "  Enter UUID manually? [y/N]: " yn
         if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
-        read -r -p "  UUID: " selected_uuid
+        # Same rule as flash_via_can: a UUID names which board gets
+        # overwritten and is never defaulted.
+        katana_read_value selected_uuid "  UUID: " "" \
+            "UUID aus der HATCH-Registry (~/.config/katana/registry/devices.json) verwenden" \
+            || return 1
     elif [ ${#uuids[@]} -eq 1 ]; then
         selected_uuid="${uuids[0]}"
         log_success "Found: $selected_uuid"
@@ -261,7 +265,17 @@ function flash_via_katapult_wizard() {
         for i in "${!uuids[@]}"; do
             echo "    [$((i+1))] ${uuids[$i]}"
         done
-        read -r -p "  Select [1-${#uuids[@]}]: " choice
+        # No default: "the first one in the scan order" is not a board the
+        # operator chose, and the scan order is whatever the CAN bus answered
+        # in. Guessing here flashes the wrong toolhead.
+        local choice=""
+        katana_read_value choice "  Select [1-${#uuids[@]}]: " "" \
+            "Board interaktiv waehlen, oder genau ein Geraet in Katapult-Mode versetzen" \
+            || return 1
+        if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#uuids[@]}" ]; then
+            log_error "Invalid selection."
+            return 1
+        fi
         selected_uuid="${uuids[$((choice-1))]}"
     fi
     
@@ -287,9 +301,17 @@ function flash_via_katapult_wizard() {
                 for i in "${!instances[@]}"; do
                     echo "    [$((i+1))] $(basename "${instances[$i]}")"
                 done
-                read -r -p "  Select [1-${#instances[@]}]: " inst_choice
-                if [ -n "${instances[$((inst_choice-1))]}" ]; then
-                    inject_uuid_to_config "$selected_uuid" "${instances[$((inst_choice-1))]}"
+                # Writing a UUID into the wrong instance's printer.cfg breaks
+                # a printer that was working. No default.
+                local inst_choice=""
+                if katana_read_value inst_choice "  Select [1-${#instances[@]}]: " "" \
+                    "Ziel-Instanz interaktiv waehlen"; then
+                    if [[ "$inst_choice" =~ ^[0-9]+$ ]] \
+                        && [ -n "${instances[$((inst_choice-1))]:-}" ]; then
+                        inject_uuid_to_config "$selected_uuid" "${instances[$((inst_choice-1))]}"
+                    else
+                        log_error "Invalid selection — printer.cfg unveraendert."
+                    fi
                 fi
             fi
         fi

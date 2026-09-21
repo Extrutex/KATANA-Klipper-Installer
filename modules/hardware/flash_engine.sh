@@ -517,7 +517,12 @@ function run_build_and_flash() {
     echo ""
     echo "  ${C_GREEN}[S]${NC} USB-Geräte scannen"
     echo "  ${C_NEON}[Enter]${NC} Überspringen"
-    read -r -p "  >> " scan_ch
+    # The one value prompt in this file with a defensible default: the menu
+    # already documents Enter as "skip the scan", so skipping is what an absent
+    # human gets. The default is spelled "no" rather than "skip" because the
+    # test below is `^[sS]` — "skip" would have matched it and run the scan.
+    local scan_ch="no"
+    katana_read_value scan_ch "  >> " "no" || true
     if [[ "$scan_ch" =~ ^[sS] ]]; then
         echo ""
         lsusb
@@ -701,8 +706,13 @@ function save_board_config() {
     echo ""
     echo "  ${C_NEON}:: SAVE BOARD CONFIGURATION ::${NC}"
     echo "  Give this board a unique name (e.g. 'SHT36_Toolhead', 'U2C_Bridge')"
-    read -r -p "  >> Name: " board_name
-    
+    # No default. The name becomes the registry filename, so a generated one
+    # would collide across hosts and silently overwrite another board's saved
+    # config on the next save.
+    katana_read_value board_name "  >> Name: " "" \
+        "Board interaktiv benennen" || return 1
+
+
     # Sanitize name (alphanumeric + underscore only)
     board_name=$(echo "$board_name" | tr -cd '[:alnum:]_')
     
@@ -1001,10 +1011,18 @@ function flash_via_can() {
         log_warn "CAN interface not detected. Ensure can0 is configured."
     fi
 
-    read -r -p "  Enter UUID to flash: " uuid
+    # A UUID is the one value in this tool that must never be guessed: it names
+    # which board on the bus gets overwritten. There is no default, and the
+    # message points at the registry HATCH already maintains rather than at a
+    # flag, because a UUID KATANA invents is a UUID nobody recorded.
+    local uuid=""
+    if ! katana_read_value uuid "  Enter UUID to flash: " "" \
+        "UUID aus der HATCH-Registry (~/.config/katana/registry/devices.json) verwenden"; then
+        return 1
+    fi
     if [ -z "$uuid" ]; then
         log_error "No UUID provided."
-        return
+        return 1
     fi
 
     if [ -f "$HOME/katapult/scripts/flashtool.py" ]; then

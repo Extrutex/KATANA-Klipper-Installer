@@ -84,7 +84,11 @@ function vault_restore() {
     echo "  [B] Back"
     echo ""
     
-    read -r -p "  >> SELECT RESTORE POINT: " choice
+    # Which restore point overwrites the live config is not guessable. No
+    # default, and the refusal is the whole point on an unattended run.
+    local choice=""
+    katana_read_value choice "  >> SELECT RESTORE POINT: " "" \
+        "Restore-Punkt interaktiv waehlen" || return 1
 
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#backups[@]}" ]; then
         local target="${backups[$((choice-1))]}"

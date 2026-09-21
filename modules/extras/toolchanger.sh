@@ -107,8 +107,11 @@ function custom_toolchanger() {
     draw_header "CUSTOM TOOLCHANGER"
     echo ""
     echo "  How many tools? (2-16)"
-    read -r -p "  >> " num_tools
-    
+    # No default: a tool count is a property of the physical machine. Picking
+    # one generates macros for hardware that is not there.
+    katana_read_value num_tools "  >> " "" \
+        "Werkzeuganzahl interaktiv angeben" || return 1
+
     if ! [[ "$num_tools" =~ ^[0-9]+$ ]] || [ "$num_tools" -lt 2 ] || [ "$num_tools" -gt 16 ]; then
         log_error "Invalid number (2-16)"
         return

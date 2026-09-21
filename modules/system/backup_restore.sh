@@ -143,8 +143,12 @@ function restore_backup() {
     echo "  [B] Back"
     echo ""
     
-    read -r -p "  >> SELECT BACKUP TO RESTORE: " choice
-    
+    # No default: the selection decides which backup overwrites the live
+    # configuration.
+    local choice=""
+    katana_read_value choice "  >> SELECT BACKUP TO RESTORE: " "" \
+        "Backup interaktiv waehlen" || return 1
+
     if [[ "$choice" =~ ^[bB]$ ]]; then return; fi
     
     if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#backups[@]}" ]; then

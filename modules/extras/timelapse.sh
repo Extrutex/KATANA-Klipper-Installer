@@ -102,7 +102,11 @@ function configure_timelapse() {
     case $selection in
         1) 
             echo "  New directory path (e.g., ~/timelapse):"
-            read -r -p "  >> " new_dir
+            # Refuses rather than defaulting: the value is substituted straight
+            # into the config with sed, so an empty answer used to rewrite the
+            # line as "directory: " and leave timelapse writing nowhere.
+            katana_read_value new_dir "  >> " "" \
+                "Zielverzeichnis interaktiv setzen" || return 1
             sed -i "s|directory:.*|directory: $new_dir|" "$conf_file"
             log_success "Directory updated!"
             ;;

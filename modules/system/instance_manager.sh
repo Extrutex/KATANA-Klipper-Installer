@@ -133,12 +133,24 @@ function remove_instance() {
         echo "    [$((i+1))] $(basename "${inst_arr[$i]}")"
     done
     echo ""
-    read -r -p "  Select [1-${#inst_arr[@]}] or [B]ack: " choice
+    # No default: this picks which instance gets deleted.
+    local choice=""
+    katana_read_value choice "  Select [1-${#inst_arr[@]}] or [B]ack: " "" \
+        "Instanz interaktiv waehlen" || return 1
     if [[ "$choice" =~ ^[bB]$ ]]; then return; fi
-    
+
+    # Range check added with the prompt change: a non-numeric or out-of-range
+    # answer used to index the array with garbage, so $target came out empty
+    # and the systemctl/rm calls below ran against an empty path.
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#inst_arr[@]}" ]; then
+        log_error "Invalid selection."
+        return 1
+    fi
+
     local idx=$((choice - 1))
     local target="${inst_arr[$idx]}"
-    local name=$(basename "$target")
+    local name
+    name=$(basename "$target")
     
     if [ "$name" == "printer_data" ]; then
         log_warn "This is the base instance. Are you sure?"

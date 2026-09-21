@@ -21,9 +21,13 @@ function run_autopilot() {
     echo "  ${C_NEON}[2]${NC}  Fluidd"
     echo ""
     
-    local ui_choice
-    read -r -p "  >> Select UI [1/2]: " ui_choice
-    
+    # One of the few value prompts with a default that is already documented
+    # in the code below it: the `1|""` arm has always meant "Mainsail unless
+    # told otherwise", and the menu marks it Recommended. So the default is
+    # named here rather than arrived at by an empty read.
+    local ui_choice="1"
+    katana_read_value ui_choice "  >> Select UI [1/2]: " "1" || true
+
     case "$ui_choice" in
         1|"") ui_choice="mainsail" ;;
         2) ui_choice="fluidd" ;;

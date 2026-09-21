@@ -33,15 +33,24 @@ function create_basic_printer_cfg() {
     local serial_port=""
     local baudrate="250000"
     
+    # Name and serial port have no defensible default and the file being
+    # written is the one Klipper refuses to start without. An empty
+    # `serial:` line produces a printer.cfg that looks complete, passes a
+    # section-level check, and fails at MCU connect — so the wizard refuses
+    # instead of writing it.
     echo "  Enter printer name (e.g. my-printer): "
-    read -r -p "  >> " printer_name
-    
+    katana_read_value printer_name "  >> " "" \
+        "printer.cfg interaktiv anlegen oder Datei vorbereiten" || return 1
+
     echo "  Serial port (e.g. /dev/ttyUSB0): "
-    read -r -p "  >> " serial_port
-    
+    katana_read_value serial_port "  >> " "" \
+        "Serial-Port ermitteln (ls /dev/serial/by-id/) und interaktiv eintragen" || return 1
+
+    # The baudrate is the one field here that does have a defensible default,
+    # and the code already treated it that way ("[ -z ] && baudrate=250000").
+    # That fallback now lives in the call rather than on the line after it.
     echo "  Baud rate [250000]: "
-    read -r -p "  >> " baudrate
-    [ -z "$baudrate" ] && baudrate="250000"
+    katana_read_value baudrate "  >> " "250000" || return 1
     
     local config_dir="$HOME/printer_data/config"
     mkdir -p "$config_dir"
