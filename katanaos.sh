@@ -14,7 +14,24 @@ if [[ "$(head -c 200 "${BASH_SOURCE[0]}" | tr -d '\0')" == *$'\r'* ]]; then echo
 ################################################################################
 
 # --- EXECUTION MODE ---
-# pipefail: Verhindert dass Pipe-Fehler verschluckt werden
+# pipefail: Verhindert dass Pipe-Fehler verschluckt werden.
+#
+# `set -e` and `set -u` are deliberately NOT enabled at this level, and the
+# omission is documented rather than silent:
+#
+#   -e  this file sources ~30 legacy modules and then runs an interactive menu
+#       loop. In that tree an unchecked non-zero return is routine (a cancelled
+#       submenu, a `grep` with no match), and aborting the whole tool on one
+#       would be a regression, not a hardening.
+#   -u  the module tree still references undefined colour variables
+#       (e.g. C_YELLOW in core/dispatchers.sh, which logging.sh does not
+#       define). With -u the tool would die mid-render. Cleaning that up is a
+#       separate change with its own review surface.
+#
+# Strictness is applied where it can be verified instead of hoped for: every
+# unattended install step runs under `set -euo pipefail` in its own subshell
+# (see headless_run_step in core/headless.sh), and the executed entrypoint
+# install.sh enables all three.
 set -o pipefail
 
 # --- VERSION ---
@@ -214,7 +231,13 @@ for opt_module in \
     "$MODULES_DIR/engine/install_klipper.sh" \
     "$MODULES_DIR/ui/install_ui.sh" \
     "$MODULES_DIR/vision/install_crowsnest.sh"; do
-    [[ -f "$opt_module" ]] && source "$opt_module"
+    # An explicit `if` rather than `[[ -f ... ]] && source ...`: the && form
+    # yields a non-zero status for every absent module, and with the ERR trap
+    # armed during the load phase a single missing optional file would crash
+    # the tool with a CRITICAL ERROR banner instead of degrading gracefully.
+    if [[ -f "$opt_module" ]]; then
+        source "$opt_module"
+    fi
 done
 
 # --- HATCH ENGINE (Firmware/Board-Authority — conditional, graceful degradation) ---

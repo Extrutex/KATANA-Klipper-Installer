@@ -26,25 +26,34 @@ function install_service_from_template() {
     # Render Template
     # Replace template variables
     # Safe pattern: using | as delimiter to avoid path clashes
-    local rendered_content=$(sed "s|{{USER}}|$USER|g" "$template_path" | \
+    # $USER is not exported by every login/cron/systemd context; id -un always
+    # is. An empty {{USER}} substitution produces a unit with `User=` unset,
+    # which systemd then runs as root.
+    local run_user="${USER:-$(id -un)}"
+    local rendered_content
+    rendered_content=$(sed "s|{{USER}}|$run_user|g" "$template_path" | \
         sed "s|{{HOME}}|$HOME|g" | \
         sed "s|{{SERVICE_NAME}}|$target_service_name|g" | \
         sed "s|{{DATA_DIR}}|$target_data_dir|g")
-        
-    # Write to target
-    echo "$rendered_content" | sudo tee "$target_path" > /dev/null
-    
-    if [ $? -eq 0 ]; then
-        log_success "Service unit created: $target_path"
-        
-        # Reload & Enable
-        sudo systemctl daemon-reload
-        sudo systemctl enable "$target_service_name"
-        log_info "Service enabled."
-    else
-        log_error "Failed to write service file."
+
+    # Write to target. The status of the pipeline is checked directly: the
+    # previous `if [ $? -eq 0 ]` sat after the pipeline but was evaluated
+    # against it correctly only by accident, and reads as a no-op to shellcheck.
+    if ! printf '%s\n' "$rendered_content" | sudo tee "$target_path" > /dev/null; then
+        log_error "Failed to write service file: $target_path"
         return 1
     fi
+
+    log_success "Service unit created: $target_path"
+
+    # Reload & Enable
+    sudo systemctl daemon-reload
+    if ! sudo systemctl enable "$target_service_name"; then
+        log_error "Could not enable $target_service_name."
+        return 1
+    fi
+    log_info "Service enabled."
+    return 0
 }
 
 function verify_service_health() {

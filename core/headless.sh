@@ -83,6 +83,28 @@ headless_print_plan() {
 # Runs one step through the function the interactive path uses. A missing
 # function is a failure, not a skip: silently installing less than was asked
 # for is how a fleet ends up in two different states.
+#
+# The step body runs in a subshell under `set -euo pipefail`. Why a subshell
+# rather than a file-level `set -e`: headless.sh is SOURCED by katanaos.sh, so a
+# file-level flag would apply to the interactive menu and to all 30 legacy
+# modules, where an unchecked non-zero return is routine and aborting the tool
+# on one would be a regression. Scoping the strictness to the step is what makes
+# it safe to switch on at all:
+#
+#   -e            an unchecked failing command inside an install function aborts
+#                 the step instead of falling through to its closing
+#                 log_success — the exact shape of the bug this branch fixes
+#   -u            an unset variable fails the step instead of expanding to ""
+#                 and operating on the wrong path
+#   -o pipefail   a failing producer stops being masked by its consumer
+#                 (`pip install ... | tail -3` hid every dependency failure)
+#
+# The isolation costs nothing here: a step's side effects are files, packages
+# and systemd units, all of which outlive the subshell, and no install function
+# returns data through shell variables. It also contains
+# moonraker_update_manager.sh, which redefines log_info/log_success when
+# do_install_mainsail sources it and would otherwise degrade the logging of
+# every later step.
 headless_run_step() {
     local label="$1" function_name="$2"
     shift 2
@@ -91,7 +113,7 @@ headless_run_step() {
         headless_err "KATANA: step '$label' unavailable — function $function_name not loaded."
         return 1
     fi
-    if ! "$function_name" "$@"; then
+    if ! ( set -euo pipefail; "$function_name" "$@" ); then
         headless_err "KATANA: step '$label' failed."
         return 1
     fi

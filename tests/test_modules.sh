@@ -14,6 +14,12 @@
 # Exit 0 = alles gruen, Exit 1 = Fehler gefunden.
 # ==============================================================================
 
+# `set -e` is deliberately NOT used here, and the omission is not an oversight:
+# this harness exists to find every broken module in one run and report a count.
+# Aborting on the first failing check would turn a full report into a single
+# error message. Failures are counted explicitly via fail() and the exit code is
+# decided at the bottom. pipefail stays on so a failing producer in any of the
+# analysis pipelines below cannot be masked by its consumer.
 set -o pipefail
 
 KATANA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# LOG_FILE is set by katanaos.sh. The fallback exists because the install steps
+# now run under `set -u` (see core/headless.sh): an unset LOG_FILE would turn
+# every log line into a fatal error and abort an otherwise healthy install.
+# Logging must never be the thing that fails a provisioning run.
+: "${LOG_FILE:=${KATANA_ROOT:-.}/katana.log}"
+
 # --- COLORS ---
 C_PURPLE='\033[38;5;93m'
 C_CYAN='\033[38;5;51m'
