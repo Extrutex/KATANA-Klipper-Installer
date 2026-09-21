@@ -3,26 +3,31 @@
 # KATANAOS VISUAL ENGINE v2.6 — FIXED
 # ============================================================
 
-# Colors
-C_PURPLE=$'\033[38;5;93m'
-C_NEON=$'\033[38;5;51m'
-C_GREEN=$'\033[38;5;46m'
-C_GREY=$'\033[38;5;240m'
-C_WHITE=$'\033[38;5;255m'
-C_RED=$'\033[38;5;196m'
-C_YELLOW=$'\033[38;5;226m'
-C_ORANGE=$'\033[38;5;208m'
-NC=$'\033[0m'
+# Colors — defined in core/logging.sh, which is sourced before this file.
+#
+# They used to be defined here as well, with three names (C_PURPLE, C_GREY,
+# C_RED) carrying different values than the logging.sh copy. The winner was
+# whichever file was sourced last, so the palette of a given module depended on
+# load order rather than on anything visible in the module. One owner removes
+# that; see the comment block in core/logging.sh.
+#
+# The fallback below is not a second definition creeping back in. It exists
+# because this file must stay independently sourceable (tests and tooling load
+# the renderer alone), and because under `set -u` an unset C_PURPLE here is a
+# fatal error rather than an empty string. Sourcing logging.sh is the fix; the
+# `:` defaults only keep an isolated load from aborting.
+if ! declare -p C_PURPLE >/dev/null 2>&1; then
+    # shellcheck source=core/logging.sh
+    [[ -f "${CORE_DIR:-$(dirname "${BASH_SOURCE[0]}")}/logging.sh" ]] \
+        && source "${CORE_DIR:-$(dirname "${BASH_SOURCE[0]}")}/logging.sh"
+fi
+: "${C_PURPLE:=}" "${C_NEON:=}" "${C_GREEN:=}" "${C_GREY:=}" "${C_WHITE:=}"
+: "${C_RED:=}" "${C_YELLOW:=}" "${C_ORANGE:=}" "${C_RESET:=}" "${NC:=}"
+: "${C_TXT:=}" "${C_OK:=}" "${C_ERR:=}" "${C_WARN:=}" "${C_CYAN:=}"
 
 # Box dimensions
 BOX_WIDTH=70
 INDENT="  "
-
-# Legacy colors (if used by other modules)
-C_TXT="$C_WHITE"
-C_OK="$C_GREEN"
-C_ERR="$C_RED"
-C_WARN="$C_YELLOW"
 
 # ============================================================
 # CORE UTILITY: VISIBLE LENGTH
