@@ -14,25 +14,45 @@ if [[ "$(head -c 200 "${BASH_SOURCE[0]}" | tr -d '\0')" == *$'\r'* ]]; then echo
 ################################################################################
 
 # --- EXECUTION MODE ---
-# pipefail: Verhindert dass Pipe-Fehler verschluckt werden.
 #
-# `set -e` and `set -u` are deliberately NOT enabled at this level, and the
-# omission is documented rather than silent:
+# -u and -o pipefail are on globally. -e is not, and the split is measured
+# rather than assumed.
 #
-#   -e  this file sources ~30 legacy modules and then runs an interactive menu
-#       loop. In that tree an unchecked non-zero return is routine (a cancelled
-#       submenu, a `grep` with no match), and aborting the whole tool on one
-#       would be a regression, not a hardening.
-#   -u  the module tree still references undefined colour variables
-#       (e.g. C_YELLOW in core/dispatchers.sh, which logging.sh does not
-#       define). With -u the tool would die mid-render. Cleaning that up is a
-#       separate change with its own review surface.
+#   -u  ON as of this branch. It used to be off because the module tree
+#       referenced colour variables that were defined in only one of two
+#       competing palettes — C_YELLOW in core/dispatchers.sh being the
+#       documented example — so -u would abort the tool mid-render on a status
+#       line. One palette now owns those names (core/logging.sh), and the
+#       second blocker, check_environment_bash calling `exit` from a module
+#       function, is a `return` now. Verified after both: a static sweep for
+#       unguarded references finds none outside quoted heredocs (nginx and
+#       ifupdown templates, where `\$scheme` is literal), and every one of the
+#       61 zero-argument entry points — every run_*, dispatch_* and renderer —
+#       executes under -u without a single unbound-variable abort.
 #
-# Strictness is applied where it can be verified instead of hoped for: every
-# unattended install step runs under `set -euo pipefail` in its own subshell
-# (see headless_run_step in core/headless.sh), and the executed entrypoint
-# install.sh enables all three.
-set -o pipefail
+#   -o pipefail  ON, as before. A failing producer must not be masked by its
+#       consumer; `pip install ... | tail -3` hid every dependency failure.
+#
+#   -e  STAYS OFF, and not for lack of trying. Two independent reasons:
+#
+#       1. A submenu that the operator leaves returns non-zero by design. The
+#          main loop dispatches them bare (`1) run_quick_start ;;`), and under
+#          -e a bare non-zero command in a case arm terminates the shell.
+#          Measured: `( set -e; run_repair_menu; echo NEXT )` never reaches
+#          NEXT and exits 1, while the same without -e reaches it and exits 0.
+#          Pressing CTRL+D in a submenu would quit KATANA instead of returning
+#          to the menu it was opened from.
+#       2. 194 statement-level commands across modules/ and core/ run
+#          unchecked, most of them legitimately: `grep` with no match, `dpkg
+#          -s` on an absent package, `systemctl stop` on a service that is not
+#          running. Under -e each is a tool-wide abort. Fixing that is a
+#          per-call-site audit of the legacy tree, not a flag.
+#
+#       Strictness is therefore applied where it can be verified instead of
+#       hoped for: every unattended install step runs under `set -euo pipefail`
+#       in its own subshell (headless_run_step in core/headless.sh), and the
+#       executed entrypoint install.sh enables all three.
+set -uo pipefail
 
 # --- VERSION ---
 readonly KATANA_VERSION="v2.6"
