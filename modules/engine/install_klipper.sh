@@ -60,7 +60,7 @@ function do_install_ratos() {
     fi
     
     log_success "RatOS installed. Use 'Engine Manager' to switch to it."
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function do_install_kalico() {
@@ -83,7 +83,7 @@ function do_install_kalico() {
     exec_silent "Installing Dependencies" "$env_dir/bin/pip install -r $repo_dir/scripts/klippy-requirements.txt"
 
     log_success "Kalico installed. Use 'Engine Manager' to switch to it."
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function do_install_klipper() {
@@ -104,8 +104,14 @@ function do_install_klipper() {
         log_success "System dependencies installed."
     else
         log_error "Failed to install some dependencies. Check your internet connection."
-        read -r -p "  Continue anyway? [y/N]: " yn
-        if [[ ! "$yn" =~ ^[yY] ]]; then return 1; fi
+        # Unattended, this is a hard stop: --yes authorises the installation, it
+        # does not authorise continuing without a toolchain. Continuing here is
+        # how a fleet host ends up with Klipper that cannot build firmware while
+        # the installer exits 0.
+        if ! katana_confirm "  Continue anyway? [y/N]: " no; then
+            log_error "Aborting: required build dependencies are missing."
+            return 1
+        fi
     fi
     
     # 1. Repo & Env (Shared across instances)
@@ -339,7 +345,7 @@ function do_update_klipper() {
     
     if [ ! -d "$klipper_dir" ]; then
         log_error "Klipper not installed. Install it first."
-        read -r -p "  Press Enter..."
+        katana_pause
         return 1
     fi
 
@@ -385,7 +391,7 @@ function do_update_klipper() {
         fi
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function do_update_moonraker() {
@@ -393,7 +399,7 @@ function do_update_moonraker() {
     
     if [ ! -d "$moonraker_dir" ]; then
         log_error "Moonraker not installed. Install it first."
-        read -r -p "  Press Enter..."
+        katana_pause
         return 1
     fi
 
@@ -437,5 +443,5 @@ function do_update_moonraker() {
         fi
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause
 }

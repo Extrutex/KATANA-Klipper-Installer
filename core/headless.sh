@@ -101,6 +101,13 @@ headless_run_step() {
 run_headless_install() {
     local profile="${1:-standard}" ui="${2:-mainsail}" confirmed="${3:-0}" dry_run="${4:-0}"
 
+    # Every prompt below this line is answered by its documented default, and
+    # every pause is skipped. Set before validation so even an early return
+    # cannot reach a blocking read. See core/interaction.sh for why a TTY test
+    # alone is not sufficient: `install --yes` started from a terminal keeps a
+    # TTY on stdin and would otherwise wait for a keypress nobody will make.
+    export KATANA_NONINTERACTIVE=1
+
     if ! headless_components_for "$profile" > /dev/null; then
         headless_err "KATANA: unknown profile '$profile' (minimal|standard|power)."
         return $KATANA_EXIT_USAGE

@@ -35,52 +35,60 @@ function run_autopilot() {
     echo "  Installing: Klipper + Moonraker + ${ui_choice^}"
     echo "  ─────────────────────────────────"
     echo ""
-    read -r -p "  Start Installation? [y/N] " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
-    
+    if ! katana_confirm "  Start Installation? [y/N] " no; then return 0; fi
+
     echo ""
-    
+
+    # Each step's return value is checked before the next one starts. Previously
+    # the three calls were fired and ignored, so "INSTALLATION COMPLETE" was
+    # printed even when Klipper had failed — the interactive twin of the
+    # headless bug this branch fixes.
+
     # STEP 1: KLIPPER
     log_info "═══ STEP 1/3: KLIPPER ═══"
-    if declare -f do_install_klipper > /dev/null; then
-        do_install_klipper "Standard"
-    else
+    if ! declare -f do_install_klipper > /dev/null; then
         log_error "Klipper install function not found!"
         return 1
     fi
-    
+    if ! do_install_klipper "Standard"; then
+        log_error "Klipper installation failed — aborting before Moonraker."
+        katana_pause
+        return 1
+    fi
+
     # STEP 2: MOONRAKER
     echo ""
     log_info "═══ STEP 2/3: MOONRAKER ═══"
-    if declare -f do_install_moonraker > /dev/null; then
-        do_install_moonraker
-    else
+    if ! declare -f do_install_moonraker > /dev/null; then
         log_error "Moonraker install function not found!"
         return 1
     fi
-    
+    if ! do_install_moonraker; then
+        log_error "Moonraker installation failed — aborting before the web UI."
+        katana_pause
+        return 1
+    fi
+
     # STEP 3: WEB UI
     echo ""
     log_info "═══ STEP 3/3: ${ui_choice^^} ═══"
-    if [ "$ui_choice" = "fluidd" ]; then
-        if declare -f do_install_fluidd > /dev/null; then
-            do_install_fluidd
-        else
-            log_error "Fluidd install function not found!"
-        fi
-    else
-        if declare -f do_install_mainsail > /dev/null; then
-            do_install_mainsail
-        else
-            log_error "Mainsail install function not found!"
-        fi
+    local ui_function="do_install_mainsail"
+    [ "$ui_choice" = "fluidd" ] && ui_function="do_install_fluidd"
+    if ! declare -f "$ui_function" > /dev/null; then
+        log_error "${ui_choice^} install function not found!"
+        return 1
     fi
-    
+    if ! "$ui_function"; then
+        log_error "${ui_choice^} installation failed."
+        katana_pause
+        return 1
+    fi
+
     echo ""
     log_success "═══ INSTALLATION COMPLETE ═══"
     echo ""
     post_install_verify
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 # POST-INSTALL VERIFICATION
