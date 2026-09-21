@@ -176,6 +176,7 @@ handle_args() {
 
 # Lädt Core-Module sicher (die UI Renderer sollten später keine Business-Logik mehr enthalten!)
 require_module "$CORE_DIR/logging.sh"
+require_module "$CORE_DIR/interaction.sh"
 require_module "$CORE_DIR/ui_renderer.sh"
 require_module "$CORE_DIR/env_check.sh"
 require_module "$CORE_DIR/engine_manager.sh"

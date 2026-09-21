@@ -30,7 +30,7 @@ info() { echo -e "  ${YEL}[..]${NC} $1"; }
 
 # Loader-Reihenfolge — identisch zu katanaos.sh
 CORE_MODULES=(
-    "core/logging.sh" "core/ui_renderer.sh" "core/env_check.sh"
+    "core/logging.sh" "core/interaction.sh" "core/ui_renderer.sh" "core/env_check.sh"
     "core/engine_manager.sh" "core/dispatchers.sh" "core/service_manager.sh"
 )
 OPT_MODULES=(
@@ -98,7 +98,7 @@ fi
 echo ""
 echo "═══ TEST 3: FUNKTIONS-AUFLOESUNG (undefined function references) ═══"
 # Projekt-Funktionen folgen snake_case mit diesen Praefixen.
-PREFIX='run|do|dispatch|install|vault|update|check|setup|post|switch|require|handle|show|change|draw|box|sub|warn|print|menu|visible|exec|flash|render|build|enable|disable|view|manage|scan|inject|wait|uninstall|restore|backup'
+PREFIX='run|do|dispatch|install|vault|update|check|setup|post|switch|require|handle|show|change|draw|box|sub|warn|print|menu|visible|exec|flash|render|build|enable|disable|view|manage|scan|inject|wait|uninstall|restore|backup|katana'
 
 # Tokens in KOMMANDO-Position (kein Variablen-Assignment, kein Argument):
 #   1) Zeilenanfang:        ^   <tok>
