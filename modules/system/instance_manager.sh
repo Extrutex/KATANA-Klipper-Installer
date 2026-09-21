@@ -16,7 +16,7 @@ function run_instance_manager() {
         echo "  [2] Remove instance"
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "INSTANCE MANAGER" || return
         
         case $ch in
             1) add_new_instance ;;

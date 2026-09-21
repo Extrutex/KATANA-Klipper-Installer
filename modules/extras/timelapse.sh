@@ -13,7 +13,7 @@ function run_timelapse_menu() {
         echo "  [3] View Timelapse Files"
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " cmd
+        katana_read_menu cmd "  >> COMMAND: " "TIMELAPSE" || return
         
         case $cmd in
             1) install_timelapse ;;
@@ -97,7 +97,7 @@ function configure_timelapse() {
     echo "  [3] Reset to defaults"
     echo "  [B] Back"
     echo ""
-    read -r -p "  >> SELECT: " selection
+    katana_read_menu selection "  >> SELECT: " "TIMELAPSE CONFIG" || return
     
     case $selection in
         1) 

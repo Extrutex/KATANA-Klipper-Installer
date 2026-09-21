@@ -17,7 +17,7 @@ function run_uninstaller() {
         echo "  [5] REMOVE ALL KATANA FILES"
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " cmd
+        katana_read_menu cmd "  >> COMMAND: " "UNINSTALLER" || return
         
         case $cmd in
             1) full_uninstall ;;

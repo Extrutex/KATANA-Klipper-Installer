@@ -14,7 +14,7 @@ function run_printer_config_wizard() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> " ch
+        katana_read_menu ch "  >> " "PRINTER CONFIG WIZARD" || return
         
         case $ch in
             1) create_basic_printer_cfg ;;

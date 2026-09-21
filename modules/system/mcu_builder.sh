@@ -28,7 +28,7 @@ function run_quick_build_menu() {
     echo ""
     
     local ch
-    read -r -p "  >> Choose: " ch
+    katana_read_menu ch "  >> Choose: " "QUICK BUILD" || return
     
     case $ch in
         1) build_mcu "btt_octopus_f446_v1.1" ;;

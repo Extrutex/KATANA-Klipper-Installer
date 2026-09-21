@@ -26,7 +26,7 @@ function run_toolchanger_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " cmd
+        katana_read_menu cmd "  >> COMMAND: " "TOOLCHANGER" || return
         
         case $cmd in
             1) quick_toolchanger_setup ;;
@@ -48,7 +48,7 @@ function quick_toolchanger_setup() {
     echo "  [6] Six Tool"
     echo "  [B] Back"
     echo ""
-    read -r -p "  >> SELECT: " selection
+    katana_read_menu selection "  >> SELECT: " "TOOLCHANGER QUICK SETUP" || return
     
     local num_tools=2
     case $selection in
@@ -140,7 +140,7 @@ function tool_calibration() {
     echo "  [2] Calibrate Extrusion Ratio"
     echo "  [B] Back"
     echo ""
-    read -r -p "  >> SELECT: " selection
+    katana_read_menu selection "  >> SELECT: " "TOOL CALIBRATION" || return
     
     local macro_dir="$HOME/printer_data/config/macros/toolchanger"
     mkdir -p "$macro_dir"

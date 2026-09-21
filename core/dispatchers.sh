@@ -281,8 +281,7 @@ function dispatch_update_menu() {
         echo ""
         
         local choice
-        if ! read -r -p "  >> COMMAND: " choice; then return; fi
-        choice="${choice#"${choice%%[![:space:]]*}"}"
+        katana_read_menu choice "  >> COMMAND: " "UPDATE MANAGER" || return
 
         case "$choice" in
             1) 
@@ -356,7 +355,7 @@ function update_ui_only() {
     echo "  [1] Mainsail"
     echo "  [2] Fluidd"
     local ch
-    if ! read -r -p "  >> " ch; then return; fi
+    katana_read_menu ch "  >> " "UPDATE - WEB UI" || return
     case "$ch" in
         1) cd "$HOME/mainsail" && git pull ;;
         2) cd "$HOME/fluidd" && git pull ;;
@@ -435,8 +434,7 @@ function dispatch_diagnose_menu() {
         echo ""
         
         local choice
-        if ! read -r -p "  >> COMMAND: " choice; then return; fi
-        choice="${choice#"${choice%%[![:space:]]*}"}"
+        katana_read_menu choice "  >> COMMAND: " "DIAGNOSE" || return
 
         case "$choice" in
             1) check_all_services ;;
@@ -465,7 +463,7 @@ function show_logs_menu() {
         echo "  [B] Back"
         
         local ch
-        if ! read -r -p "  >> " ch; then return; fi
+        katana_read_menu ch "  >> " "LOGS" || return
         case "$ch" in
             1) sudo journalctl -u klipper -n 50 ;;
             2) sudo journalctl -u moonraker -n 50 ;;
@@ -487,7 +485,7 @@ function run_repair_menu() {
         echo "  [B] Back"
 
         local ch
-        if ! read -r -p "  >> " ch; then return; fi
+        katana_read_menu ch "  >> " "REPAIR" || return
         case "$ch" in
             1) sudo systemctl restart klipper ;;
             2) sudo systemctl restart moonraker ;;
@@ -578,7 +576,7 @@ function run_emergency_menu() {
         echo "  [B] Back"
         
         local ch
-        if ! read -r -p "  >> " ch; then return; fi
+        katana_read_menu ch "  >> " "NOTFALL" || return
         case "$ch" in
             1) run_autopilot ;;
             2) 
@@ -612,8 +610,7 @@ function dispatch_settings_menu() {
         echo ""
         
         local choice
-        if ! read -r -p "  >> COMMAND: " choice; then return; fi
-        choice="${choice#"${choice%%[![:space:]]*}"}"
+        katana_read_menu choice "  >> COMMAND: " "SETTINGS" || return
 
         case "$choice" in
             1) change_profile ;;
@@ -657,7 +654,7 @@ function change_profile() {
     echo "  [2] standard  - Core + Mainsail (default)"
     echo "  [3] power     - Everything"
     local ch
-    if ! read -r -p "  >> " ch; then return; fi
+    katana_read_menu ch "  >> " "CHANGE PROFILE" || return
     case "$ch" in
         1) INSTALL_PROFILE="minimal" ;;
         2) INSTALL_PROFILE="standard" ;;

@@ -13,7 +13,7 @@ function install_vision_stack() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> " ch
+        katana_read_menu ch "  >> " "VISION" || return
         
         case $ch in
             1) do_install_crowsnest ;;

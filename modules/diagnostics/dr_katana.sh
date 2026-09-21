@@ -19,7 +19,7 @@ function run_dr_katana() {
         echo "  [5] AUTO-HEALER (One-Click Fix)"
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " cmd
+        katana_read_menu cmd "  >> COMMAND: " "DR. KATANA" || return
         
         case $cmd in
             1) service_control_menu ;;
@@ -93,7 +93,7 @@ function service_control_menu() {
         echo ""
         echo "  [B] Back"
         
-        read -r -p "  >> " sc
+        katana_read_menu sc "  >> " "SERVICE CONTROL" || return
         
         case $sc in
             1) exec_silent "Starting Klipper" "sudo systemctl start klipper" ;;
@@ -124,7 +124,7 @@ function repair_system() {
     echo "  2) System Update (APT)"
     echo "  3) Fix Dependencies (Libraries)"
     echo "  B) Back"
-    read -r -p "  >> " ch
+    katana_read_menu ch "  >> " "REPAIR SYSTEM" || return
     
     case $ch in
         1)

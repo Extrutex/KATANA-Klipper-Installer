@@ -17,7 +17,7 @@ function run_hardware_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> SELECT: " ch
+        katana_read_menu ch "  >> SELECT: " "HARDWARE" || return
         
         case $ch in
             1) run_multimaterial_menu ;;

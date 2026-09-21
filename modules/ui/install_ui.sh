@@ -16,7 +16,7 @@ function install_ui_stack() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "WEB UI" || return
         
         case $ch in
             1) do_install_mainsail ;;

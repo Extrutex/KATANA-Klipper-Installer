@@ -236,7 +236,7 @@ function run_multimaterial_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "MULTI-MATERIAL" || return
 
         case $ch in
             1) install_happyhare ;;

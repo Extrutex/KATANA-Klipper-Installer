@@ -26,7 +26,7 @@ function run_backup_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "BACKUP & RESTORE" || return
         
         case $ch in
             1) create_backup ;;

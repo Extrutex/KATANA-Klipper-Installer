@@ -22,7 +22,7 @@ function run_katapult_menu() {
         echo ""
         echo "  [B] Back"
         
-        read -r -p "  >> SELECT: " ch
+        katana_read_menu ch "  >> SELECT: " "KATAPULT MANAGER" || return
         case $ch in
             1) install_katapult_repo ;;
             2) build_katapult ;;

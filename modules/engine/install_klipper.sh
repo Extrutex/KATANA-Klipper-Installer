@@ -27,7 +27,7 @@ function install_core_stack() {
         echo "  [5] Build Firmware    (MCU Builder)"
         echo ""
         echo "  [B] Back"
-        read -r -p "  >> " ch
+        katana_read_menu ch "  >> " "CORE STACK" || return
 
         case $ch in
             1) do_install_klipper "Standard" ;;
@@ -375,7 +375,7 @@ function update_core_stack() {
     echo "  2) Update Moonraker"
     echo "  3) Update Both"
     echo "  B) Back"
-    read -r -p "  >> " ch
+    katana_read_menu ch "  >> " "CORE STACK UPDATE" || return
 
     case $ch in
         1) do_update_klipper ;;

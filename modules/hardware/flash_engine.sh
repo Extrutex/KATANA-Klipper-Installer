@@ -193,7 +193,7 @@ function run_hal_flasher() {
         echo "  ${C_RED}[C]${NC}  Clear Workflow State       (Neustart)"
         echo "  [B] Back"
         echo ""
-        if ! read -r -p "  >> SELECT: " choice; then return; fi
+        katana_read_menu choice "  >> SELECT: " "FORGE" || return
         case $choice in
             1)
                if [ -f "$MODULES_DIR/hardware/katapult_manager.sh" ]; then
@@ -247,7 +247,10 @@ function run_saved_boards_manager() {
             echo ""
             echo "  [B] Back"
             echo ""
-            if ! read -r -p "  >> COMMAND: " ch; then return; fi
+            # A menu prompt in shape only: whatever is typed is discarded and
+            # the function returns on the next line regardless. It is a pause
+            # wearing a menu's prompt, so it is treated as one.
+            katana_pause "  >> COMMAND: "
             return
         fi
 
@@ -267,7 +270,7 @@ function run_saved_boards_manager() {
         echo "  [B] Back"
         echo ""
         
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "SAVED BOARDS MANAGER" || return
         
         if [[ "$ch" =~ ^[0-9]+$ ]] && [ "$ch" -lt "$i" ] && [ "$ch" -ge 1 ]; then
              local selected_meta="${board_list[$((ch-1))]}"
@@ -302,7 +305,7 @@ function manage_single_board() {
         echo "  [B] Back"
         echo ""
         
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "MANAGE BOARD" || return
         
         case $ch in
             1) build_and_flash_saved "$meta"; return ;;
@@ -732,7 +735,7 @@ function save_board_config() {
         echo "  [1] USB (DFU/Serial) - Standard"
         echo "  [2] CAN Bus (Katapult) - Bridge required"
         echo "  [3] SD Card / Manual"
-        read -r -p "  >> Method: " f_method
+        katana_read_menu f_method "  >> Method: " "FLASH METHOD" || return
         
         case $f_method in
             2) echo "FLASH_METHOD=\"can\"" >> "$meta_dest" ;;
@@ -921,7 +924,7 @@ function flash_bin_artifact() {
     fi
 
     echo ""
-    read -r -p "  >> METHOD: " method
+    katana_read_menu method "  >> METHOD: " "FLASH METHOD" || return
 
     case $method in
         1)

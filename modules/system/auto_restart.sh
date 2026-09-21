@@ -15,7 +15,7 @@ function run_service_manager_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> " ch
+        katana_read_menu ch "  >> " "SERVICE MANAGER" || return
         
         case $ch in
             1) enable_all_auto_restart ;;

@@ -474,7 +474,7 @@ function run_quick_start() {
         echo ""
         echo "  [B] Back"
         echo ""
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "QUICK START" || return
 
         case $ch in
             1) run_autopilot ;;
@@ -519,7 +519,7 @@ function run_extras_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "EXTRAS" || return
 
         case $ch in
             1) run_extras_webui ;;
@@ -551,7 +551,7 @@ function run_extras_webui() {
         echo ""
         echo "  [B] Back"
         echo ""
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "EXTRAS / WEB UI" || return
 
         case $ch in
             1) run_ui_installer ;;
@@ -594,7 +594,7 @@ function run_extras_vision() {
         echo ""
         echo "  [B] Back"
         echo ""
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "EXTRAS / VISION" || return
 
         case $ch in
             1) install_crowsnest ;;
@@ -657,7 +657,7 @@ function run_extras_smartprobes() {
         echo ""
         echo "  [B] Back"
         echo ""
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "EXTRAS / SMART PROBES" || return
 
         case $ch in
             1) run_smartprobe_menu ;;
@@ -676,7 +676,7 @@ function run_extras_beddistance() {
     echo "  Status: $status"
     echo "  [1] Install"
     echo "  [2] Remove"
-    if ! read -r -p "  >> " ch; then return; fi
+    katana_read_menu ch "  >> " "EXTRAS / BED DISTANCE" || return
     katana_pause "  Enter..."
 }
 
@@ -697,7 +697,7 @@ function run_extras_toolchanger() {
         echo ""
         echo "  [B] Back"
         echo ""
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "EXTRAS / TOOLCHANGER" || return
 
         case $ch in
             1) run_multimaterial_menu ;;
@@ -725,7 +725,7 @@ function run_extras_tuning() {
         echo ""
         echo "  [B] Back"
         echo ""
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "EXTRAS / TUNING" || return
 
         case $ch in
             1) run_katana_flow ;;
@@ -757,7 +757,7 @@ function run_extras_system() {
         echo ""
         echo "  [B] Back"
         echo ""
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "EXTRAS / SYSTEM" || return
 
         case $ch in
             1)

@@ -14,7 +14,7 @@ function run_can_manager() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "CAN MANAGER" || return
         
         case $ch in
             1) setup_can_network ;;
@@ -124,7 +124,7 @@ function install_katapult_wizard() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> Select: " choice
+        katana_read_menu choice "  >> Select: " "KATAPULT BOARD SELECT" || return
         
         case $choice in
             1) board="ebb42"; break ;;

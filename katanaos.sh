@@ -341,16 +341,15 @@ main() {
         draw_main_menu
         
         local choice
-        if ! read -r -p "  >> COMMAND: " choice; then
-            # Fängt CTRL+D (EOF) sauber ab
-            echo ""
-            log_info "Sitzung durch Benutzer (EOF) beendet."
+        # Ends the session on EOF (CTRL+D) and on any start without a human —
+        # the same two conditions, handled in one place. katana_read_menu also
+        # does the whitespace trim that used to be repeated here and in every
+        # submenu, and forgotten in about half of them.
+        if ! katana_read_menu choice "  >> COMMAND: " "HAUPTMENUE"; then
+            log_info "Sitzung beendet (kein interaktives Terminal oder EOF)."
             break
         fi
-        
-        # Trim whitespace from input
-        choice="${choice#"${choice%%[![:space:]]*}"}"
-        
+
         # Navigation
         case "$choice" in
             1) run_quick_start ;;       # Befindet sich idealerweise bald im Dispatcher-Modul

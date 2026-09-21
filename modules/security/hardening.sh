@@ -19,7 +19,7 @@ function run_hardening_wizard() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> SELECT: " ch
+        katana_read_menu ch "  >> SELECT: " "HARDENING" || return
         case $ch in
             1) install_security_stack ;;
             2) install_fail2ban ;;

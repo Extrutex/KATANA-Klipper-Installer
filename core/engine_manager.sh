@@ -11,7 +11,7 @@ function run_engine_manager() {
     echo "  2) Switch to KALICO (High-Performance)"
     echo "  3) Switch to RatOS (Klipper Fork)"
     echo "  B) Back"
-    read -r -p "  >> " ech
+    katana_read_menu ech "  >> " "ENGINE MANAGER" || return
     
     case $ech in
         1) switch_core_router "klipper" ;;

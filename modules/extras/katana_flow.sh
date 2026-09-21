@@ -24,7 +24,7 @@ function install_katana_flow() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "KATANA-FLOW" || return
         
         case $ch in
             1) do_install_flow ;;
