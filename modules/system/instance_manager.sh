@@ -123,7 +123,7 @@ function remove_instance() {
     if [ -z "$instances" ]; then
         log_error "No instances found to remove."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
 
     echo "  Select instance to DELETE:"

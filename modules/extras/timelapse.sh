@@ -33,7 +33,7 @@ function install_timelapse() {
     if [ ! -d "$HOME/moonraker" ]; then
         log_error "Moonraker not installed. Install it first."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
     
     log_info "Installing Moonraker Timelapse..."
@@ -78,7 +78,7 @@ function configure_timelapse() {
     if [ ! -f "$conf_file" ]; then
         log_error "Moonraker config not found."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
     
     echo "  Current settings:"
@@ -144,7 +144,7 @@ function view_timelapse_files() {
     if [ ! -d "$timelapse_dir" ]; then
         log_error "Timelapse directory not found."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
     
     local files=($(ls -1t "$timelapse_dir"/*.mp4 2>/dev/null))

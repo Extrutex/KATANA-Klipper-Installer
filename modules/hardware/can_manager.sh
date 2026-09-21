@@ -210,7 +210,7 @@ EOF
     if [ ! -f "out/katapult.bin" ] && [ ! -f "out/katapult.uf2" ]; then
         log_error "Build failed!"
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
     
     echo ""
@@ -255,7 +255,7 @@ function flash_via_katapult_wizard() {
     if [ ! -f "$firmware" ]; then
         log_error "No firmware found! Build it first via 'The Forge -> Manual Build'."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
     
     # 1. Scan for devices
@@ -265,7 +265,9 @@ function flash_via_katapult_wizard() {
     
     if [ ${#uuids[@]} -eq 0 ]; then
         log_warn "No CAN devices found in flash mode."
-        if ! katana_confirm "  Enter UUID manually? [y/N]: " no; then return; fi
+        # `return` (0) here meant "flash succeeded" for a run that found no
+        # board and was told not to ask for one.
+        if ! katana_confirm "  Enter UUID manually? [y/N]: " no; then return 1; fi
         # Same rule as flash_via_can: a UUID names which board gets
         # overwritten and is never defaulted.
         katana_read_value selected_uuid "  UUID: " "" \
@@ -354,7 +356,7 @@ function inject_uuid_to_config() {
     
     if [ ! -f "$config_file" ]; then
         log_error "printer.cfg not found in $(basename $data_dir)!"
-        return
+        return 1
     fi
     
     log_info "Updating $(basename $data_dir)/config/printer.cfg..."

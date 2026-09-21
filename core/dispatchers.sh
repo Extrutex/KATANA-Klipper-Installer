@@ -549,7 +549,7 @@ function run_config_validator() {
     if [ ${#args[@]} -eq 0 ]; then
         log_error "No configs found in ~/printer_data/config."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
 
     local report rc=0
@@ -559,7 +559,7 @@ function run_config_validator() {
     if [ "$rc" -gt 1 ] || [ -z "$report" ]; then
         log_error "Validator failed to run. Check $LOG_FILE."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
 
     # Render verdicts in the existing log style

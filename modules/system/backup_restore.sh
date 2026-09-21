@@ -152,7 +152,7 @@ function restore_backup() {
     
     if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#backups[@]}" ]; then
         log_error "Invalid selection."
-        return
+        return 1
     fi
     
     local target_backup="${backups[$((choice-1))]}"

@@ -55,7 +55,7 @@ function do_install_flow() {
     if [ ! -d "$cfg_dir" ]; then
         log_error "Config directory not found at $cfg_dir"
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
     
     mkdir -p "$flow_dir"
@@ -74,7 +74,7 @@ function do_install_flow() {
     if [ "$failed" -eq 1 ]; then
         log_error "Some files missing. Check your KATANA installation."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
     
     if [ -f "$pcfg" ]; then

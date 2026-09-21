@@ -53,7 +53,7 @@ function install_katapult_repo() {
 function build_katapult() {
     if [ ! -d "$KATAPULT_DIR" ]; then
         log_error "Katapult not installed. Run Step 1 first."
-        return
+        return 1
     fi
     cd "$KATAPULT_DIR" || { log_error "Katapult directory not found"; return 1; }
     

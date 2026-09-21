@@ -114,7 +114,7 @@ function custom_toolchanger() {
 
     if ! [[ "$num_tools" =~ ^[0-9]+$ ]] || [ "$num_tools" -lt 2 ] || [ "$num_tools" -gt 16 ]; then
         log_error "Invalid number (2-16)"
-        return
+        return 1
     fi
     
     local macro_dir="$HOME/printer_data/config/macros/toolchanger"

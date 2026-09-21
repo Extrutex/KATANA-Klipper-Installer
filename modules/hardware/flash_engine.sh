@@ -320,7 +320,7 @@ function run_mcu_update_all() {
     if [ ! -d "$BOARD_REGISTRY_DIR" ]; then
         log_error "No board registry found."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
 
     local configs=("$BOARD_REGISTRY_DIR"/*.meta)
@@ -357,7 +357,7 @@ function build_and_flash_saved() {
     if [ ! -f "$config_file" ]; then
         log_error "Config file missing!"
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
     
     # Restore
@@ -390,7 +390,7 @@ function build_and_flash_saved() {
     else
         log_error "Build failed."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
     
     # Flash
@@ -463,7 +463,7 @@ function run_build_and_flash() {
         echo "  Zuerst Quick Start [1] ausführen."
         echo ""
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
 
     # B2B Standard: Klipper MUSS gestoppt werden
@@ -501,7 +501,7 @@ function run_build_and_flash() {
     if ! make menuconfig; then
         log_error "Menuconfig abgebrochen."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
     
     # Hardware-Validation
@@ -541,7 +541,7 @@ function run_build_and_flash() {
     else
         log_error "Build fehlgeschlagen."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
 
     log_success "Phase 2 abgeschlossen."
@@ -711,7 +711,7 @@ function save_board_config() {
     
     if [ -z "$board_name" ]; then
         log_error "Invalid name. Config NOT saved."
-        return
+        return 1
     fi
     
     local config_src="$HOME/klipper/.config"
@@ -764,7 +764,7 @@ function run_linux_wizard() {
         echo "  You need to install Klipper first via Quick Start [1]."
         echo ""
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
 
     echo "  This will compile & install Klipper for the Raspberry Pi itself."
@@ -787,7 +787,7 @@ function run_linux_wizard() {
     else
         log_error "Build failed."
         katana_pause "  Press Enter..."
-        return
+        return 1
     fi
 
     log_info "Installing..."
