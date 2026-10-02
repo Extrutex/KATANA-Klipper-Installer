@@ -26,7 +26,7 @@ function run_toolchanger_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " cmd
+        katana_read_menu cmd "  >> COMMAND: " "TOOLCHANGER" || return
         
         case $cmd in
             1) quick_toolchanger_setup ;;
@@ -48,7 +48,7 @@ function quick_toolchanger_setup() {
     echo "  [6] Six Tool"
     echo "  [B] Back"
     echo ""
-    read -r -p "  >> SELECT: " selection
+    katana_read_menu selection "  >> SELECT: " "TOOLCHANGER QUICK SETUP" || return
     
     local num_tools=2
     case $selection in
@@ -100,18 +100,21 @@ EOF
     log_success "$num_tools tools configured!"
     echo "  Macros: $macro_dir"
     echo "  Use T0, T1, T2... to switch tools"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function custom_toolchanger() {
     draw_header "CUSTOM TOOLCHANGER"
     echo ""
     echo "  How many tools? (2-16)"
-    read -r -p "  >> " num_tools
-    
+    # No default: a tool count is a property of the physical machine. Picking
+    # one generates macros for hardware that is not there.
+    katana_read_value num_tools "  >> " "" \
+        "Werkzeuganzahl interaktiv angeben" || return 1
+
     if ! [[ "$num_tools" =~ ^[0-9]+$ ]] || [ "$num_tools" -lt 2 ] || [ "$num_tools" -gt 16 ]; then
         log_error "Invalid number (2-16)"
-        return
+        return 1
     fi
     
     local macro_dir="$HOME/printer_data/config/macros/toolchanger"
@@ -130,7 +133,7 @@ EOF
     
     log_success "$num_tools tools configured!"
     echo "  Edit the macros in: $macro_dir"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function tool_calibration() {
@@ -140,7 +143,7 @@ function tool_calibration() {
     echo "  [2] Calibrate Extrusion Ratio"
     echo "  [B] Back"
     echo ""
-    read -r -p "  >> SELECT: " selection
+    katana_read_menu selection "  >> SELECT: " "TOOL CALIBRATION" || return
     
     local macro_dir="$HOME/printer_data/config/macros/toolchanger"
     mkdir -p "$macro_dir"
@@ -167,7 +170,7 @@ EOF
         [bB]) return ;;
     esac
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_toolchanger() {
@@ -177,15 +180,14 @@ function remove_toolchanger() {
     
     if [ ! -d "$macro_dir" ]; then
         log_warn "No toolchanger config found."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
     echo "  Files to remove:"
     ls "$macro_dir/" 2>/dev/null
     echo ""
-    read -r -p "  Remove all toolchanger configs? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Remove all toolchanger configs? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing toolchanger macros..."
     rm -rf "$macro_dir"
@@ -201,5 +203,5 @@ function remove_toolchanger() {
     fi
     
     log_success "Toolchanger removed!"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

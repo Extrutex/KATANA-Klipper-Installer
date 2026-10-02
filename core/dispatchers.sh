@@ -21,9 +21,13 @@ function run_autopilot() {
     echo "  ${C_NEON}[2]${NC}  Fluidd"
     echo ""
     
-    local ui_choice
-    read -r -p "  >> Select UI [1/2]: " ui_choice
-    
+    # One of the few value prompts with a default that is already documented
+    # in the code below it: the `1|""` arm has always meant "Mainsail unless
+    # told otherwise", and the menu marks it Recommended. So the default is
+    # named here rather than arrived at by an empty read.
+    local ui_choice="1"
+    katana_read_value ui_choice "  >> Select UI [1/2]: " "1" || true
+
     case "$ui_choice" in
         1|"") ui_choice="mainsail" ;;
         2) ui_choice="fluidd" ;;
@@ -35,52 +39,60 @@ function run_autopilot() {
     echo "  Installing: Klipper + Moonraker + ${ui_choice^}"
     echo "  ─────────────────────────────────"
     echo ""
-    read -r -p "  Start Installation? [y/N] " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
-    
+    if ! katana_confirm "  Start Installation? [y/N] " no; then return 0; fi
+
     echo ""
-    
+
+    # Each step's return value is checked before the next one starts. Previously
+    # the three calls were fired and ignored, so "INSTALLATION COMPLETE" was
+    # printed even when Klipper had failed — the interactive twin of the
+    # headless bug this branch fixes.
+
     # STEP 1: KLIPPER
     log_info "═══ STEP 1/3: KLIPPER ═══"
-    if declare -f do_install_klipper > /dev/null; then
-        do_install_klipper "Standard"
-    else
+    if ! declare -f do_install_klipper > /dev/null; then
         log_error "Klipper install function not found!"
         return 1
     fi
-    
+    if ! do_install_klipper "Standard"; then
+        log_error "Klipper installation failed — aborting before Moonraker."
+        katana_pause
+        return 1
+    fi
+
     # STEP 2: MOONRAKER
     echo ""
     log_info "═══ STEP 2/3: MOONRAKER ═══"
-    if declare -f do_install_moonraker > /dev/null; then
-        do_install_moonraker
-    else
+    if ! declare -f do_install_moonraker > /dev/null; then
         log_error "Moonraker install function not found!"
         return 1
     fi
-    
+    if ! do_install_moonraker; then
+        log_error "Moonraker installation failed — aborting before the web UI."
+        katana_pause
+        return 1
+    fi
+
     # STEP 3: WEB UI
     echo ""
     log_info "═══ STEP 3/3: ${ui_choice^^} ═══"
-    if [ "$ui_choice" = "fluidd" ]; then
-        if declare -f do_install_fluidd > /dev/null; then
-            do_install_fluidd
-        else
-            log_error "Fluidd install function not found!"
-        fi
-    else
-        if declare -f do_install_mainsail > /dev/null; then
-            do_install_mainsail
-        else
-            log_error "Mainsail install function not found!"
-        fi
+    local ui_function="do_install_mainsail"
+    [ "$ui_choice" = "fluidd" ] && ui_function="do_install_fluidd"
+    if ! declare -f "$ui_function" > /dev/null; then
+        log_error "${ui_choice^} install function not found!"
+        return 1
     fi
-    
+    if ! "$ui_function"; then
+        log_error "${ui_choice^} installation failed."
+        katana_pause
+        return 1
+    fi
+
     echo ""
     log_success "═══ INSTALLATION COMPLETE ═══"
     echo ""
     post_install_verify
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 # POST-INSTALL VERIFICATION
@@ -273,8 +285,7 @@ function dispatch_update_menu() {
         echo ""
         
         local choice
-        if ! read -r -p "  >> COMMAND: " choice; then return; fi
-        choice="${choice#"${choice%%[![:space:]]*}"}"
+        katana_read_menu choice "  >> COMMAND: " "UPDATE MANAGER" || return
 
         case "$choice" in
             1) 
@@ -305,7 +316,7 @@ function update_klipper_only() {
     log_info "Pulling latest Klipper changes..."
     if ! git pull; then
         log_error "Git pull failed. Please check your config."
-        read -r -p "  Drücke Enter..."
+        katana_pause "  Drücke Enter..."
         return 1
     fi
     
@@ -314,10 +325,23 @@ function update_klipper_only() {
     log_info "Building Klipper Firmware..."
     make -j"$(nproc)"
     
+    # An MCU flash hidden inside a menu entry called "Klipper Only — Firmware".
+    # Nothing on the way here said a board would be written to: the operator
+    # picked "update", and the update reflashed whatever MCU answered on USB,
+    # mid-print if one was running. The flash is now a separate decision from
+    # the update, and declining it still leaves the host updated.
+    if ! katana_confirm_destructive \
+        "  Gebaute Firmware jetzt auf den MCU flashen? [y/N]: " flash; then
+        log_info "Klipper aktualisiert und gebaut. Firmware NICHT geflasht."
+        log_info "Flashen spaeter ueber FORGE -> Build & Flash."
+        katana_pause "  Drücke Enter..."
+        return 0
+    fi
+
     log_info "Attempting to flash (assuming USB/default make flash)..."
     sudo make flash || log_warn "Automated flash failed or not applicable."
-    
-    read -r -p "  Drücke Enter..."
+
+    katana_pause "  Drücke Enter..."
 }
 
 function update_moonraker_only() {
@@ -332,14 +356,14 @@ function update_moonraker_only() {
     log_info "Pulling latest Moonraker changes..."
     if ! git pull; then
         log_error "Git pull failed."
-        read -r -p "  Drücke Enter..."
+        katana_pause "  Drücke Enter..."
         return 1
     fi
     
     ./scripts/install.sh
     sudo systemctl restart moonraker
     log_success "Moonraker updated and restarted."
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function update_ui_only() {
@@ -348,14 +372,14 @@ function update_ui_only() {
     echo "  [1] Mainsail"
     echo "  [2] Fluidd"
     local ch
-    if ! read -r -p "  >> " ch; then return; fi
+    katana_read_menu ch "  >> " "UPDATE - WEB UI" || return
     case "$ch" in
         1) cd "$HOME/mainsail" && git pull ;;
         2) cd "$HOME/fluidd" && git pull ;;
         *) return ;;
     esac
     log_success "UI Updated."
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function update_extras_only() {
@@ -377,7 +401,7 @@ function update_extras_only() {
     done
 
     log_success "Extras update check complete."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function check_updates_only() {
@@ -404,7 +428,7 @@ function check_updates_only() {
     done
 
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # 15. DIAGNOSE DISPATCHER
@@ -427,8 +451,7 @@ function dispatch_diagnose_menu() {
         echo ""
         
         local choice
-        if ! read -r -p "  >> COMMAND: " choice; then return; fi
-        choice="${choice#"${choice%%[![:space:]]*}"}"
+        katana_read_menu choice "  >> COMMAND: " "DIAGNOSE" || return
 
         case "$choice" in
             1) check_all_services ;;
@@ -445,7 +468,7 @@ function check_all_services() {
     draw_header "SERVICE STATUS"
     systemctl status klipper --no-pager || true
     systemctl status moonraker --no-pager || true
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function show_logs_menu() {
@@ -457,7 +480,7 @@ function show_logs_menu() {
         echo "  [B] Back"
         
         local ch
-        if ! read -r -p "  >> " ch; then return; fi
+        katana_read_menu ch "  >> " "LOGS" || return
         case "$ch" in
             1) sudo journalctl -u klipper -n 50 ;;
             2) sudo journalctl -u moonraker -n 50 ;;
@@ -465,7 +488,7 @@ function show_logs_menu() {
             [bB]) return ;;
             *) log_error "Invalid Selection" ; sleep 1 ; continue ;;
         esac
-        read -r -p "  Drücke Enter..."
+        katana_pause "  Drücke Enter..."
     done
 }
 
@@ -479,7 +502,7 @@ function run_repair_menu() {
         echo "  [B] Back"
 
         local ch
-        if ! read -r -p "  >> " ch; then return; fi
+        katana_read_menu ch "  >> " "REPAIR" || return
         case "$ch" in
             1) sudo systemctl restart klipper ;;
             2) sudo systemctl restart moonraker ;;
@@ -516,7 +539,7 @@ function run_config_validator() {
         else
             log_error "moonraker.conf: missing or no [server] section"
         fi
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -525,8 +548,8 @@ function run_config_validator() {
     [ -f "$mconf" ] && args+=(--moonraker "$mconf")
     if [ ${#args[@]} -eq 0 ]; then
         log_error "No configs found in ~/printer_data/config."
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
 
     local report rc=0
@@ -535,8 +558,8 @@ function run_config_validator() {
 
     if [ "$rc" -gt 1 ] || [ -z "$report" ]; then
         log_error "Validator failed to run. Check $LOG_FILE."
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
 
     # Render verdicts in the existing log style
@@ -559,7 +582,7 @@ for c in json.load(sys.stdin)["checks"]:
     else
         log_error "Fatal config problems found. Fix them before starting Klipper."
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function run_emergency_menu() {
@@ -570,7 +593,7 @@ function run_emergency_menu() {
         echo "  [B] Back"
         
         local ch
-        if ! read -r -p "  >> " ch; then return; fi
+        katana_read_menu ch "  >> " "NOTFALL" || return
         case "$ch" in
             1) run_autopilot ;;
             2) 
@@ -604,8 +627,7 @@ function dispatch_settings_menu() {
         echo ""
         
         local choice
-        if ! read -r -p "  >> COMMAND: " choice; then return; fi
-        choice="${choice#"${choice%%[![:space:]]*}"}"
+        katana_read_menu choice "  >> COMMAND: " "SETTINGS" || return
 
         case "$choice" in
             1) change_profile ;;
@@ -649,7 +671,7 @@ function change_profile() {
     echo "  [2] standard  - Core + Mainsail (default)"
     echo "  [3] power     - Everything"
     local ch
-    if ! read -r -p "  >> " ch; then return; fi
+    katana_read_menu ch "  >> " "CHANGE PROFILE" || return
     case "$ch" in
         1) INSTALL_PROFILE="minimal" ;;
         2) INSTALL_PROFILE="standard" ;;
@@ -657,18 +679,18 @@ function change_profile() {
         *) log_error "Abbruch." ; sleep 1 ; return ;;
     esac
     log_success "Profile Changed to $INSTALL_PROFILE"
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function change_theme() {
     draw_header "THEME"
     echo "  Theme switching coming soon..."
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }
 
 function show_info() {
     draw_header "KATANAOS INFO"
     echo "  Building modern deployments."
     echo "  Profile: $INSTALL_PROFILE"
-    read -r -p "  Drücke Enter..."
+    katana_pause "  Drücke Enter..."
 }

@@ -17,7 +17,7 @@ function run_hardware_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> SELECT: " ch
+        katana_read_menu ch "  >> SELECT: " "HARDWARE" || return
         
         case $ch in
             1) run_multimaterial_menu ;;
@@ -39,17 +39,14 @@ function install_bed_distance_sensor() {
     echo ""
     echo "  Accelerometer-based probe for automatic Z-offset calibration."
     echo ""
-    read -r -p "  Install Bed Distance Sensor? [y/N]: " yn
-    
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    if ! katana_confirm "  Install Bed Distance Sensor? [y/N]: " no; then return; fi
     
     local repo_dir="$HOME/Bed_Distance_sensor"
     local cfg_dir="$HOME/printer_data/config/bed_distance_sensor"
     
     if [ -d "$repo_dir" ]; then
         log_warn "Bed Distance Sensor already installed."
-        read -r -p "  Reinstall? [y/N]: " yn
-        if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+        if ! katana_confirm_destructive "  Reinstall? [y/N]: " reinstall; then return 1; fi
         rm -rf "$repo_dir"
     fi
     
@@ -84,5 +81,5 @@ function install_bed_distance_sensor() {
     echo "  Repo: $repo_dir"
     echo "  Configs: $cfg_dir"
     echo "  [!] Adjust pin settings for your setup."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

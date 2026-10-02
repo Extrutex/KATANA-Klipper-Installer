@@ -19,7 +19,7 @@ function run_hardening_wizard() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> SELECT: " ch
+        katana_read_menu ch "  >> SELECT: " "HARDENING" || return
         case $ch in
             1) install_security_stack ;;
             2) install_fail2ban ;;
@@ -37,8 +37,7 @@ function install_security_stack() {
     echo "  ${C_RED}[!] WARNING:${NC} Configuring a firewall via SSH carries a risk."
     echo "  We have implemented safety checks, but please be careful."
     echo ""
-    read -r -p "  Proceed with Firewall Setup? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm "  Proceed with Firewall Setup? [y/N]: " no; then return; fi
     
     # 1. Install UFW
     log_info "Installing UFW..."
@@ -89,20 +88,19 @@ function install_security_stack() {
     
     echo ""
     echo "  [i] Note: You can check status anytime with 'sudo ufw status'."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function install_fail2ban() {
     draw_header "INSTALL FAIL2BAN"
     echo "  Protect SSH against brute-force attacks."
     echo ""
-    read -r -p "  Install Fail2Ban? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm "  Install Fail2Ban? [y/N]: " no; then return; fi
     
     log_info "Installing Fail2Ban..."
     sudo apt-get update
     sudo apt-get install -y fail2ban
     
     log_success "Fail2Ban installed and running."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

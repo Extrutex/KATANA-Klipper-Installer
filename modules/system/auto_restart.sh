@@ -15,7 +15,7 @@ function run_service_manager_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> " ch
+        katana_read_menu ch "  >> " "SERVICE MANAGER" || return
         
         case $ch in
             1) enable_all_auto_restart ;;
@@ -45,7 +45,7 @@ function enable_all_auto_restart() {
     fi
     
     draw_success "Auto-restart enabled for all services!"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function enable_klipper_auto_restart() {
@@ -62,7 +62,18 @@ function enable_moonraker_auto_restart() {
 
 function setup_service_restart() {
     local service="$1"
-    
+
+    # Symmetry with disable_auto_restart, which gates on `reset`. Gating only
+    # the teardown and not the setup is worse than gating neither: it implies
+    # the writing half is the safe one, when this is the half that writes a
+    # systemd drop-in under /etc and changes how the machine behaves after a
+    # crash. Both halves, one operation name.
+    if ! katana_confirm_destructive \
+        "  systemd-Override fuer '${service}' schreiben? [y/N]: " reset; then
+        log_info "Auto-Restart fuer '${service}' nicht konfiguriert."
+        return 1
+    fi
+
     # Create override directory
     sudo mkdir -p /etc/systemd/system/${service}.service.d
     
@@ -86,6 +97,12 @@ EOF
 }
 
 function disable_auto_restart() {
+    # Deletes systemd drop-in directories under /etc. Reversible by re-running
+    # the enable path, but it silently changes how a printer behaves after a
+    # crash, so it is not something an unattended run should decide.
+    if ! katana_confirm_destructive "  Auto-Restart fuer alle Dienste deaktivieren? [y/N]: " reset; then
+        return 1
+    fi
     log_info "Disabling auto-restart for all services..."
     
     for service in klipper moonraker crowsnest KlipperScreen; do
@@ -98,7 +115,7 @@ function disable_auto_restart() {
     sudo systemctl daemon-reload
     
     draw_success "Auto-restart disabled for all services."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function view_service_health() {
@@ -154,5 +171,5 @@ function view_service_health() {
     fi
     
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

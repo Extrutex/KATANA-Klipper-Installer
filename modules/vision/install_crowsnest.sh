@@ -13,7 +13,7 @@ function install_vision_stack() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> " ch
+        katana_read_menu ch "  >> " "VISION" || return
         
         case $ch in
             1) do_install_crowsnest ;;
@@ -47,7 +47,7 @@ function do_install_crowsnest() {
     fi
     
     log_success "Crowsnest Installed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function do_install_klipperscreen() {
@@ -72,23 +72,25 @@ function do_install_klipperscreen() {
     fi
 
     log_success "KlipperScreen Installed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function do_remove_crowsnest() {
+    if ! katana_confirm_destructive "  Crowsnest entfernen? [y/N]: " uninstall; then return 1; fi
     log_info "Removing Crowsnest..."
     cd "$HOME/crowsnest" 2>/dev/null && make uninstall
     rm -rf "$HOME/crowsnest"
     log_success "Crowsnest Removed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function do_remove_klipperscreen() {
+    if ! katana_confirm_destructive "  KlipperScreen entfernen? [y/N]: " uninstall; then return 1; fi
     log_info "Removing KlipperScreen..."
     cd "$HOME/KlipperScreen" 2>/dev/null && make uninstall
     rm -rf "$HOME/KlipperScreen"
     sudo rm -f /etc/systemd/system/KlipperScreen.service
     sudo systemctl daemon-reload
     log_success "KlipperScreen Removed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

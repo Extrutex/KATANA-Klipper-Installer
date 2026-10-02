@@ -26,7 +26,7 @@ function run_backup_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "BACKUP & RESTORE" || return
         
         case $ch in
             1) create_backup ;;
@@ -76,14 +76,14 @@ function create_backup() {
         log_error "Backup failed!"
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function list_backups() {
     draw_header "AVAILABLE BACKUPS"
     ls -lh "$BACKUP_DIR"
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function push_config_to_git() {
@@ -93,8 +93,7 @@ function push_config_to_git() {
     if [ ! -d "$config_dir/.git" ]; then
         log_warn "No Git repository found in $config_dir"
         echo "  Would you like to initialize one?"
-        read -r -p "  [y/N]: " yn
-        if [[ "$yn" =~ ^[yY] ]]; then
+        if katana_confirm "  [y/N]: " no; then
             cd "$config_dir" || return 1
             git init
             git add .
@@ -118,7 +117,7 @@ function push_config_to_git() {
     fi
     
 
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function restore_backup() {
@@ -129,7 +128,7 @@ function restore_backup() {
     
     if [ ${#backups[@]} -eq 0 ]; then
         log_warn "No backups found in $BACKUP_DIR."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
@@ -143,13 +142,17 @@ function restore_backup() {
     echo "  [B] Back"
     echo ""
     
-    read -r -p "  >> SELECT BACKUP TO RESTORE: " choice
-    
+    # No default: the selection decides which backup overwrites the live
+    # configuration.
+    local choice=""
+    katana_read_value choice "  >> SELECT BACKUP TO RESTORE: " "" \
+        "Backup interaktiv waehlen" || return 1
+
     if [[ "$choice" =~ ^[bB]$ ]]; then return; fi
     
     if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#backups[@]}" ]; then
         log_error "Invalid selection."
-        return
+        return 1
     fi
     
     local target_backup="${backups[$((choice-1))]}"
@@ -158,11 +161,12 @@ function restore_backup() {
     echo ""
     log_warn "WARNING: This will OVERWRITE your current configuration!"
     echo "  Restoring: $backup_name"
-    read -r -p "  Type 'RESTORE' to confirm: " confirm
-    
-    if [ "$confirm" != "RESTORE" ]; then
+    # The typed token is kept, not downgraded to a keystroke: the friction is
+    # the feature. katana_confirm_destructive demands the exact string from a
+    # human and refuses outright without one.
+    if ! katana_confirm_destructive "  Type 'RESTORE' to confirm: " restore "RESTORE"; then
         log_info "Restore cancelled."
-        return
+        return 1
     fi
     
     log_info "Stopping services..."
@@ -221,5 +225,5 @@ function restore_backup() {
         log_error "Unzip failed."
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

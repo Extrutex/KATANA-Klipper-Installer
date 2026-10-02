@@ -22,7 +22,7 @@ function run_katapult_menu() {
         echo ""
         echo "  [B] Back"
         
-        read -r -p "  >> SELECT: " ch
+        katana_read_menu ch "  >> SELECT: " "KATAPULT MANAGER" || return
         case $ch in
             1) install_katapult_repo ;;
             2) build_katapult ;;
@@ -47,19 +47,19 @@ function install_katapult_repo() {
     if ! pip3 show pyserial >/dev/null 2>&1; then
         pip3 install pyserial
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function build_katapult() {
     if [ ! -d "$KATAPULT_DIR" ]; then
         log_error "Katapult not installed. Run Step 1 first."
-        return
+        return 1
     fi
     cd "$KATAPULT_DIR" || { log_error "Katapult directory not found"; return 1; }
     
     draw_header "BUILD KATAPULT"
     echo "  Select your architecture in menuconfig."
-    read -r -p "  Press Enter to configure..."
+    katana_pause "  Press Enter to configure..."
     
     make menuconfig
     make clean
@@ -71,7 +71,7 @@ function build_katapult() {
     else
         log_error "Build failed."
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function flash_katapult_dfu() {
@@ -79,10 +79,19 @@ function flash_katapult_dfu() {
     echo "  Ensure your device is in DFU Mode!"
     echo "  (Press Boot button + Reset)"
     echo ""
-    read -r -p "  Press Enter when ready..."
+    katana_pause "  Press Enter when ready..."
     
-    cd "$KATAPULT_DIR" || return
-    
+    cd "$KATAPULT_DIR" || return 1
+
+    # The pause above ("Press Enter when ready") is not consent — it returns 0
+    # unconditionally by contract, so unattended this function walked straight
+    # into `make flash` and overwrote the bootloader of whatever board happened
+    # to be in DFU mode. This is the gate.
+    if ! katana_confirm_destructive "  Katapult-Bootloader jetzt flashen? [y/N]: " flash; then
+        log_info "Flash abgebrochen — Board unveraendert."
+        return 1
+    fi
+
     log_info "Flashing via DFU..."
     if make flash; then
         log_success "Katapult geflasht!"
@@ -93,5 +102,5 @@ function flash_katapult_dfu() {
     else
         log_warn "Flash möglicherweise fehlgeschlagen. Device-ID prüfen."
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

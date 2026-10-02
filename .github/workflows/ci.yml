@@ -1,5 +1,6 @@
 # KATANA CI — strangler phase 0 (docs/PYTHON_CORE_STRATEGY.md)
-# Gate: pytest (katana_core) + module integrity harness + shellcheck.
+# Gate: pytest (katana_core) + module integrity harness + headless behaviour
+#       test + shellcheck.
 name: CI
 
 on:
@@ -22,6 +23,57 @@ jobs:
         run: pytest -q
       - name: Module integrity harness
         run: bash tests/test_modules.sh
+
+  headless-install:
+    name: headless install (real run, stdin closed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install fixtures tooling
+        run: sudo apt-get update -qq && sudo apt-get install -y zip unzip curl
+      # `< /dev/null` is redundant on a runner (there is no TTY) but it is the
+      # condition under test, so it is stated rather than assumed.
+      - name: Headless install behaviour test
+        run: bash tests/test_headless_install.sh < /dev/null
+
+  headless-install-container:
+    name: headless install (container, root, real nginx)
+    runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm-slim
+    steps:
+      - uses: actions/checkout@v4
+      # Running as root inside the container means tests/headless_install_harness.sh
+      # passes sudo through instead of stubbing it, so the nginx vhost is really
+      # written and `nginx -t` really runs. systemd stays stubbed: a plain
+      # container has no PID 1, so "the service actually came up" remains
+      # provable only on target hardware or in a systemd-enabled VM. This is
+      # documented in the header of tests/test_headless_install.sh.
+      - name: Install runtime dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            bash curl unzip zip nginx util-linux ca-certificates
+      - name: Headless install behaviour test (root)
+        run: bash tests/test_headless_install.sh < /dev/null
+
+  interaction-sweep:
+    name: interaction sweep (flash, CAN, destructive paths)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # util-linux provides script(1), which allocates the pty the suite needs
+      # to prove that prompts do not block when a TTY IS present but nobody is
+      # watching. Without it those cases skip rather than fail, and the half of
+      # the defect that hangs a fleet rollout would go unverified.
+      - name: Install pty tooling
+        run: sudo apt-get update -qq && sudo apt-get install -y util-linux
+      # stdin closed, as under systemd, ssh -n, cron or this runner. Every
+      # command that could write to a board is stubbed inside the harness, so
+      # this job cannot flash anything even if a gate regresses — it records the
+      # attempt and fails instead.
+      - name: Interaction behaviour test
+        run: bash tests/test_interaction_sweep.sh < /dev/null
 
   shellcheck:
     name: shellcheck (error severity)

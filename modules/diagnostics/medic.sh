@@ -88,5 +88,5 @@ function run_system_diagnostics() {
         log_error "Packaging failed."
     fi
 
-    read -r -p "  Press [Enter] to return..."
+    katana_pause "  Press [Enter] to return..."
 }

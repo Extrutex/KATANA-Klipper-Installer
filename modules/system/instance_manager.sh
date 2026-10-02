@@ -16,7 +16,7 @@ function run_instance_manager() {
         echo "  [2] Remove instance"
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "INSTANCE MANAGER" || return
         
         case $ch in
             1) add_new_instance ;;
@@ -93,8 +93,7 @@ function add_new_instance() {
     echo "  - Port:      $next_port"
     echo "  - Service:   klipper-$next_num / moonraker-$next_num"
     echo ""
-    read -r -p "  Create? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    if ! katana_confirm "  Create? [y/N]: " no; then return; fi
 
     local data_dir="$HOME/printer_data_$next_num"
     local k_svc="klipper-$next_num"
@@ -114,7 +113,7 @@ function add_new_instance() {
         log_error "Installer module not found."
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_instance() {
@@ -123,8 +122,8 @@ function remove_instance() {
     local instances=$(ls -d "$HOME"/printer_data* 2>/dev/null)
     if [ -z "$instances" ]; then
         log_error "No instances found to remove."
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
 
     echo "  Select instance to DELETE:"
@@ -133,20 +132,36 @@ function remove_instance() {
         echo "    [$((i+1))] $(basename "${inst_arr[$i]}")"
     done
     echo ""
-    read -r -p "  Select [1-${#inst_arr[@]}] or [B]ack: " choice
+    # No default: this picks which instance gets deleted.
+    local choice=""
+    katana_read_value choice "  Select [1-${#inst_arr[@]}] or [B]ack: " "" \
+        "Instanz interaktiv waehlen" || return 1
     if [[ "$choice" =~ ^[bB]$ ]]; then return; fi
-    
+
+    # Range check added with the prompt change: a non-numeric or out-of-range
+    # answer used to index the array with garbage, so $target came out empty
+    # and the systemctl/rm calls below ran against an empty path.
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#inst_arr[@]}" ]; then
+        log_error "Invalid selection."
+        return 1
+    fi
+
     local idx=$((choice - 1))
     local target="${inst_arr[$idx]}"
-    local name=$(basename "$target")
+    local name
+    name=$(basename "$target")
     
     if [ "$name" == "printer_data" ]; then
         log_warn "This is the base instance. Are you sure?"
     fi
 
     echo -e "${C_RED}!!! WARNING: This will delete all configs and service files for $name !!!${NC}"
-    read -r -p "  Confirm? Type 'DELETE': " confirm
-    if [ "$confirm" != "DELETE" ]; then return; fi
+    # Typed token preserved for the same reason as the restore path: what
+    # follows is `rm -rf "$target"` plus systemd unit removal.
+    if ! katana_confirm_destructive "  Confirm? Type 'DELETE': " delete "DELETE"; then
+        log_info "Abgebrochen — Instanz '$name' unveraendert."
+        return 1
+    fi
 
     log_info "Removing services..."
     local k_svc="klipper"; local m_svc="moonraker"
@@ -165,5 +180,5 @@ function remove_instance() {
     rm -rf "$target"
     
     draw_success "$name removed completely."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

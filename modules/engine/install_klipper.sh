@@ -27,7 +27,7 @@ function install_core_stack() {
         echo "  [5] Build Firmware    (MCU Builder)"
         echo ""
         echo "  [B] Back"
-        read -r -p "  >> " ch
+        katana_read_menu ch "  >> " "CORE STACK" || return
 
         case $ch in
             1) do_install_klipper "Standard" ;;
@@ -60,7 +60,7 @@ function do_install_ratos() {
     fi
     
     log_success "RatOS installed. Use 'Engine Manager' to switch to it."
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function do_install_kalico() {
@@ -83,7 +83,7 @@ function do_install_kalico() {
     exec_silent "Installing Dependencies" "$env_dir/bin/pip install -r $repo_dir/scripts/klippy-requirements.txt"
 
     log_success "Kalico installed. Use 'Engine Manager' to switch to it."
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function do_install_klipper() {
@@ -104,8 +104,14 @@ function do_install_klipper() {
         log_success "System dependencies installed."
     else
         log_error "Failed to install some dependencies. Check your internet connection."
-        read -r -p "  Continue anyway? [y/N]: " yn
-        if [[ ! "$yn" =~ ^[yY] ]]; then return 1; fi
+        # Unattended, this is a hard stop: --yes authorises the installation, it
+        # does not authorise continuing without a toolchain. Continuing here is
+        # how a fleet host ends up with Klipper that cannot build firmware while
+        # the installer exits 0.
+        if ! katana_confirm "  Continue anyway? [y/N]: " no; then
+            log_error "Aborting: required build dependencies are missing."
+            return 1
+        fi
     fi
     
     # 1. Repo & Env (Shared across instances)
@@ -124,14 +130,24 @@ function do_install_klipper() {
     mkdir -p "$data_dir/config" "$data_dir/logs" "$data_dir/comms" "$data_dir/gcodes"
 
     # 3. Service File (Dynamic)
-    if command -v install_service_from_template &> /dev/null; then
-        install_service_from_template "klipper" "$service_name" "$data_dir"
-    else
+    if ! command -v install_service_from_template &> /dev/null; then
         log_error "Service Manager missing! Klipper service NOT installed."
+        return 1
     fi
-    
-    sudo systemctl restart "$service_name"
-    
+    if ! install_service_from_template "klipper" "$service_name" "$data_dir"; then
+        log_error "Could not install the $service_name systemd unit."
+        return 1
+    fi
+
+    # Deliberately tolerated: on a freshly imaged host there is no valid
+    # printer.cfg and usually no MCU attached yet, so klipper is EXPECTED to
+    # fail its first start — it goes online once the MCU is flashed and wired.
+    # Treating this as a step failure would make every unattended provisioning
+    # run fail on hardware that is not yet connected. The unit is installed and
+    # enabled at this point, which is what this step is responsible for.
+    sudo systemctl restart "$service_name" || \
+        log_warn "$service_name did not start yet (expected until printer.cfg and MCU are in place)."
+
     # 4. Default Config (First time only)
     local config_file="$data_dir/config/printer.cfg"
     if [ ! -f "$config_file" ]; then
@@ -202,10 +218,16 @@ function do_install_moonraker() {
     wait_for_apt_lock
     sudo apt-get update -qq
     wait_for_apt_lock
+    # Deliberately tolerated: several of these package names differ between
+    # Debian releases (packagekit, libopenjp2-7), and a missing optional one
+    # must not abort provisioning. The venv/pip step below is the real gate —
+    # if a genuinely required header is absent, the requirements install fails
+    # there with a readable error instead of here with an apt exit code.
     sudo apt-get install -y python3-virtualenv python3-dev liblmdb-dev \
         libopenjp2-7 libsodium-dev zlib1g-dev libjpeg-dev packagekit \
-        python3-wheel python3-setuptools 2>/dev/null
-    
+        python3-wheel python3-setuptools >>"${LOG_FILE:-/dev/null}" 2>&1 || \
+        log_warn "Some Moonraker system packages were unavailable — see ${LOG_FILE:-the log}."
+
     # 2. Clone Repo
     local repo_dir="$HOME/moonraker"
     if [ ! -d "$repo_dir" ]; then
@@ -218,8 +240,20 @@ function do_install_moonraker() {
         exec_silent "Creating VirtualEnv" "virtualenv -p python3 $env_dir"
     fi
     log_info "Installing Moonraker Python packages..."
-    "$env_dir/bin/pip" install --upgrade pip setuptools wheel 2>/dev/null
-    "$env_dir/bin/pip" install -r "$repo_dir/scripts/moonraker-requirements.txt" 2>&1 | tail -3
+    if ! "$env_dir/bin/pip" install --upgrade pip setuptools wheel >>"${LOG_FILE:-/dev/null}" 2>&1; then
+        log_error "Could not bootstrap pip/setuptools/wheel in $env_dir — the virtualenv is unusable."
+        return 1
+    fi
+    # Previously `pip install ... | tail -3`: the pipeline's exit status was
+    # tail's, so every dependency failure was reported as success and Moonraker
+    # was installed without its dependencies. The full output goes to the log,
+    # the tail stays on screen, and the status is now pip's.
+    if ! "$env_dir/bin/pip" install -r "$repo_dir/scripts/moonraker-requirements.txt" \
+            >>"${LOG_FILE:-/dev/null}" 2>&1; then
+        log_error "Moonraker dependency installation failed — last lines:"
+        tail -n 10 "${LOG_FILE:-/dev/null}" 2>/dev/null || true
+        return 1
+    fi
 
     # 4. Instance Directories
     mkdir -p "$data_dir/config" "$data_dir/logs" "$data_dir/comms" "$data_dir/gcodes" "$data_dir/systemd"
@@ -264,10 +298,12 @@ EOF
     fi
 
     # 6. Service File (uses our template with direct Python path)
-    if command -v install_service_from_template &> /dev/null; then
-        install_service_from_template "moonraker" "$service_name" "$data_dir"
-    else
+    if ! command -v install_service_from_template &> /dev/null; then
         log_error "Service Manager missing!"
+        return 1
+    fi
+    if ! install_service_from_template "moonraker" "$service_name" "$data_dir"; then
+        log_error "Could not install the $service_name systemd unit."
         return 1
     fi
     
@@ -306,16 +342,31 @@ POLLIT
 
     # 8. Start Service
     sudo systemctl daemon-reload
-    sudo systemctl enable "$service_name" 2>/dev/null
-    sudo systemctl restart "$service_name"
-    sleep 3
-    
-    if systemctl is-active --quiet "$service_name" 2>/dev/null; then
-        log_success "Moonraker is RUNNING on port $port."
-    else
-        log_warn "Moonraker not running yet. Showing logs:"
-        sudo journalctl -u "$service_name" -n 15 --no-pager 2>/dev/null || true
-    fi
+    # Tolerated: `enable` is idempotent and already done by the template
+    # installer; a non-zero here (unit already enabled, no-op link) must not
+    # abort the run.
+    sudo systemctl enable "$service_name" >>"${LOG_FILE:-/dev/null}" 2>&1 || true
+    # Tolerated at this line only so the health check below can produce a
+    # readable diagnosis instead of a bare exit code.
+    sudo systemctl restart "$service_name" || true
+
+    # Unlike klipper, Moonraker does not need an MCU or a printer.cfg to run.
+    # If it is not up after the grace period the install did not succeed, and
+    # saying so is the entire point of an unattended installer: a warning here
+    # used to let the step return 0 with no API server on the host.
+    local waited=0
+    while [ "$waited" -lt 15 ]; do
+        if systemctl is-active --quiet "$service_name" 2>/dev/null; then
+            log_success "Moonraker is RUNNING on port $port."
+            return 0
+        fi
+        sleep 1
+        waited=$((waited + 1))
+    done
+
+    log_error "Moonraker did not come up within 15s. Last log lines:"
+    sudo journalctl -u "$service_name" -n 15 --no-pager 2>/dev/null || true
+    return 1
 }
 
 function update_core_stack() {
@@ -324,7 +375,7 @@ function update_core_stack() {
     echo "  2) Update Moonraker"
     echo "  3) Update Both"
     echo "  B) Back"
-    read -r -p "  >> " ch
+    katana_read_menu ch "  >> " "CORE STACK UPDATE" || return
 
     case $ch in
         1) do_update_klipper ;;
@@ -339,7 +390,7 @@ function do_update_klipper() {
     
     if [ ! -d "$klipper_dir" ]; then
         log_error "Klipper not installed. Install it first."
-        read -r -p "  Press Enter..."
+        katana_pause
         return 1
     fi
 
@@ -385,7 +436,7 @@ function do_update_klipper() {
         fi
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function do_update_moonraker() {
@@ -393,7 +444,7 @@ function do_update_moonraker() {
     
     if [ ! -d "$moonraker_dir" ]; then
         log_error "Moonraker not installed. Install it first."
-        read -r -p "  Press Enter..."
+        katana_pause
         return 1
     fi
 
@@ -437,5 +488,5 @@ function do_update_moonraker() {
         fi
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause
 }

@@ -19,7 +19,7 @@ function run_dr_katana() {
         echo "  [5] AUTO-HEALER (One-Click Fix)"
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " cmd
+        katana_read_menu cmd "  >> COMMAND: " "DR. KATANA" || return
         
         case $cmd in
             1) service_control_menu ;;
@@ -45,8 +45,7 @@ function run_healer() {
     echo "    - Fix ownership/permissions on printer_data, klipper, moonraker"
     echo "    - Reload systemd and restart core services"
     echo ""
-    if ! read -r -p "  Run Auto-Healer now? [y/N]: " yn; then return; fi
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Run Auto-Healer now? [y/N]: " repair; then return 1; fi
 
     # 1. Permissions
     log_info "Fixing ownership & permissions..."
@@ -67,7 +66,7 @@ function run_healer() {
     done
 
     log_success "Auto-Healer complete. Check DIAGNOSE for remaining issues."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function service_control_menu() {
@@ -93,7 +92,7 @@ function service_control_menu() {
         echo ""
         echo "  [B] Back"
         
-        read -r -p "  >> " sc
+        katana_read_menu sc "  >> " "SERVICE CONTROL" || return
         
         case $sc in
             1) exec_silent "Starting Klipper" "sudo systemctl start klipper" ;;
@@ -115,7 +114,7 @@ function view_logs() {
     else
         echo "  [!] Analyzer script missing."
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function repair_system() {
@@ -124,7 +123,7 @@ function repair_system() {
     echo "  2) System Update (APT)"
     echo "  3) Fix Dependencies (Libraries)"
     echo "  B) Back"
-    read -r -p "  >> " ch
+    katana_read_menu ch "  >> " "REPAIR SYSTEM" || return
     
     case $ch in
         1)
@@ -155,5 +154,5 @@ function repair_system() {
             ;;
         [bB]) return ;;
     esac
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

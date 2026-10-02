@@ -14,6 +14,12 @@
 # Exit 0 = alles gruen, Exit 1 = Fehler gefunden.
 # ==============================================================================
 
+# `set -e` is deliberately NOT used here, and the omission is not an oversight:
+# this harness exists to find every broken module in one run and report a count.
+# Aborting on the first failing check would turn a full report into a single
+# error message. Failures are counted explicitly via fail() and the exit code is
+# decided at the bottom. pipefail stays on so a failing producer in any of the
+# analysis pipelines below cannot be masked by its consumer.
 set -o pipefail
 
 KATANA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -30,7 +36,7 @@ info() { echo -e "  ${YEL}[..]${NC} $1"; }
 
 # Loader-Reihenfolge — identisch zu katanaos.sh
 CORE_MODULES=(
-    "core/logging.sh" "core/ui_renderer.sh" "core/env_check.sh"
+    "core/logging.sh" "core/interaction.sh" "core/ui_renderer.sh" "core/env_check.sh"
     "core/engine_manager.sh" "core/dispatchers.sh" "core/service_manager.sh"
 )
 OPT_MODULES=(
@@ -54,12 +60,19 @@ OPT_MODULES=(
 echo ""
 echo "═══ TEST 1: SYNTAX CHECK (bash -n) ═══"
 SYNTAX_OK=1
+# A fixed path under /tmp was used here. Two problems, both real: on a shared
+# or containerised host the file may already exist owned by another uid, and
+# then every single syntax check "fails" with a redirection error instead of a
+# result — observed, and it reported 40 phantom syntax errors. And a predictable
+# name in a world-writable directory is a symlink target waiting to happen.
+SYN_ERR="$(mktemp "${TMPDIR:-/tmp}/katana-syn.XXXXXX")"
+trap 'rm -f "$SYN_ERR"' EXIT
 while IFS= read -r f; do
-    if bash -n "$f" 2>/tmp/katana_syn.err; then
+    if bash -n "$f" 2>"$SYN_ERR"; then
         :
     else
         fail "Syntaxfehler: ${f#$KATANA_ROOT/}"
-        sed 's/^/        /' /tmp/katana_syn.err
+        sed 's/^/        /' "$SYN_ERR"
         SYNTAX_OK=0
     fi
 done < <(find "$KATANA_ROOT" -name '*.sh' -not -path '*/.git/*')
@@ -98,7 +111,7 @@ fi
 echo ""
 echo "═══ TEST 3: FUNKTIONS-AUFLOESUNG (undefined function references) ═══"
 # Projekt-Funktionen folgen snake_case mit diesen Praefixen.
-PREFIX='run|do|dispatch|install|vault|update|check|setup|post|switch|require|handle|show|change|draw|box|sub|warn|print|menu|visible|exec|flash|render|build|enable|disable|view|manage|scan|inject|wait|uninstall|restore|backup'
+PREFIX='run|do|dispatch|install|vault|update|check|setup|post|switch|require|handle|show|change|draw|box|sub|warn|print|menu|visible|exec|flash|render|build|enable|disable|view|manage|scan|inject|wait|uninstall|restore|backup|katana'
 
 # Tokens in KOMMANDO-Position (kein Variablen-Assignment, kein Argument):
 #   1) Zeilenanfang:        ^   <tok>

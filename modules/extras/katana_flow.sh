@@ -24,7 +24,7 @@ function install_katana_flow() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "KATANA-FLOW" || return
         
         case $ch in
             1) do_install_flow ;;
@@ -45,8 +45,7 @@ function do_install_flow() {
     echo "    FLOW_PURGE  — X-Blade cross purge pattern"
     echo "    FLOW_END    — Retract, Present, Cooldown (replaces END_PRINT)"
     echo ""
-    read -r -p "  Install? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    if ! katana_confirm "  Install? [y/N]: " no; then return; fi
     
     local cfg_dir="$HOME/printer_data/config"
     local flow_dir="$cfg_dir/katana_flow"
@@ -55,8 +54,8 @@ function do_install_flow() {
     
     if [ ! -d "$cfg_dir" ]; then
         log_error "Config directory not found at $cfg_dir"
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
     
     mkdir -p "$flow_dir"
@@ -74,8 +73,8 @@ function do_install_flow() {
     
     if [ "$failed" -eq 1 ]; then
         log_error "Some files missing. Check your KATANA installation."
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
     
     if [ -f "$pcfg" ]; then
@@ -95,15 +94,13 @@ function do_install_flow() {
     echo "  Slicer Start G-Code:  FLOW_START BED=60 NOZZLE=210"
     echo "  Slicer End G-Code:    FLOW_END"
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function do_remove_flow() {
     draw_header "REMOVE KATANA-FLOW"
     echo ""
-    read -r -p "  Remove KATANA-FLOW completely? [y/N]: " yn
-    
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    if ! katana_confirm_destructive "  Remove KATANA-FLOW completely? [y/N]: " uninstall; then return 1; fi
     
     local cfg_dir="$HOME/printer_data/config"
     local flow_dir="$cfg_dir/katana_flow"
@@ -122,5 +119,5 @@ function do_remove_flow() {
     fi
     
     log_success "KATANA-FLOW removed!"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

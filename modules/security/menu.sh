@@ -12,7 +12,7 @@ function run_security_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> SELECT: " ch
+        katana_read_menu ch "  >> SELECT: " "SECURITY" || return
         case $ch in
             1) run_hardening_wizard ;;
             2) vault_create ;;

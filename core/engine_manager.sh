@@ -11,7 +11,7 @@ function run_engine_manager() {
     echo "  2) Switch to KALICO (High-Performance)"
     echo "  3) Switch to RatOS (Klipper Fork)"
     echo "  B) Back"
-    read -r -p "  >> " ech
+    katana_read_menu ech "  >> " "ENGINE MANAGER" || return
     
     case $ech in
         1) switch_core_router "klipper" ;;
@@ -67,7 +67,21 @@ function switch_core() {
     # Check if target exists
     if [ ! -d "$target_repo" ]; then
         log_error "Target repo not found at $target_repo. Please install it first using the Installer menu."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
+        return 1
+    fi
+
+    # Gate before anything is removed. `rm -rf "$HOME/klipper"` below is
+    # harmless when that path is a symlink into a repo — which is the case the
+    # engine switcher creates — but it is a real deletion when the user has a
+    # plain Klipper checkout there, which is what every non-switched
+    # installation has. Switching engines then destroys the working tree,
+    # including any local modifications, with no prompt anywhere on the path
+    # from the settings menu to here.
+    if ! katana_confirm_destructive \
+        "  Engine auf '$target' umstellen? ~/klipper und ~/klippy-env werden ersetzt. [y/N]: " \
+        overwrite; then
+        log_info "Engine-Wechsel abgebrochen — nichts veraendert."
         return 1
     fi
 
@@ -93,5 +107,5 @@ function switch_core() {
     exec_silent "Restarting Klipper Service" "sudo systemctl start klipper"
     
     log_success "Successfully switched to $target."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

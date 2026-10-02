@@ -13,7 +13,7 @@ function run_timelapse_menu() {
         echo "  [3] View Timelapse Files"
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " cmd
+        katana_read_menu cmd "  >> COMMAND: " "TIMELAPSE" || return
         
         case $cmd in
             1) install_timelapse ;;
@@ -32,8 +32,8 @@ function install_timelapse() {
     # Check if Moonraker is installed
     if [ ! -d "$HOME/moonraker" ]; then
         log_error "Moonraker not installed. Install it first."
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
     
     log_info "Installing Moonraker Timelapse..."
@@ -66,7 +66,7 @@ function install_timelapse() {
     echo "  Config: $conf_file"
     echo "  Files: $HOME/timelapse"
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function configure_timelapse() {
@@ -77,8 +77,8 @@ function configure_timelapse() {
     
     if [ ! -f "$conf_file" ]; then
         log_error "Moonraker config not found."
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
     
     echo "  Current settings:"
@@ -97,12 +97,16 @@ function configure_timelapse() {
     echo "  [3] Reset to defaults"
     echo "  [B] Back"
     echo ""
-    read -r -p "  >> SELECT: " selection
+    katana_read_menu selection "  >> SELECT: " "TIMELAPSE CONFIG" || return
     
     case $selection in
         1) 
             echo "  New directory path (e.g., ~/timelapse):"
-            read -r -p "  >> " new_dir
+            # Refuses rather than defaulting: the value is substituted straight
+            # into the config with sed, so an empty answer used to rewrite the
+            # line as "directory: " and leave timelapse writing nowhere.
+            katana_read_value new_dir "  >> " "" \
+                "Zielverzeichnis interaktiv setzen" || return 1
             sed -i "s|directory:.*|directory: $new_dir|" "$conf_file"
             log_success "Directory updated!"
             ;;
@@ -128,7 +132,7 @@ function configure_timelapse() {
     sudo systemctl restart moonraker
     log_info "Moonraker restarted."
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function view_timelapse_files() {
@@ -139,8 +143,8 @@ function view_timelapse_files() {
     
     if [ ! -d "$timelapse_dir" ]; then
         log_error "Timelapse directory not found."
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
     
     local files=($(ls -1t "$timelapse_dir"/*.mp4 2>/dev/null))
@@ -163,5 +167,5 @@ function view_timelapse_files() {
         echo "  To view, use: http://<pi-ip>/timelapse/"
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }

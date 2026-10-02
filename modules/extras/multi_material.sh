@@ -22,8 +22,7 @@ function install_happyhare() {
     
     if [ -d "$install_dir" ]; then
         log_warn "Happy Hare repo already exists."
-        read -r -p "  Reinstall? [y/N]: " yn
-        if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+        if ! katana_confirm_destructive "  Reinstall? [y/N]: " reinstall; then return 1; fi
         rm -rf "$install_dir"
     fi
     
@@ -36,7 +35,7 @@ function install_happyhare() {
     log_info "Starting Happy Hare Installer..."
     echo "  [!] Interactive installer will launch."
     echo ""
-    read -r -p "  Press Enter to launch..."
+    katana_pause "  Press Enter to launch..."
     
     if [ -f "$install_dir/install.sh" ]; then
         cd "$install_dir" || return 1
@@ -47,7 +46,7 @@ function install_happyhare() {
     fi
     
     log_success "Happy Hare installation finished."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_happyhare() {
@@ -56,12 +55,11 @@ function remove_happyhare() {
     
     if [ ! -d "$install_dir" ]; then
         log_warn "Happy Hare is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
-    read -r -p "  Remove Happy Hare completely? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Remove Happy Hare completely? [y/N]: " uninstall; then return 1; fi
     
     # Happy Hare has its own uninstaller
     if [ -f "$install_dir/uninstall.sh" ]; then
@@ -74,7 +72,7 @@ function remove_happyhare() {
     fi
     
     log_success "Happy Hare removed."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================
@@ -90,8 +88,7 @@ function install_stealthchanger() {
     
     if [ -d "$install_dir" ]; then
         log_warn "StealthChanger config already exists."
-        read -r -p "  Overwrite? [y/N]: " yn
-        if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+        if ! katana_confirm_destructive "  Overwrite? [y/N]: " overwrite; then return 1; fi
     fi
     
     log_info "Cloning StealthChanger..."
@@ -113,7 +110,7 @@ function install_stealthchanger() {
     
     log_success "StealthChanger macros installed to $install_dir"
     echo "  [!] Include the .cfg files in your printer.cfg"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_stealthchanger() {
@@ -123,18 +120,17 @@ function remove_stealthchanger() {
     
     if [ ! -d "$install_dir" ] && [ ! -d "$repo_dir" ]; then
         log_warn "StealthChanger is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
     
-    read -r -p "  Remove StealthChanger completely? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Remove StealthChanger completely? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing StealthChanger..."
     rm -rf "$install_dir" "$repo_dir"
     log_success "StealthChanger removed."
     echo "  [!] Remove StealthChanger includes from printer.cfg manually."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================
@@ -151,13 +147,11 @@ function install_madmax() {
 
     if [ -d "$install_dir" ]; then
         log_warn "MADMAX already exists."
-        read -r -p "  Reinstall? [y/N]: " yn
-        if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+        if ! katana_confirm_destructive "  Reinstall? [y/N]: " reinstall; then return 1; fi
         rm -rf "$install_dir"
     fi
 
-    read -r -p "  Install MADMAX? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm "  Install MADMAX? [y/N]: " no; then return; fi
 
     log_info "Cloning MADMAX..."
     git clone https://github.com/zruncho3d/madmax.git "$install_dir" || {
@@ -183,7 +177,7 @@ function install_madmax() {
     echo "  Repo: $install_dir"
     echo "  Configs: $config_dir"
     echo "  [!] Include the relevant .cfg files in your printer.cfg"
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function remove_madmax() {
@@ -193,18 +187,17 @@ function remove_madmax() {
 
     if [ ! -d "$install_dir" ] && [ ! -d "$config_dir" ]; then
         log_warn "MADMAX is not installed."
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
         return
     fi
 
-    read -r -p "  Remove MADMAX completely? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Remove MADMAX completely? [y/N]: " uninstall; then return 1; fi
 
     log_info "Removing MADMAX..."
     rm -rf "$install_dir" "$config_dir"
     log_success "MADMAX removed."
     echo "  [!] Remove MADMAX includes from printer.cfg manually."
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # ============================================================
@@ -236,7 +229,7 @@ function run_multimaterial_menu() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "MULTI-MATERIAL" || return
 
         case $ch in
             1) install_happyhare ;;

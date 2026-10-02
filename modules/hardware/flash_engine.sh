@@ -137,7 +137,7 @@ function run_mcu_scanner() {
     fi
 
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function run_hal_flasher() {
@@ -157,8 +157,7 @@ function run_hal_flasher() {
                     echo "  ${C_ORANGE}│${NC}  ${C_GREEN}→ Nächster Schritt: KLIPPER BAUEN & FLASHEN${NC}"
                     echo "  ${C_ORANGE}└────────────────────────────────────────────────┘${NC}"
                     echo ""
-                    read -r -p "  Klipper-Flash jetzt fortsetzen? [Y/n]: " resume
-                    if [[ ! "$resume" =~ ^[nN] ]]; then
+                    if katana_confirm_destructive "  Klipper-Flash jetzt fortsetzen? [y/N]: " flash; then
                         run_build_and_flash
                         continue
                     fi
@@ -168,8 +167,7 @@ function run_hal_flasher() {
                     echo "  ${C_ORANGE}│${NC}  ${C_GREEN}→ Nächster Schritt: FIRMWARE FLASHEN${NC}"
                     echo "  ${C_ORANGE}└────────────────────────────────────────────────┘${NC}"
                     echo ""
-                    read -r -p "  Flash-Vorgang jetzt fortsetzen? [Y/n]: " resume
-                    if [[ ! "$resume" =~ ^[nN] ]]; then
+                    if katana_confirm_destructive "  Flash-Vorgang jetzt fortsetzen? [y/N]: " flash; then
                         run_build_and_flash
                         continue
                     fi
@@ -193,7 +191,7 @@ function run_hal_flasher() {
         echo "  ${C_RED}[C]${NC}  Clear Workflow State       (Neustart)"
         echo "  [B] Back"
         echo ""
-        if ! read -r -p "  >> SELECT: " choice; then return; fi
+        katana_read_menu choice "  >> SELECT: " "FORGE" || return
         case $choice in
             1)
                if [ -f "$MODULES_DIR/hardware/katapult_manager.sh" ]; then
@@ -201,7 +199,7 @@ function run_hal_flasher() {
                    run_katapult_menu
                else
                    log_error "Katapult module missing."
-                   read -r -p "  Press Enter..." || return
+                   katana_pause "  Press Enter..."
                fi
                ;;
             2) run_build_and_flash ;;
@@ -216,11 +214,11 @@ function run_hal_flasher() {
                        run_can_setup
                    else
                        log_error "CAN Modul geladen, aber keine Setup-Funktion gefunden."
-                       read -r -p "  Press Enter..."
+                       katana_pause "  Press Enter..."
                    fi
                else
                    log_error "CAN Manager Modul nicht gefunden."
-                   read -r -p "  Press Enter..." || return
+                   katana_pause "  Press Enter..."
                fi
                ;;
             6) run_mcu_scanner ;;
@@ -247,7 +245,10 @@ function run_saved_boards_manager() {
             echo ""
             echo "  [B] Back"
             echo ""
-            if ! read -r -p "  >> COMMAND: " ch; then return; fi
+            # A menu prompt in shape only: whatever is typed is discarded and
+            # the function returns on the next line regardless. It is a pause
+            # wearing a menu's prompt, so it is treated as one.
+            katana_pause "  >> COMMAND: "
             return
         fi
 
@@ -267,7 +268,7 @@ function run_saved_boards_manager() {
         echo "  [B] Back"
         echo ""
         
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "SAVED BOARDS MANAGER" || return
         
         if [[ "$ch" =~ ^[0-9]+$ ]] && [ "$ch" -lt "$i" ] && [ "$ch" -ge 1 ]; then
              local selected_meta="${board_list[$((ch-1))]}"
@@ -302,7 +303,7 @@ function manage_single_board() {
         echo "  [B] Back"
         echo ""
         
-        if ! read -r -p "  >> COMMAND: " ch; then return; fi
+        katana_read_menu ch "  >> COMMAND: " "MANAGE BOARD" || return
         
         case $ch in
             1) build_and_flash_saved "$meta"; return ;;
@@ -318,14 +319,14 @@ function run_mcu_update_all() {
 
     if [ ! -d "$BOARD_REGISTRY_DIR" ]; then
         log_error "No board registry found."
-        read -r -p "  Press Enter..." || return
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
 
     local configs=("$BOARD_REGISTRY_DIR"/*.meta)
     if [ ! -e "${configs[0]}" ]; then
         log_warn "No saved boards to update."
-        read -r -p "  Press Enter..." || return
+        katana_pause "  Press Enter..."
         return
     fi
 
@@ -335,8 +336,7 @@ function run_mcu_update_all() {
         ( katana_load_board_meta "$meta"; echo "    - $BOARD_NAME ($ARCH)" )
     done
     echo ""
-    if ! read -r -p "  Proceed with ALL? [y/N]: " yn; then return; fi
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Proceed with ALL? [y/N]: " flash; then return 1; fi
 
     for meta in "${configs[@]}"; do
         log_info "═══ Updating $(basename "$meta" .meta) ═══"
@@ -344,7 +344,7 @@ function run_mcu_update_all() {
     done
 
     log_success "All saved boards processed."
-    read -r -p "  Press Enter..." || return
+    katana_pause "  Press Enter..."
 }
 
 function build_and_flash_saved() {
@@ -356,8 +356,8 @@ function build_and_flash_saved() {
     
     if [ ! -f "$config_file" ]; then
         log_error "Config file missing!"
-        read -r -p "  Press Enter..." || return
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
     
     # Restore
@@ -368,8 +368,7 @@ function build_and_flash_saved() {
     echo "  Configuration loaded."
     echo "  Ready to build and flash using method: $FLASH_METHOD"
     echo ""
-    if ! read -r -p "  Start Build? [Y/n]: " yn; then return; fi
-    if [[ "$yn" =~ ^[nN] ]]; then return; fi
+    if ! katana_confirm_destructive "  Start Build? [y/N]: " flash; then return 1; fi
     
     # Build
     log_info "Building..."
@@ -390,8 +389,8 @@ function build_and_flash_saved() {
         fi
     else
         log_error "Build failed."
-        read -r -p "  Press Enter..." || return
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
     
     # Flash
@@ -400,7 +399,7 @@ function build_and_flash_saved() {
         manual)
             echo "  Manual Flash required."
             echo "  Firmware is in $HOME/klipper/out/"
-            read -r -p "  Press Enter..." || return
+            katana_pause "  Press Enter..."
             ;;
         usb|*)
             if [ -f "out/klipper.uf2" ]; then flash_rp2040
@@ -410,7 +409,7 @@ function build_and_flash_saved() {
             ;;
     esac
     
-    read -r -p "  Press Enter to return..." || return
+    katana_pause "  Press Enter to return..."
 }
 
 function edit_saved_config() {
@@ -432,7 +431,7 @@ function edit_saved_config() {
     else
         log_warn "Cancelled. Changes discarded."
     fi
-    read -r -p "  Press Enter..." || return
+    katana_pause "  Press Enter..."
 }
 
 function delete_saved_board() {
@@ -442,9 +441,7 @@ function delete_saved_board() {
     
     echo ""
     echo -e "  ${C_RED}WARNING: This will delete '$BOARD_NAME' permanently.${NC}"
-    if ! read -r -p "  Are you sure? [y/N]: " yn; then return; fi
-    
-    if [[ "$yn" =~ ^[yY] ]]; then
+    if katana_confirm_destructive "  Are you sure? [y/N]: " delete; then
         rm "$meta" "$config_file" 2>/dev/null
         log_success "Board deleted."
         sleep 1
@@ -465,22 +462,23 @@ function run_build_and_flash() {
         log_error "Klipper ist nicht installiert!"
         echo "  Zuerst Quick Start [1] ausführen."
         echo ""
-        read -r -p "  Press Enter..." || return
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
 
     # B2B Standard: Klipper MUSS gestoppt werden
     log_info "Pre-Flight Check..."
     if systemctl is-active --quiet klipper 2>/dev/null; then
         log_warn "Klipper läuft. Muss gestoppt werden vor dem Flash."
-        read -r -p "  Klipper jetzt stoppen? [Y/n]: " yn
-        if [[ ! "$yn" =~ ^[nN] ]]; then
+        if katana_confirm_destructive "  Klipper jetzt stoppen? [y/N]: " flash; then
             sudo systemctl stop klipper
             log_success "Klipper gestoppt."
         else
+            # `return` (0) here reported "phase 1 complete" for a run that
+            # stopped before doing anything — the same lie about its own
+            # outcome that this branch exists to remove.
             log_error "Abbruch: Klipper blockiert die MCU-Verbindung."
-            sleep 2
-            return
+            return 1
         fi
     else
         log_success "Klipper ist bereits gestoppt."
@@ -498,12 +496,12 @@ function run_build_and_flash() {
     echo "  2a) MCU konfigurieren (menuconfig)"
     echo "      Wähle Architektur, Prozessor, Kommunikation."
     echo ""
-    read -r -p "  Enter drücken für menuconfig..."
+    katana_pause "  Enter drücken für menuconfig..."
 
     if ! make menuconfig; then
         log_error "Menuconfig abgebrochen."
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
     
     # Hardware-Validation
@@ -514,20 +512,24 @@ function run_build_and_flash() {
     echo ""
     echo "  ${C_GREEN}[S]${NC} USB-Geräte scannen"
     echo "  ${C_NEON}[Enter]${NC} Überspringen"
-    read -r -p "  >> " scan_ch
+    # The one value prompt in this file with a defensible default: the menu
+    # already documents Enter as "skip the scan", so skipping is what an absent
+    # human gets. The default is spelled "no" rather than "skip" because the
+    # test below is `^[sS]` — "skip" would have matched it and run the scan.
+    local scan_ch="no"
+    katana_read_value scan_ch "  >> " "no" || true
     if [[ "$scan_ch" =~ ^[sS] ]]; then
         echo ""
         lsusb
         echo ""
         echo "  (Suche nach: DFU Mode, STM32, RP2040, Klipper)"
-        read -r -p "  Press Enter..."
+        katana_pause "  Press Enter..."
     fi
 
     echo ""
     echo "  2c) Firmware kompilieren"
     echo "  ─────────────────────────────────────────"
-    if ! read -r -p "  Kompilierung starten? [Y/n]: " yn; then return; fi
-    if [[ "$yn" =~ ^[nN] ]]; then return; fi
+    if ! katana_confirm_destructive "  Kompilierung starten? [y/N]: " flash; then return 1; fi
     
     log_info "Alte Build-Dateien entfernen..."
     make clean > /dev/null
@@ -538,8 +540,8 @@ function run_build_and_flash() {
         save_workflow_state "KLIPPER_BUILT" "klipper" "Firmware kompiliert, bereit zum Flashen"
     else
         log_error "Build fehlgeschlagen."
-        read -r -p "  Press Enter..." || return
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
 
     log_success "Phase 2 abgeschlossen."
@@ -554,8 +556,7 @@ function run_build_and_flash() {
     # 3a) Config speichern
     echo "  3a) Board-Konfiguration speichern"
     echo "  ─────────────────────────────────────────"
-    read -r -p "  Config für spätere Updates speichern? [y/N]: " save_yn
-    if [[ "$save_yn" =~ ^[yY] ]]; then
+    if katana_confirm "  Config für spätere Updates speichern? [y/N]: " no; then
         save_board_config
     fi
 
@@ -685,7 +686,7 @@ function run_build_and_flash() {
         fi
     fi
 
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # === BOARD REGISTRY (MCU Persistence) ===
@@ -698,14 +699,19 @@ function save_board_config() {
     echo ""
     echo "  ${C_NEON}:: SAVE BOARD CONFIGURATION ::${NC}"
     echo "  Give this board a unique name (e.g. 'SHT36_Toolhead', 'U2C_Bridge')"
-    read -r -p "  >> Name: " board_name
-    
+    # No default. The name becomes the registry filename, so a generated one
+    # would collide across hosts and silently overwrite another board's saved
+    # config on the next save.
+    katana_read_value board_name "  >> Name: " "" \
+        "Board interaktiv benennen" || return 1
+
+
     # Sanitize name (alphanumeric + underscore only)
     board_name=$(echo "$board_name" | tr -cd '[:alnum:]_')
     
     if [ -z "$board_name" ]; then
         log_error "Invalid name. Config NOT saved."
-        return
+        return 1
     fi
     
     local config_src="$HOME/klipper/.config"
@@ -732,8 +738,16 @@ function save_board_config() {
         echo "  [1] USB (DFU/Serial) - Standard"
         echo "  [2] CAN Bus (Katapult) - Bridge required"
         echo "  [3] SD Card / Manual"
-        read -r -p "  >> Method: " f_method
-        
+        # Pre-set to the documented default BEFORE asking. The .meta file is
+        # already half-written at this point (BOARD_NAME, LAST_BUILT, ARCH), so
+        # returning on an unanswered prompt would leave a registry entry with no
+        # FLASH_METHOD line. Nothing crashes on that — katana_load_board_meta
+        # defaults it to "usb" — but a file that is complete is better than a
+        # file that relies on a reader's default, and this one is read by the
+        # update path months later.
+        local f_method="1"
+        katana_read_menu f_method "  >> Method: " "FLASH METHOD" || f_method="1"
+
         case $f_method in
             2) echo "FLASH_METHOD=\"can\"" >> "$meta_dest" ;;
             3) echo "FLASH_METHOD=\"manual\"" >> "$meta_dest" ;;
@@ -757,15 +771,14 @@ function run_linux_wizard() {
         log_error "Klipper is not installed!"
         echo "  You need to install Klipper first via Quick Start [1]."
         echo ""
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
 
     echo "  This will compile & install Klipper for the Raspberry Pi itself."
     echo "  No configuration needed - fully automatic."
     echo ""
-    read -r -p "  Start? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY] ]]; then return; fi
+    if ! katana_confirm_destructive "  Start? [y/N]: " flash; then return 1; fi
 
     cd ~/klipper || { log_error "Klipper directory not found"; return 1; }
 
@@ -781,8 +794,8 @@ function run_linux_wizard() {
         log_success "Build complete!"
     else
         log_error "Build failed."
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
 
     log_info "Installing..."
@@ -802,7 +815,7 @@ function run_linux_wizard() {
     else
         log_error "Installation failed."
     fi
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 # === FLASH METHODS (Auto-Selected by Artifact) ===
@@ -826,10 +839,18 @@ function flash_rp2040() {
 
     if [ -n "$rp2_mount" ]; then
         log_success "Found RP2040 at: $rp2_mount"
-        read -r -p "  Copy firmware now? [Y/n]: " yn
-        if [[ ! "$yn" =~ ^[nN] ]]; then
-            cp out/klipper.uf2 "$rp2_mount/" && log_success "Firmware copied! Board will reboot."
+        # Copying the .uf2 onto the mounted RP2040 IS the flash — the board
+        # reboots into the new firmware the moment the write completes. It is
+        # gated as a flash and its outcome is reported, because a caller that
+        # sees 0 here is entitled to believe the board is running new firmware.
+        if ! katana_confirm_destructive "  Copy firmware now? [y/N]: " flash; then
+            return 1
         fi
+        if ! cp out/klipper.uf2 "$rp2_mount/"; then
+            log_error "Kopieren nach $rp2_mount fehlgeschlagen."
+            return 1
+        fi
+        log_success "Firmware copied! Board will reboot."
     else
         echo "  ${C_YELLOW}RP2040 not detected as USB drive.${NC}"
         echo "  Put board in BOOTSEL mode and try again,"
@@ -921,7 +942,7 @@ function flash_bin_artifact() {
     fi
 
     echo ""
-    read -r -p "  >> METHOD: " method
+    katana_read_menu method "  >> METHOD: " "FLASH METHOD" || return
 
     case $method in
         1)
@@ -956,7 +977,7 @@ function flash_bin_artifact() {
             else
                 log_info "Flashing..."
                 echo "  Ensure device is in bootloader/DFU mode!"
-                read -r -p "  Press Enter when ready..."
+                katana_pause "  Press Enter when ready..."
                 make flash
             fi
             ;;
@@ -983,7 +1004,7 @@ function flash_avr_artifact() {
     echo "  ${C_GREEN}Detected: AVR (hex)${NC}"
     echo "  ---------------------------------------------------"
     echo "  Ensure board is connected via USB."
-    read -r -p "  Press Enter to flash..."
+    katana_pause "  Press Enter to flash..."
     make flash
 }
 
@@ -998,10 +1019,18 @@ function flash_via_can() {
         log_warn "CAN interface not detected. Ensure can0 is configured."
     fi
 
-    read -r -p "  Enter UUID to flash: " uuid
+    # A UUID is the one value in this tool that must never be guessed: it names
+    # which board on the bus gets overwritten. There is no default, and the
+    # message points at the registry HATCH already maintains rather than at a
+    # flag, because a UUID KATANA invents is a UUID nobody recorded.
+    local uuid=""
+    if ! katana_read_value uuid "  Enter UUID to flash: " "" \
+        "UUID aus der HATCH-Registry (~/.config/katana/registry/devices.json) verwenden"; then
+        return 1
+    fi
     if [ -z "$uuid" ]; then
         log_error "No UUID provided."
-        return
+        return 1
     fi
 
     if [ -f "$HOME/katapult/scripts/flashtool.py" ]; then

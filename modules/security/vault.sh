@@ -57,7 +57,7 @@ function vault_create() {
 
     echo ""
     echo "  [i] Backup stored in: ~/katana_backups"
-    read -r -p "  Press [Enter] to continue..."
+    katana_pause "  Press [Enter] to continue..."
 }
 
 function vault_restore() {
@@ -84,15 +84,17 @@ function vault_restore() {
     echo "  [B] Back"
     echo ""
     
-    read -r -p "  >> SELECT RESTORE POINT: " choice
+    # Which restore point overwrites the live config is not guessable. No
+    # default, and the refusal is the whole point on an unattended run.
+    local choice=""
+    katana_read_value choice "  >> SELECT RESTORE POINT: " "" \
+        "Restore-Punkt interaktiv waehlen" || return 1
 
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#backups[@]}" ]; then
         local target="${backups[$((choice-1))]}"
         log_warn "You are about to restore: $(basename "$target")"
         log_warn "Current config will be OVERWRITTEN."
-        read -r -p "  Are you sure? (y/N): " confirm
-        
-        if [[ "$confirm" =~ ^[yY]$ ]]; then
+        if katana_confirm_destructive "  Are you sure? (y/N): " restore; then
             log_info "Restoring..."
             check_dependency "unzip" "unzip"
             
@@ -107,5 +109,5 @@ function vault_restore() {
             fi
         fi
     fi
-    read -r -p "  Press [Enter]..."
+    katana_pause "  Press [Enter]..."
 }

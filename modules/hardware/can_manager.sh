@@ -14,7 +14,7 @@ function run_can_manager() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "CAN MANAGER" || return
         
         case $ch in
             1) setup_can_network ;;
@@ -37,8 +37,7 @@ function setup_can_network() {
     echo "  - Bitrate: $bitrate"
     echo "  - TX Queue Length: $txqueuelen"
     echo ""
-    read -r -p "  Write configuration? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    if ! katana_confirm_destructive "  Write configuration? [y/N]: " overwrite; then return 1; fi
 
     # Ensure ifupdown is installed (required for /etc/network/interfaces on Bookworm)
     if ! command -v ifup &> /dev/null; then
@@ -105,7 +104,7 @@ function scan_can_devices() {
     fi
     
     echo ""
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function install_katapult_wizard() {
@@ -124,7 +123,7 @@ function install_katapult_wizard() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> Select: " choice
+        katana_read_menu choice "  >> Select: " "KATAPULT BOARD SELECT" || return
         
         case $choice in
             1) board="ebb42"; break ;;
@@ -210,25 +209,47 @@ EOF
     
     if [ ! -f "out/katapult.bin" ] && [ ! -f "out/katapult.uf2" ]; then
         log_error "Build failed!"
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
     
     echo ""
     echo -e "${C_YELLOW}!!! PUT MCU IN DFU MODE !!!${NC}"
     echo "  (Hold BOOT button + press RESET)"
-    read -r -p "  Press Enter when ready..."
+    katana_pause "  Press Enter when ready..."
     
-    log_info "Flashing bootloader..."
+    # The RP2040 branch flashes nothing — it prints a path and asks the
+    # operator to copy the .uf2 by hand — so it is handled before the gate.
+    # Asking "flash now?" and then answering "copy it yourself" would train
+    # people to click through a confirmation that decides nothing, which is how
+    # confirmations stop being read.
     if [[ "$board" == "sb2209_rp2040" ]]; then
         log_warn "RP2040: Use mass storage copy instead."
         echo "  File: $katapult_dir/out/katapult.uf2"
-    else
-        sudo dfu-util -a 0 -d 0483:df11 -D out/katapult.bin -s 0x08000000:leave
+        katana_pause "  Press Enter..."
+        return 0
     fi
-    
-    [ $? -eq 0 ] && draw_success "Katapult installed successfully!" || log_error "Flash failed!"
-    read -r -p "  Press Enter..."
+
+    # Same defect as katapult_manager: the "PUT MCU IN DFU MODE" pause reads
+    # like a confirmation and is not one, so unattended this reached dfu-util
+    # and rewrote flash at 0x08000000 on any board in DFU mode.
+    if ! katana_confirm_destructive "  Katapult-Bootloader jetzt flashen? [y/N]: " flash; then
+        log_info "Flash abgebrochen — Board unveraendert."
+        return 1
+    fi
+
+    log_info "Flashing bootloader..."
+
+    # Tested directly instead of via `[ $? -eq 0 ]` two lines later, which read
+    # the status of the preceding `fi` on the RP2040 branch and always said 0.
+    if sudo dfu-util -a 0 -d 0483:df11 -D out/katapult.bin -s 0x08000000:leave; then
+        draw_success "Katapult installed successfully!"
+    else
+        log_error "Flash failed!"
+        katana_pause "  Press Enter..."
+        return 1
+    fi
+    katana_pause "  Press Enter..."
 }
 
 function flash_via_katapult_wizard() {
@@ -239,8 +260,8 @@ function flash_via_katapult_wizard() {
     
     if [ ! -f "$firmware" ]; then
         log_error "No firmware found! Build it first via 'The Forge -> Manual Build'."
-        read -r -p "  Press Enter..."
-        return
+        katana_pause "  Press Enter..."
+        return 1
     fi
     
     # 1. Scan for devices
@@ -250,9 +271,14 @@ function flash_via_katapult_wizard() {
     
     if [ ${#uuids[@]} -eq 0 ]; then
         log_warn "No CAN devices found in flash mode."
-        read -r -p "  Enter UUID manually? [y/N]: " yn
-        if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
-        read -r -p "  UUID: " selected_uuid
+        # `return` (0) here meant "flash succeeded" for a run that found no
+        # board and was told not to ask for one.
+        if ! katana_confirm "  Enter UUID manually? [y/N]: " no; then return 1; fi
+        # Same rule as flash_via_can: a UUID names which board gets
+        # overwritten and is never defaulted.
+        katana_read_value selected_uuid "  UUID: " "" \
+            "UUID aus der HATCH-Registry (~/.config/katana/registry/devices.json) verwenden" \
+            || return 1
     elif [ ${#uuids[@]} -eq 1 ]; then
         selected_uuid="${uuids[0]}"
         log_success "Found: $selected_uuid"
@@ -261,23 +287,44 @@ function flash_via_katapult_wizard() {
         for i in "${!uuids[@]}"; do
             echo "    [$((i+1))] ${uuids[$i]}"
         done
-        read -r -p "  Select [1-${#uuids[@]}]: " choice
+        # No default: "the first one in the scan order" is not a board the
+        # operator chose, and the scan order is whatever the CAN bus answered
+        # in. Guessing here flashes the wrong toolhead.
+        local choice=""
+        katana_read_value choice "  Select [1-${#uuids[@]}]: " "" \
+            "Board interaktiv waehlen, oder genau ein Geraet in Katapult-Mode versetzen" \
+            || return 1
+        if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#uuids[@]}" ]; then
+            log_error "Invalid selection."
+            return 1
+        fi
         selected_uuid="${uuids[$((choice-1))]}"
     fi
     
-    if [ -z "$selected_uuid" ]; then return; fi
-    
+    if [ -z "$selected_uuid" ]; then return 1; fi
+
     echo ""
+    # The gate that was missing entirely. Every other branch above now asks
+    # something, but the single-device branch does not: with exactly one board
+    # in Katapult mode, the scan picked it and the flash started with no
+    # confirmation at all. Unattended that is a board erased because it
+    # happened to be the only one plugged in. The gate sits here rather than in
+    # the branches so all three paths pass through it.
+    if ! katana_confirm_destructive \
+        "  ${selected_uuid} jetzt mit ${firmware} flashen? [y/N]: " flash; then
+        log_info "Flash abgebrochen — Board unveraendert."
+        return 1
+    fi
+
     log_info "Flashing $firmware to $selected_uuid..."
-    python3 "$HOME/katapult/scripts/flashtool.py" -i can0 -u "$selected_uuid" -f "$firmware"
-    
-    if [ $? -eq 0 ]; then
+    # `if [ $? -eq 0 ]` on the line after was already fragile; the call is
+    # tested directly so nothing can come between it and its status.
+    if python3 "$HOME/katapult/scripts/flashtool.py" -i can0 -u "$selected_uuid" -f "$firmware"; then
         draw_success "FLASH SUCCESSFUL!"
         echo ""
         echo -e "${C_CYAN}UUID: $selected_uuid${NC}"
         echo ""
-        read -r -p "  Add this UUID to printer.cfg? [y/N]: " inject_yn
-        if [[ "$inject_yn" =~ ^[yY]$ ]]; then
+        if katana_confirm_destructive "  Add this UUID to printer.cfg? [y/N]: " overwrite; then
             # 2. Select target instance
             local instances=($(ls -d $HOME/printer_data* 2>/dev/null))
             if [ ${#instances[@]} -eq 1 ]; then
@@ -287,9 +334,17 @@ function flash_via_katapult_wizard() {
                 for i in "${!instances[@]}"; do
                     echo "    [$((i+1))] $(basename "${instances[$i]}")"
                 done
-                read -r -p "  Select [1-${#instances[@]}]: " inst_choice
-                if [ -n "${instances[$((inst_choice-1))]}" ]; then
-                    inject_uuid_to_config "$selected_uuid" "${instances[$((inst_choice-1))]}"
+                # Writing a UUID into the wrong instance's printer.cfg breaks
+                # a printer that was working. No default.
+                local inst_choice=""
+                if katana_read_value inst_choice "  Select [1-${#instances[@]}]: " "" \
+                    "Ziel-Instanz interaktiv waehlen"; then
+                    if [[ "$inst_choice" =~ ^[0-9]+$ ]] \
+                        && [ -n "${instances[$((inst_choice-1))]:-}" ]; then
+                        inject_uuid_to_config "$selected_uuid" "${instances[$((inst_choice-1))]}"
+                    else
+                        log_error "Invalid selection — printer.cfg unveraendert."
+                    fi
                 fi
             fi
         fi
@@ -297,7 +352,7 @@ function flash_via_katapult_wizard() {
         log_error "Flash failed."
     fi
     
-    read -r -p "  Press Enter..."
+    katana_pause "  Press Enter..."
 }
 
 function inject_uuid_to_config() {
@@ -307,7 +362,7 @@ function inject_uuid_to_config() {
     
     if [ ! -f "$config_file" ]; then
         log_error "printer.cfg not found in $(basename $data_dir)!"
-        return
+        return 1
     fi
     
     log_info "Updating $(basename $data_dir)/config/printer.cfg..."

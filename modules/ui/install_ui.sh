@@ -16,7 +16,7 @@ function install_ui_stack() {
         echo ""
         echo "  [B] Back"
         echo ""
-        read -r -p "  >> COMMAND: " ch
+        katana_read_menu ch "  >> COMMAND: " "WEB UI" || return
         
         case $ch in
             1) do_install_mainsail ;;
@@ -30,58 +30,209 @@ function install_ui_stack() {
     done
 }
 
+# ==============================================================================
+# WEB UI BUNDLE DEPLOYMENT
+# ------------------------------------------------------------------------------
+# Mainsail and Fluidd are both shipped as a release ZIP of a static site. The
+# previous implementation ("Simplified placeholder logic as real logic was
+# lost") checked no exit code at all: wget, unzip and rm could each fail and the
+# function still logged success. A 404, a truncated download or a full disk
+# produced an empty $HOME/mainsail, a green log line and an nginx vhost serving
+# nothing — the failure surfaced days later as a blank browser tab.
+# ==============================================================================
+
+# Release URL per UI, overridable via environment.
+#
+# The override is not a test hook bolted on: a shop that provisions printers
+# behind a corporate proxy or on an isolated production line needs to install
+# from an internal mirror, and pinning a known-good release is how a fleet stays
+# on one version. It also lets the headless test run without network.
+function katana_web_ui_url() {
+    local ui_type="$1"
+    case "$ui_type" in
+        mainsail)
+            printf '%s\n' "${KATANA_MAINSAIL_URL:-https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip}"
+            ;;
+        fluidd)
+            printf '%s\n' "${KATANA_FLUIDD_URL:-https://github.com/fluidd-core/fluidd/releases/latest/download/fluidd.zip}"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Downloads <url> to <dest>. curl and wget are both accepted because the target
+# images differ; a missing downloader is an error, not a silent skip.
+function katana_fetch_url() {
+    local url="$1" dest="$2"
+
+    if command -v curl >/dev/null 2>&1; then
+        # --fail: an HTTP 404 must not be written to disk as a 9-byte "file"
+        # and then fail confusingly in unzip. -L follows the release redirect.
+        curl -fsSL --retry 2 --connect-timeout 20 -o "$dest" "$url"
+        return $?
+    fi
+
+    if command -v wget >/dev/null 2>&1; then
+        wget -q --tries=3 --timeout=20 -O "$dest" "$url"
+        return $?
+    fi
+
+    log_error "Neither curl nor wget is available — cannot download $url"
+    return 1
+}
+
+# Installs a web UI release bundle into $install_dir.
+#
+# Order of operations, and why:
+#   1. stage in a directory NEXT TO the target, not in /tmp — the final step is
+#      then a rename on the same filesystem, i.e. atomic. A /tmp staging area
+#      turns the last step into a cross-device copy that can fail halfway and
+#      leave exactly the broken half-install this function exists to prevent.
+#   2. download with a checked exit code
+#   3. `unzip -t` before extracting, so a truncated or corrupted archive is
+#      named as such instead of producing a partial tree
+#   4. extract, then verify index.html actually exists — a ZIP that unpacks
+#      cleanly but is not a web bundle is still a failed install
+#   5. swap into place, keeping the previous version until the new one is in
+#
+# The body runs in a subshell so `trap ... EXIT` cleans the staging directory on
+# every exit path including failure, without installing an EXIT trap into the
+# long-lived interactive shell. The subshell also confines `set -euo pipefail`
+# to this block: any unchecked command failure aborts the deployment instead of
+# falling through to a success message.
+function install_web_ui_bundle() {
+    local ui_type="$1"
+    local install_dir="$2"
+    local url
+
+    if ! url="$(katana_web_ui_url "$ui_type")"; then
+        log_error "Unknown web UI '$ui_type'."
+        return 1
+    fi
+
+    log_info "Deploying $ui_type from $url"
+
+    (
+        set -euo pipefail
+
+        parent_dir="$(dirname "$install_dir")"
+        mkdir -p "$parent_dir"
+
+        staging="$(mktemp -d "$parent_dir/.katana-${ui_type}.XXXXXX")"
+        trap 'rm -rf "$staging"' EXIT
+
+        archive="$staging/bundle.zip"
+
+        if ! katana_fetch_url "$url" "$archive"; then
+            log_error "$ui_type: download failed ($url) — check network, proxy or release URL."
+            exit 1
+        fi
+
+        if [ ! -s "$archive" ]; then
+            log_error "$ui_type: downloaded archive is empty ($url)."
+            exit 1
+        fi
+
+        # Integrity before extraction: unzip -t reads the central directory and
+        # CRCs every member, which is what catches a truncated transfer.
+        if ! unzip -tqq "$archive" >>"${LOG_FILE:-/dev/null}" 2>&1; then
+            log_error "$ui_type: archive is corrupt (failed unzip -t) — download incomplete or not a ZIP."
+            exit 1
+        fi
+
+        if ! unzip -q "$archive" -d "$staging/payload" >>"${LOG_FILE:-/dev/null}" 2>&1; then
+            log_error "$ui_type: extraction failed — check free disk space and permissions on $parent_dir."
+            exit 1
+        fi
+
+        if [ ! -f "$staging/payload/index.html" ]; then
+            log_error "$ui_type: archive contains no index.html — this is not a $ui_type web bundle."
+            exit 1
+        fi
+
+        # Swap. The previous install is kept aside until the new tree is in
+        # place, so a failure here never leaves the host without a UI.
+        previous=""
+        if [ -e "$install_dir" ]; then
+            previous="${install_dir}.replaced.$(date +%s)"
+            mv "$install_dir" "$previous"
+        fi
+
+        if ! mv "$staging/payload" "$install_dir"; then
+            log_error "$ui_type: could not move the new bundle into $install_dir."
+            if [ -n "$previous" ]; then
+                mv "$previous" "$install_dir"
+                log_warn "$ui_type: restored the previous installation."
+            fi
+            exit 1
+        fi
+
+        if [ -n "$previous" ]; then
+            rm -rf "$previous"
+        fi
+
+        exit 0
+    ) || return 1
+
+    log_success "$ui_type bundle deployed to $install_dir"
+    return 0
+}
+
 function do_install_mainsail() {
     log_info "Installing Mainsail..."
-    
-    # Logic to download/install mainsail
-    # Simplified placeholder logic as real logic was lost or needs to be robust
+
     local install_dir="$HOME/mainsail"
-    if [ -d "$install_dir" ]; then
-        log_warn "Mainsail already exists at $install_dir"
-    else
-        log_info "Cloning Mainsail..."
-        mkdir -p "$install_dir"
-        wget -q -O mainsail.zip https://github.com/mainsail-crew/mainsail/releases/latest/download/mainsail.zip
-        unzip -q mainsail.zip -d "$install_dir"
-        rm mainsail.zip
-        log_success "Mainsail downloaded."
+    if [ -d "$install_dir" ] && [ -f "$install_dir/index.html" ]; then
+        log_warn "Mainsail already exists at $install_dir — skipping download."
+    elif ! install_web_ui_bundle "mainsail" "$install_dir"; then
+        log_error "Mainsail installation aborted."
+        return 1
     fi
-    
+
     # Configure Nginx
-    setup_nginx "mainsail"
-    
-    # Add to Moonraker Update Manager
-    if source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" 2>/dev/null; then
-        add_update_manager_entry "Mainsail" "web" "$HOME/mainsail" "" "" "stable" "mainsail-crew/mainsail"
+    if ! setup_nginx "mainsail"; then
+        log_error "Mainsail: nginx configuration failed."
+        return 1
     fi
-    
+
+    # Add to Moonraker Update Manager. Optional: a missing update manager is a
+    # degraded install, not a failed one — the UI itself is already serving.
+    if source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" 2>/dev/null; then
+        add_update_manager_entry "Mainsail" "web" "$HOME/mainsail" "" "" "stable" "mainsail-crew/mainsail" \
+            || log_warn "Mainsail: could not register with the Moonraker update manager."
+    fi
+
     log_success "Mainsail Installed."
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function do_install_fluidd() {
     log_info "Installing Fluidd..."
+
     local install_dir="$HOME/fluidd"
-     if [ -d "$install_dir" ]; then
-        log_warn "Fluidd already exists at $install_dir"
-    else
-        mkdir -p "$install_dir"
-        wget -q -O fluidd.zip https://github.com/fluidd-core/fluidd/releases/latest/download/fluidd.zip
-        unzip -q fluidd.zip -d "$install_dir"
-        rm fluidd.zip
-        log_success "Fluidd downloaded."
+    if [ -d "$install_dir" ] && [ -f "$install_dir/index.html" ]; then
+        log_warn "Fluidd already exists at $install_dir — skipping download."
+    elif ! install_web_ui_bundle "fluidd" "$install_dir"; then
+        log_error "Fluidd installation aborted."
+        return 1
     fi
-    
+
     # Configure Nginx
-    setup_nginx "fluidd"
-    
-    # Add to Moonraker Update Manager
-    if source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" 2>/dev/null; then
-        add_update_manager_entry "Fluidd" "web" "$HOME/fluidd" "" "" "stable" "fluidd-core/fluidd"
+    if ! setup_nginx "fluidd"; then
+        log_error "Fluidd: nginx configuration failed."
+        return 1
     fi
-    
+
+    # Add to Moonraker Update Manager (see do_install_mainsail).
+    if source "$KATANA_ROOT/modules/system/moonraker_update_manager.sh" 2>/dev/null; then
+        add_update_manager_entry "Fluidd" "web" "$HOME/fluidd" "" "" "stable" "fluidd-core/fluidd" \
+            || log_warn "Fluidd: could not register with the Moonraker update manager."
+    fi
+
     log_success "Fluidd Installed."
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 
@@ -89,36 +240,38 @@ function do_install_fluidd() {
 function uninstall_mainsail() {
     draw_header "UNINSTALL MAINSAIL"
     echo ""
-    read -r -p "  Uninstall Mainsail? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    # Destructive and never implied by --yes. Phase 0 gave this a defaulted
+    # "no"; it now refuses out loud, like every other uninstall path, so an
+    # unattended caller learns why nothing was removed.
+    if ! katana_confirm_destructive "  Uninstall Mainsail? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing Mainsail..."
     rm -rf "$HOME/mainsail"
     sudo rm -f /etc/nginx/sites-enabled/mainsail /etc/nginx/sites-available/mainsail
     sudo systemctl restart nginx
     draw_success "Mainsail uninstalled."
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function uninstall_fluidd() {
     draw_header "UNINSTALL FLUIDD"
     echo ""
-    read -r -p "  Uninstall Fluidd? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    # Same rule as uninstall_mainsail.
+    if ! katana_confirm_destructive "  Uninstall Fluidd? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing Fluidd..."
     rm -rf "$HOME/fluidd"
     sudo rm -f /etc/nginx/sites-enabled/fluidd /etc/nginx/sites-available/fluidd
     sudo systemctl restart nginx
     draw_success "Fluidd uninstalled."
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function uninstall_all_ui() {
     draw_header "UNINSTALL ALL UIs"
     echo ""
-    read -r -p "  Uninstall ALL web interfaces? [y/N]: " yn
-    if [[ ! "$yn" =~ ^[yY]$ ]]; then return; fi
+    # Same rule as uninstall_mainsail.
+    if ! katana_confirm_destructive "  Uninstall ALL web interfaces? [y/N]: " uninstall; then return 1; fi
     
     log_info "Removing all UIs..."
     rm -rf "$HOME/mainsail" "$HOME/fluidd" "$HOME/horizon"
@@ -126,14 +279,17 @@ function uninstall_all_ui() {
     sudo rm -f /etc/nginx/sites-enabled/fluidd /etc/nginx/sites-available/fluidd
     sudo systemctl restart nginx
     draw_success "All UIs uninstalled."
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function do_remove_ui() {
+    # Had no confirmation at all, while the three functions above it did —
+    # and it deletes the same directories they do.
+    if ! katana_confirm_destructive "  Mainsail und Fluidd entfernen? [y/N]: " uninstall; then return 1; fi
     log_info "Removing UI..."
     rm -rf "$HOME/mainsail" "$HOME/fluidd"
     log_success "UI Removed."
-    read -r -p "  Press Enter..."
+    katana_pause
 }
 
 function setup_nginx() {
@@ -262,7 +418,9 @@ EOF
     sudo chmod o+x "$HOME"
     
     # 2. Ensure the UI folder is readable/executable for everyone
-    sudo chown -R "$USER":"$USER" "$root_dir"
+    # $USER is not exported by every login/cron/systemd context; id -un always is.
+    local run_user="${USER:-$(id -un)}"
+    sudo chown -R "$run_user":"$run_user" "$root_dir"
     sudo chmod -R 755 "$root_dir"
     
     # Enable site
@@ -279,8 +437,14 @@ EOF
         sudo systemctl start nginx
         sudo systemctl reload nginx
         log_success "Nginx configured for $ui_type on port $port"
-    else
-        log_error "Nginx config test failed!"
-        sudo nginx -t 2>&1 | head -20
+        return 0
     fi
+
+    # A broken vhost means the UI is not reachable. Reporting that as success
+    # was the second half of the same bug as the placeholder installer: the
+    # caller's last command was the `head` of the diagnostic output, so
+    # setup_nginx returned 0 on a failed config test.
+    log_error "Nginx config test failed — $ui_type is NOT being served."
+    sudo nginx -t 2>&1 | head -20
+    return 1
 }

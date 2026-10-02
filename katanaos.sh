@@ -14,8 +14,49 @@ if [[ "$(head -c 200 "${BASH_SOURCE[0]}" | tr -d '\0')" == *$'\r'* ]]; then echo
 ################################################################################
 
 # --- EXECUTION MODE ---
-# pipefail: Verhindert dass Pipe-Fehler verschluckt werden
-set -o pipefail
+#
+# -u and -o pipefail are on globally. -e is not, and the split is measured
+# rather than assumed.
+#
+#   -u  ON as of this branch. It used to be off because the module tree
+#       referenced colour variables that were defined in only one of two
+#       competing palettes — C_YELLOW in core/dispatchers.sh being the
+#       documented example — so -u would abort the tool mid-render on a status
+#       line. One palette now owns those names (core/logging.sh), and the
+#       second blocker, check_environment_bash calling `exit` from a module
+#       function, is a `return` now. Verified after both: a static sweep for
+#       unguarded references finds none outside quoted heredocs (nginx and
+#       ifupdown templates, where `\$scheme` is literal), and every one of the
+#       61 zero-argument entry points — every run_*, dispatch_* and renderer —
+#       executes under -u without a single unbound-variable abort.
+#
+#   -o pipefail  ON, as before. A failing producer must not be masked by its
+#       consumer; `pip install ... | tail -3` hid every dependency failure.
+#
+#   -e  STAYS OFF, and not for lack of trying. Two independent reasons:
+#
+#       1. A submenu that the operator leaves returns non-zero by design. The
+#          main loop dispatches them bare (`1) run_quick_start ;;`), and under
+#          -e a bare non-zero command in a case arm terminates the shell.
+#          Measured: `( set -e; run_repair_menu; echo NEXT )` never reaches
+#          NEXT and exits 1, while the same without -e reaches it and exits 0.
+#          Pressing CTRL+D in a submenu would quit KATANA instead of returning
+#          to the menu it was opened from.
+#       2. 194 statement-level commands across modules/ and core/ run
+#          unchecked, most of them legitimately: `grep` with no match, `dpkg
+#          -s` on an absent package, `systemctl stop` on a service that is not
+#          running. Under -e each is a tool-wide abort. Fixing that is a
+#          per-call-site audit of the legacy tree, not a flag.
+#
+#       Strictness is therefore applied where it can be verified instead of
+#       hoped for: every unattended install step runs under `set -euo pipefail`
+#       in its own subshell (headless_run_step in core/headless.sh), and the
+#       executed entrypoint install.sh enables all three. For -e that only
+#       holds while the step is not called from a tested context — Bash ignores
+#       errexit below `if`, `!`, `||` and `&&` no matter where it is set — so
+#       headless_run_step checks that precondition itself before each step and
+#       refuses to run one it could not fail fast.
+set -uo pipefail
 
 # --- VERSION ---
 readonly KATANA_VERSION="v2.6"
@@ -64,12 +105,25 @@ export INSTALL_PROFILE
 # 1. ERROR HANDLING & VALIDATION
 # ==============================================================================
 
-# Globaler Error Trap: Fängt alle unerwarteten Abstürze ab
+# Globaler Error Trap: Faengt unerwartete Abstuerze waehrend der LADEPHASE ab.
+#
+# Scope note, because both productive paths switch this off further down and
+# that reads like an oversight: this trap covers the window between here and
+# main() — sourcing the core and optional modules, and argument parsing. In
+# that window any non-zero status really is unexpected and aborting is right.
+#
+# It is NOT the error handling of the two productive paths:
+#   - the unattended path replaces it with checked returns and per-step
+#     `set -euo pipefail` (see main(), and headless_run_step in core/headless.sh),
+#     called as plain statements all the way down so that -e is not ignored
+#   - the interactive loop replaces it with per-command log_error, because a
+#     submenu returning 1 (a cancelled install) must not kill the session
+# Both are argued at their respective `trap - ERR`.
 error_trap() {
     local exit_code=$?
-    local line_no=$1
-    echo -e "\n\033[38;5;196m[CRITICAL ERROR] Das Skript ist unerwartet in Zeile ${line_no} mit Exit-Code ${exit_code} abgestürzt!\033[0m"
-    echo "Bitte überprüfe die Log-Datei: $LOG_FILE"
+    local line_no="${1:-?}"
+    echo -e "\n\033[38;5;196m[CRITICAL ERROR] Das Skript ist unerwartet in Zeile ${line_no} mit Exit-Code ${exit_code} abgestürzt!\033[0m" >&2
+    echo "Bitte überprüfe die Log-Datei: ${LOG_FILE:-<nicht gesetzt>}" >&2
     exit "$exit_code"
 }
 trap 'error_trap $LINENO' ERR
@@ -176,6 +230,7 @@ handle_args() {
 
 # Lädt Core-Module sicher (die UI Renderer sollten später keine Business-Logik mehr enthalten!)
 require_module "$CORE_DIR/logging.sh"
+require_module "$CORE_DIR/interaction.sh"
 require_module "$CORE_DIR/ui_renderer.sh"
 require_module "$CORE_DIR/env_check.sh"
 require_module "$CORE_DIR/engine_manager.sh"
@@ -213,15 +268,32 @@ for opt_module in \
     "$MODULES_DIR/engine/install_klipper.sh" \
     "$MODULES_DIR/ui/install_ui.sh" \
     "$MODULES_DIR/vision/install_crowsnest.sh"; do
-    [[ -f "$opt_module" ]] && source "$opt_module"
+    # An explicit `if` rather than `[[ -f ... ]] && source ...`: the && form
+    # yields a non-zero status for every absent module, and with the ERR trap
+    # armed during the load phase a single missing optional file would crash
+    # the tool with a CRITICAL ERROR banner instead of degrading gracefully.
+    if [[ -f "$opt_module" ]]; then
+        source "$opt_module"
+    fi
 done
 
 # --- HATCH ENGINE (Firmware/Board-Authority — conditional, graceful degradation) ---
 if [[ -n "$HATCH_DIR" && -f "$HATCH_DIR/hatch.sh" ]]; then
     source "$HATCH_DIR/hatch.sh"
 else
+    # Fallback stub. The message names the resolution paths that are actually
+    # implemented above — there is no `install.sh --hatch`, and KATANA does not
+    # install HATCH: HATCH is the hardware/board authority and owns its own
+    # provisioning (see CLAUDE.md, responsibility matrix).
     function init_hatch_menu() {
-        log_error "HATCH ist nicht verfuegbar. Setze KATANA_HATCH_REPO_DIR=/pfad/zu/HATCH oder installiere HATCH (bash install.sh --hatch)."
+        log_error "HATCH ist nicht verfuegbar (Firmware-/Board-Funktionen sind deaktiviert)."
+        log_info  "HATCH wird in dieser Reihenfolge gesucht:"
+        log_info  "  1. $KATANA_ROOT/hatch/hatch.sh            (eingebettet)"
+        log_info  "  2. \$KATANA_HATCH_REPO_DIR/hatch.sh        (externes Repo)"
+        log_info  "  3. $HOME/.local/share/katana/hatch/hatch.sh  (managed)"
+        log_info  "Vorgehen: HATCH klonen und den Pfad setzen, z.B."
+        log_info  "  export KATANA_HATCH_REPO_DIR=/pfad/zu/HATCH && ./katanaos.sh"
+        return 1
     }
 fi
 
@@ -239,11 +311,44 @@ main() {
     # 1b. Unbeaufsichtigter Lauf: kein Menue, kein Prompt, sprechender Exit-Code.
     #     Der Env-Check laeuft in run_headless_install, damit --dry-run auch auf
     #     einer Nicht-Zielplattform den Plan ausgeben kann.
+    #
+    # Why the ERR trap is disarmed here, and what replaces it:
+    #
+    # A generic ERR trap and an exit-code contract cannot both own the status of
+    # this call. error_trap prints a crash banner and exits with whatever code
+    # fired it, while run_headless_install returns 0/1/2/3 as its documented
+    # API. With the trap armed, a deliberate refusal ("--yes missing", exit 3)
+    # reaches the operator as "Das Skript ist unerwartet abgestuerzt" — the tool
+    # would lie about its own behaviour. So disarming is correct.
+    #
+    # What was wrong was disarming it without putting anything in its place:
+    # the entire unattended install then ran with no error handling at all,
+    # which is how a failed step could reach `log_success`. The replacement is
+    # not another trap but checked returns, which catch strictly more:
+    #
+    #   - each step runs in a subshell under `set -euo pipefail`
+    #     (headless_run_step), so an unchecked command failure inside a legacy
+    #     install function aborts that step instead of falling through to its
+    #     closing success message
+    #   - each step's status is checked and the failing step is named on stderr
+    #   - the run's status is the documented exit code, produced in one place
+    #
+    # A crash reporter firing on those same conditions would add a banner and
+    # take away the exit code. It is not reinstated for that reason.
+    #
+    # The call below is a plain statement followed by `$?`, and has to stay one.
+    # `run_headless_install ... || headless_rc=$?` reads the same and is not:
+    # Bash ignores -e in everything a `||` list calls, subshells included, so
+    # that form silently disabled the first bullet above for every step. The
+    # failure is no longer silent — headless_run_step detects a tested context
+    # and refuses the step — but the run would then install nothing.
     if [[ "$HEADLESS_MODE" == "1" ]]; then
         trap - ERR
+        local headless_rc=0
         run_headless_install "$INSTALL_PROFILE" "$HEADLESS_UI" \
             "$HEADLESS_CONFIRMED" "$HEADLESS_DRY_RUN"
-        exit $?
+        headless_rc=$?
+        exit "$headless_rc"
     fi
 
     # 2. System initialisieren (Root-Check & Env-Validation)
@@ -269,16 +374,15 @@ main() {
         draw_main_menu
         
         local choice
-        if ! read -r -p "  >> COMMAND: " choice; then
-            # Fängt CTRL+D (EOF) sauber ab
-            echo ""
-            log_info "Sitzung durch Benutzer (EOF) beendet."
+        # Ends the session on EOF (CTRL+D) and on any start without a human —
+        # the same two conditions, handled in one place. katana_read_menu also
+        # does the whitespace trim that used to be repeated here and in every
+        # submenu, and forgotten in about half of them.
+        if ! katana_read_menu choice "  >> COMMAND: " "HAUPTMENUE"; then
+            log_info "Sitzung beendet (kein interaktives Terminal oder EOF)."
             break
         fi
-        
-        # Trim whitespace from input
-        choice="${choice#"${choice%%[![:space:]]*}"}"
-        
+
         # Navigation
         case "$choice" in
             1) run_quick_start ;;       # Befindet sich idealerweise bald im Dispatcher-Modul
