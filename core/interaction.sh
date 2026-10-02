@@ -257,6 +257,25 @@ katana_read_menu() {
 #   KATANA_ALLOW_DESTRUCTIVE="flash,uninstall"  two classes
 #   KATANA_ALLOW_DESTRUCTIVE="all"              not a thing; matches nothing
 #
+# The classes in use. A new call site joins the class whose blast radius it
+# shares instead of inventing a name, so an operator's allow-list keeps meaning
+# what it meant when it was written:
+#
+#   flash      build-and-flash, Katapult, DFU and CAN flashing, the MCU flash
+#              after a Klipper update, stopping Klipper for a flash
+#   delete     a saved board, a printer instance
+#   overwrite  replacing something that already exists with generated content:
+#              printer.cfg from the Printer Config Wizard (a timestamped backup
+#              is written first, see printer_cfg_guard_overwrite in
+#              modules/system/printer_config.sh), a CAN UUID written into
+#              printer.cfg, the can0 interface file, the StealthChanger config,
+#              ~/klipper and ~/klippy-env on an engine switch
+#   uninstall  every remove path — Klipper, Moonraker, web UIs, nginx, extras
+#   reinstall  installing over an existing checkout of an extra
+#   restore    restoring a backup or a vault snapshot over live data
+#   repair     the Dr. KATANA auto-healer
+#   reset      writing or removing the auto-restart drop-ins under /etc/systemd
+#
 # Third argument: when given, the interactive path demands that exact string
 # rather than y/n. That preserves the deliberately high-friction confirmations
 # that already existed ("Type 'RESTORE' to confirm") instead of quietly

@@ -51,7 +51,11 @@ if [[ "$(head -c 200 "${BASH_SOURCE[0]}" | tr -d '\0')" == *$'\r'* ]]; then echo
 #       Strictness is therefore applied where it can be verified instead of
 #       hoped for: every unattended install step runs under `set -euo pipefail`
 #       in its own subshell (headless_run_step in core/headless.sh), and the
-#       executed entrypoint install.sh enables all three.
+#       executed entrypoint install.sh enables all three. For -e that only
+#       holds while the step is not called from a tested context — Bash ignores
+#       errexit below `if`, `!`, `||` and `&&` no matter where it is set — so
+#       headless_run_step checks that precondition itself before each step and
+#       refuses to run one it could not fail fast.
 set -uo pipefail
 
 # --- VERSION ---
@@ -110,7 +114,8 @@ export INSTALL_PROFILE
 #
 # It is NOT the error handling of the two productive paths:
 #   - the unattended path replaces it with checked returns and per-step
-#     `set -euo pipefail` (see main(), and headless_run_step in core/headless.sh)
+#     `set -euo pipefail` (see main(), and headless_run_step in core/headless.sh),
+#     called as plain statements all the way down so that -e is not ignored
 #   - the interactive loop replaces it with per-command log_error, because a
 #     submenu returning 1 (a cancelled install) must not kill the session
 # Both are argued at their respective `trap - ERR`.
@@ -330,11 +335,19 @@ main() {
     #
     # A crash reporter firing on those same conditions would add a banner and
     # take away the exit code. It is not reinstated for that reason.
+    #
+    # The call below is a plain statement followed by `$?`, and has to stay one.
+    # `run_headless_install ... || headless_rc=$?` reads the same and is not:
+    # Bash ignores -e in everything a `||` list calls, subshells included, so
+    # that form silently disabled the first bullet above for every step. The
+    # failure is no longer silent — headless_run_step detects a tested context
+    # and refuses the step — but the run would then install nothing.
     if [[ "$HEADLESS_MODE" == "1" ]]; then
         trap - ERR
         local headless_rc=0
         run_headless_install "$INSTALL_PROFILE" "$HEADLESS_UI" \
-            "$HEADLESS_CONFIRMED" "$HEADLESS_DRY_RUN" || headless_rc=$?
+            "$HEADLESS_CONFIRMED" "$HEADLESS_DRY_RUN"
+        headless_rc=$?
         exit "$headless_rc"
     fi
 

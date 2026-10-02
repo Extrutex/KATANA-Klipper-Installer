@@ -19,6 +19,19 @@
 #   KATANA_NONINTERACTIVE   1 for the unattended case, unset for the pty case
 #   KATANA_ALLOW_DESTRUCTIVE  operation allow-list, when testing the switch
 #   PROBE_CALLLOG           file the command stubs append to
+#
+# Optional, for tests that assert on what is on disk AFTER the function ran:
+#   PROBE_HOME_DIR          use this directory as the prefix instead of a
+#                           throwaway one, and leave it in place on exit. Files
+#                           the caller put there are not overwritten by the
+#                           seeding below. Setting HOME has no such effect —
+#                           this harness always replaces it.
+#   PROBE_SEED_PRINTER_CFG  0 to leave the prefix without a printer.cfg (the
+#                           freshly imaged host); anything else seeds one
+#   PROBE_FAIL_COMMANDS     space-separated extra commands to replace with the
+#                           recording, failing stub (e.g. "cp", to prove that a
+#                           failed backup stops the overwrite it was meant to
+#                           protect)
 # ==============================================================================
 
 set -uo pipefail
@@ -34,10 +47,18 @@ export TERM="${TERM:-dumb}"
 
 # A prefix that is not the developer's home. Everything the functions under
 # test touch below $HOME lands here and dies with the process.
-PROBE_HOME="$(mktemp -d "${TMPDIR:-/tmp}/katana-probe.XXXXXX")"
+if [[ -n "${PROBE_HOME_DIR:-}" ]]; then
+    # Caller-owned prefix: created if needed, never removed here. The caller
+    # inspects it afterwards and cleans it up with its own trap.
+    PROBE_HOME="$PROBE_HOME_DIR"
+    mkdir -p "$PROBE_HOME" || { echo "PROBE load-error PROBE_HOME_DIR"; exit 90; }
+else
+    PROBE_HOME="$(mktemp -d "${TMPDIR:-/tmp}/katana-probe.XXXXXX")" \
+        || { echo "PROBE load-error mktemp"; exit 90; }
+    trap 'rm -rf "$PROBE_HOME"' EXIT
+fi
 export HOME="$PROBE_HOME"
 export LOG_FILE="$PROBE_HOME/katana.log"
-trap 'rm -rf "$PROBE_HOME"' EXIT
 
 # Minimal plausible installation, so the functions reach their prompt instead
 # of returning early on "Klipper is not installed".
@@ -48,7 +69,11 @@ mkdir -p "$PROBE_HOME/klipper/out" \
 : > "$PROBE_HOME/klipper/out/klipper.bin"
 : > "$PROBE_HOME/klipper/out/klipper.uf2"
 : > "$PROBE_HOME/klipper/.config"
-printf '[printer]\nkinematics: none\n' > "$PROBE_HOME/printer_data/config/printer.cfg"
+# Only when absent: a caller-owned prefix may carry a printer.cfg whose content
+# the test asserts on afterwards.
+if [[ "${PROBE_SEED_PRINTER_CFG:-1}" != "0" && ! -e "$PROBE_HOME/printer_data/config/printer.cfg" ]]; then
+    printf '[printer]\nkinematics: none\n' > "$PROBE_HOME/printer_data/config/printer.cfg"
+fi
 
 # A saved board, for the registry-driven paths.
 cat > "$PROBE_HOME/printer_data/config/katana_boards/probe_board.meta" <<'META'
@@ -87,8 +112,11 @@ mkdir -p "$STUBDIR"
 export PROBE_CALLLOG
 : > "$PROBE_CALLLOG"
 
+# PROBE_FAIL_COMMANDS is word-split on purpose: it is a list of command names.
+# shellcheck disable=SC2086
 for cmd in dfu-util make sudo systemctl apt-get git picotool avrdude \
-           stm32flash ip ifup ifdown modprobe curl wget dpkg; do
+           stm32flash ip ifup ifdown modprobe curl wget dpkg \
+           ${PROBE_FAIL_COMMANDS:-}; do
     cat > "$STUBDIR/$cmd" <<STUB
 #!/usr/bin/env bash
 printf '%s %s\n' "$cmd" "\$*" >> "\$PROBE_CALLLOG"

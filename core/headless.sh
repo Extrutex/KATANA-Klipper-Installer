@@ -80,6 +80,29 @@ headless_print_plan() {
     return 0
 }
 
+# Names the command that aborted a step. Installed as the ERR trap of the step
+# subshell (see headless_run_step); never called directly.
+#
+# Now that -e really is live inside a step, "step 'klipper' failed" alone is not
+# a diagnosis: a bare `[ -d x ] && y` at the end of a helper aborts the step
+# without printing anything. The trap fires under exactly the conditions errexit
+# does, so the line it prints is the command that ended the step.
+#
+# Two filters keep it from reporting things that did not end the step:
+#   - a command substitution inherits the trap (-E) but not -e, so a failure in
+#     `x=$(...)` that the surrounding code tolerates would be reported as fatal.
+#     Only failures at the step's own subshell depth are reported.
+#   - an install function that ends in an explicit `return 1` has already said
+#     why. The trap then fires once more for the function call itself, inside
+#     headless_run_step, and that echo adds nothing.
+headless_report_step_abort() {
+    local status="$1" failed_command="$2" in_function="$3" line_no="$4" step_depth="$5" label="$6"
+    [[ "$BASH_SUBSHELL" -eq "$step_depth" ]] || return 0
+    [[ "$in_function" == "headless_run_step" ]] && return 0
+    headless_err "KATANA: step '$label' aborted — '$failed_command' returned $status (${in_function:-top level}, line $line_no)."
+    return 0
+}
+
 # Runs one step through the function the interactive path uses. A missing
 # function is a failure, not a skip: silently installing less than was asked
 # for is how a fleet ends up in two different states.
@@ -105,6 +128,52 @@ headless_print_plan() {
 # moonraker_update_manager.sh, which redefines log_info/log_success when
 # do_install_mainsail sources it and would otherwise degrade the logging of
 # every later step.
+#
+# CALLING CONVENTION — this function must be called as a plain statement and
+# its status read from $? on the next line. Never `if headless_run_step`,
+# `! headless_run_step`, `headless_run_step || ...` or `... && ...`, and the
+# same holds for every caller above it, up to and including main().
+#
+# Why. Bash ignores -e in any command whose status is being tested, and "any
+# command" includes everything that command calls: function bodies and
+# subshells inherit the exemption, and a `set -e` issued inside them does not
+# lift it. The first version of this function was
+#
+#     if ! ( set -euo pipefail; "$function_name" "$@" ); then
+#
+# and that -e never fired. Measured: with `f(){ false; echo CONTINUED; }` the
+# line above prints CONTINUED and takes the success branch. A failed git clone
+# in the middle of do_install_klipper was followed by the virtualenv, the pip
+# install and log_success, and the step returned 0. Moving the subshell out of
+# the `if` alone does not fix it, because `headless_run_step ... || return` in
+# the caller puts this whole body back into a tested context.
+#
+# The alternative that works from any calling context is to background the
+# subshell and `wait` for it, since an asynchronous command starts with a clean
+# slate. It was rejected: without job control an async command ignores SIGINT
+# and SIGQUIT and reads stdin from /dev/null, and both dispositions are
+# inherited by git, pip and apt-get. CTRL+C during an install would kill the
+# orchestrator and leave the running step and its children behind as orphans,
+# still writing to the host. Undoing that means re-arming the signals inside the
+# child, forwarding them from the parent and re-attaching stdin — three
+# mechanisms to get back what a foreground subshell has for free: it stays in
+# the terminal's foreground process group, so the signal reaches the step and
+# every child directly.
+#
+# So the step stays in the foreground, and the convention it depends on is
+# enforced rather than documented and hoped for. Before the step runs, a canary
+# subshell executes `set -e; false; exit 0` under the same conditions. It can
+# only exit 0 if -e was ignored — which means this function was called from a
+# tested context and the real step would run without fail-fast. In that case
+# nothing is executed and the step is reported as failed: an install that
+# cannot be checked does not start.
+#
+# What -e covers, stated exactly, because the same rule applies one level down:
+# every command the step function runs as a statement, and every function it
+# calls as a statement, recursively. A function the install code itself calls
+# under `if`/`!`/`||`/`&&` (setup_nginx, install_service_from_template) runs
+# with -e ignored by the same Bash rule; its failure is caught by the condition
+# that tests it, not by errexit.
 headless_run_step() {
     local label="$1" function_name="$2"
     shift 2
@@ -113,7 +182,39 @@ headless_run_step() {
         headless_err "KATANA: step '$label' unavailable — function $function_name not loaded."
         return 1
     fi
-    if ! ( set -euo pipefail; "$function_name" "$@" ); then
+
+    # The two subshells below fail on purpose (the canary) or may fail (the
+    # step), as plain statements. A caller that itself runs under -e would be
+    # terminated by either before the status could be read and reported, so -e
+    # is suspended for this function and restored on every way out.
+    local caller_errexit=0
+    case "$-" in *e*) caller_errexit=1 ;; esac
+    set +e
+
+    local canary_status=0
+    ( set -e; false; exit 0 )
+    canary_status=$?
+    if [[ "$canary_status" -eq 0 ]]; then
+        headless_err "KATANA: step '$label' not started — headless_run_step was called from a"
+        headless_err "        tested context (if / ! / || / &&), where Bash ignores 'set -e'."
+        headless_err "        This is a bug in the caller, see the calling convention in core/headless.sh."
+        if [[ "$caller_errexit" -eq 1 ]]; then set -e; fi
+        return 1
+    fi
+
+    local step_status=0
+    (
+        # -E on top of the documented three: it makes the ERR trap below visible
+        # inside the install functions, which is where the failures are.
+        set -Eeuo pipefail
+        step_depth="$BASH_SUBSHELL"
+        trap 'headless_report_step_abort "$?" "$BASH_COMMAND" "${FUNCNAME[0]:-}" "$LINENO" "$step_depth" "$label"' ERR
+        "$function_name" "$@"
+    )
+    step_status=$?
+    if [[ "$caller_errexit" -eq 1 ]]; then set -e; fi
+
+    if [[ "$step_status" -ne 0 ]]; then
         headless_err "KATANA: step '$label' failed."
         return 1
     fi
@@ -162,25 +263,44 @@ run_headless_install() {
     headless_log "KATANA headless install — profile $profile, ui $ui"
     local components
     components="$(headless_components_for "$profile")"
-    local component
+    # One call site for every step, and it is a plain statement: see the
+    # calling convention on headless_run_step. The `case` only selects what to
+    # run. Writing the call once is what keeps a later edit from reintroducing
+    # `headless_run_step ... || return` in one arm and silently switching
+    # fail-fast off for that step.
+    local component step_label step_function step_status
+    local -a step_arguments
     for component in $components; do
+        step_arguments=()
         case "$component" in
             klipper)
-                headless_run_step "klipper" do_install_klipper "Standard" \
-                    || return $KATANA_EXIT_STEP_FAILED ;;
+                step_label="klipper"
+                step_function="do_install_klipper"
+                step_arguments=("Standard") ;;
             moonraker)
-                headless_run_step "moonraker" do_install_moonraker \
-                    || return $KATANA_EXIT_STEP_FAILED ;;
+                step_label="moonraker"
+                step_function="do_install_moonraker" ;;
             ui)
-                [[ "$ui" == "none" ]] && continue
-                if [[ "$ui" == "fluidd" ]]; then
-                    headless_run_step "fluidd" do_install_fluidd \
-                        || return $KATANA_EXIT_STEP_FAILED
-                else
-                    headless_run_step "mainsail" do_install_mainsail \
-                        || return $KATANA_EXIT_STEP_FAILED
-                fi ;;
+                case "$ui" in
+                    none)     continue ;;
+                    fluidd)   step_label="fluidd";   step_function="do_install_fluidd" ;;
+                    mainsail) step_label="mainsail"; step_function="do_install_mainsail" ;;
+                    *)        headless_err "KATANA: unknown UI '$ui' (mainsail|fluidd|none)."
+                              return $KATANA_EXIT_USAGE ;;
+                esac ;;
+            *)
+                headless_err "KATANA: profile '$profile' names an unknown component '$component'."
+                return $KATANA_EXIT_STEP_FAILED ;;
         esac
+
+        # ${a[@]+"${a[@]}"} rather than "${a[@]}": expanding an empty array is
+        # an unbound-variable error under -u before Bash 4.4, and a step without
+        # arguments must receive none — not one empty string.
+        headless_run_step "$step_label" "$step_function" ${step_arguments[@]+"${step_arguments[@]}"}
+        step_status=$?
+        if [[ "$step_status" -ne 0 ]]; then
+            return $KATANA_EXIT_STEP_FAILED
+        fi
     done
 
     headless_log "KATANA headless install complete."

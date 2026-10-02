@@ -231,7 +231,247 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 4. The other half of the defect: a TTY on stdin with nobody watching.
+# 4. Fail-fast inside a step. A step whose MIDDLE command fails must fail, and
+#    the commands after the failure must not run. This is the property the
+#    per-step `set -e` exists for, and for a while it was only claimed: the step
+#    was invoked as `if ! ( set -euo pipefail; ... )` under a caller using
+#    `|| return`, and Bash ignores -e in both. A failed clone was followed by
+#    the virtualenv build, the closing log_success and exit 0.
+#
+#    The assertions are on marker files, not on the exit code alone — "exit 1"
+#    is also what a step returns after running to its end and failing late.
+# ------------------------------------------------------------------------------
+assert_step_stops_at_failure() {
+    local label="$1"
+
+    if [ "$CASE_RC" -eq 1 ]; then
+        pass "$label: run exits 1 (step failed)"
+    else
+        fail "$label: run exited $CASE_RC (expected 1) — a failed command inside the step went unnoticed"
+        sed 's/^/        /' "$CASE_OUT" | tail -12
+    fi
+
+    if [ -f "$CASE_HOME/step-markers/before-failure" ]; then
+        pass "$label: the step ran up to the failing command"
+    else
+        fail "$label: the step never started — this case is not exercising the failure"
+    fi
+
+    if [ ! -e "$CASE_HOME/step-markers/after-failure" ]; then
+        pass "$label: nothing after the failing command ran"
+    else
+        fail "$label: the step CONTINUED past its failing command"
+    fi
+
+    if [ ! -d "$CASE_HOME/moonraker" ] && [ ! -d "$CASE_HOME/mainsail" ]; then
+        pass "$label: no later step was started"
+    else
+        fail "$label: a later step ran after the failed one"
+    fi
+
+    if grep -q "step 'klipper' failed" "$CASE_OUT"; then
+        pass "$label: the failing step is named"
+    else
+        fail "$label: no diagnostic naming the failing step"
+    fi
+
+    if grep -q "step 'klipper' aborted" "$CASE_OUT"; then
+        pass "$label: the failing command is named"
+    else
+        fail "$label: no diagnostic naming the command that aborted the step"
+    fi
+
+    if ! grep -q "headless install complete" "$CASE_OUT"; then
+        pass "$label: the run does not report completion"
+    else
+        fail "$label: the run reported completion after a failed step"
+    fi
+}
+
+run_case "step-midfail" "file://$FIXTURES/mainsail.zip" "step-midfail"
+assert_step_stops_at_failure "mid-step failure"
+
+# The realistic shape: the failing command is a helper returning non-zero
+# (exec_silent around `git clone`), called as a bare statement.
+run_case "step-midfail-nested" "file://$FIXTURES/mainsail.zip" "step-midfail-nested"
+assert_step_stops_at_failure "mid-step failure in a helper"
+
+# The calling convention is enforced, not assumed. Invoked from a tested
+# context, -e cannot work — so the step must not run at all, and must say why.
+run_case "tested-context" "file://$FIXTURES/mainsail.zip" "tested-context"
+
+if [ "$CASE_RC" -ne 0 ]; then
+    pass "tested context: the run fails instead of installing without fail-fast (exit $CASE_RC)"
+else
+    fail "tested context: the run exited 0 with 'set -e' ignored in every step"
+fi
+
+if [ ! -e "$CASE_HOME/step-markers/before-failure" ]; then
+    pass "tested context: the step body was never executed"
+else
+    fail "tested context: the step ran although its fail-fast could not work"
+fi
+
+if grep -q "tested context" "$CASE_OUT"; then
+    pass "tested context: the refusal names its cause"
+else
+    fail "tested context: no diagnostic explaining the refusal"
+fi
+
+# The same property through the real entrypoint. Everything above goes through
+# the harness, which calls run_headless_install itself; what decides whether -e
+# is live in production is the call chain in katanaos.sh, from the last line of
+# the file through main() down to the step. So the real katanaos.sh is run from
+# a scratch tree: the real core, and one module that supplies the preflight and
+# the two steps of the `minimal` profile. Nothing else is substituted.
+#
+# Two cases, and the passing one matters as much as the failing one: it proves
+# the canary accepts the production call chain. If main() ever wraps the call in
+# a tested context again, the steps are refused and this case exits 1.
+ENTRY_TREE="$WORKROOT/entrypoint-tree"
+mkdir -p "$ENTRY_TREE/modules/engine"
+cp "$REPO_ROOT/katanaos.sh" "$ENTRY_TREE/katanaos.sh"
+cp -R "$REPO_ROOT/core" "$ENTRY_TREE/core"
+cat > "$ENTRY_TREE/modules/engine/install_klipper.sh" <<'STUBMODULE'
+#!/bin/bash
+# Test module. Loaded by the real katanaos.sh in place of the real installer.
+check_environment() { return 0; }
+
+do_install_klipper() {
+    mkdir -p "$HOME/step-markers" "$HOME/klipper"
+    : > "$HOME/step-markers/before-failure"
+    if [ "${KATANA_TEST_STEP:-ok}" = "midfail" ]; then
+        false
+    fi
+    : > "$HOME/step-markers/after-failure"
+    log_success "Klipper instance ready."
+}
+
+do_install_moonraker() {
+    mkdir -p "$HOME/moonraker"
+    log_success "Moonraker ready."
+}
+STUBMODULE
+
+# run_entrypoint <name> <ok|midfail>  — sets CASE_RC, CASE_HOME, CASE_OUT
+run_entrypoint() {
+    CASE_HOME="$WORKROOT/$1/home"
+    CASE_OUT="$WORKROOT/$1/output.txt"
+    mkdir -p "$CASE_HOME"
+    env -i \
+        PATH="$PATH" \
+        HOME="$CASE_HOME" \
+        KATANA_TEST_STEP="$2" \
+        bash "$ENTRY_TREE/katanaos.sh" install --profile minimal --yes \
+        > "$CASE_OUT" 2>&1 < /dev/null
+    CASE_RC=$?
+}
+
+run_entrypoint "entrypoint-ok" "ok"
+if [ "$CASE_RC" -eq 0 ] && [ -d "$CASE_HOME/moonraker" ] \
+        && [ -f "$CASE_HOME/step-markers/after-failure" ]; then
+    pass "katanaos.sh install: the production call chain runs its steps and exits 0"
+else
+    fail "katanaos.sh install: healthy steps did not complete (exit $CASE_RC) — is the step called from a tested context?"
+    sed 's/^/        /' "$CASE_OUT" | tail -12
+fi
+
+run_entrypoint "entrypoint-midfail" "midfail"
+if [ "$CASE_RC" -eq 1 ]; then
+    pass "katanaos.sh install: a mid-step failure exits 1"
+else
+    fail "katanaos.sh install: a mid-step failure exited $CASE_RC (expected 1)"
+    sed 's/^/        /' "$CASE_OUT" | tail -12
+fi
+if [ -f "$CASE_HOME/step-markers/before-failure" ] \
+        && [ ! -e "$CASE_HOME/step-markers/after-failure" ] \
+        && [ ! -d "$CASE_HOME/moonraker" ]; then
+    pass "katanaos.sh install: the step stopped at the failure and no later step ran"
+else
+    fail "katanaos.sh install: the step or the run continued past the failing command"
+fi
+
+# ------------------------------------------------------------------------------
+# 5. Interrupting a run. CTRL+C delivers SIGINT to the foreground process group;
+#    the step and the child it is waiting on (git, pip, apt-get) must die with
+#    the orchestrator. This is what rules out running the step as a background
+#    job: without job control an asynchronous command ignores SIGINT, so the
+#    orchestrator would exit and leave the install running as an orphan.
+#
+#    `set -m` gives the harness its own process group, which stands in for the
+#    terminal's foreground group; the signal is sent to the group, as the tty
+#    driver does. Confined to a subshell so job control does not leak into the
+#    rest of this file.
+# ------------------------------------------------------------------------------
+SIG_DIR="$WORKROOT/step-sigint"
+SIG_HOME="$SIG_DIR/home"
+SIG_PIDFILE="$SIG_HOME/step-markers/child.pid"
+mkdir -p "$SIG_HOME"
+
+(
+    set -m
+    env -i \
+        PATH="$PATH" \
+        HOME="$SIG_HOME" \
+        TERM=dumb \
+        KATANA_ROOT="$REPO_ROOT" \
+        LOG_FILE="$SIG_DIR/katana.log" \
+        KATANA_MAINSAIL_URL="file://$FIXTURES/mainsail.zip" \
+        bash "$HARNESS" "step-sigint" > "$SIG_DIR/output.txt" 2>&1 < /dev/null &
+    harness_pid=$!
+
+    waited=0
+    while [ ! -s "$SIG_PIDFILE" ] && [ "$waited" -lt 100 ]; do
+        sleep 0.1
+        waited=$((waited + 1))
+    done
+    if [ ! -s "$SIG_PIDFILE" ]; then
+        kill -KILL -- "-$harness_pid" 2>/dev/null
+        wait "$harness_pid" 2>/dev/null
+        echo "never-started" > "$SIG_DIR/result"
+        exit 0
+    fi
+
+    kill -INT -- "-$harness_pid"
+    wait "$harness_pid"
+    echo "$?" > "$SIG_DIR/result"
+) 2>/dev/null
+
+SIG_RESULT="$(cat "$SIG_DIR/result" 2>/dev/null || echo "no-result")"
+SIG_CHILD="$(cat "$SIG_PIDFILE" 2>/dev/null || true)"
+
+if [ "$SIG_RESULT" = "never-started" ] || [ "$SIG_RESULT" = "no-result" ] || [ -z "$SIG_CHILD" ]; then
+    fail "interrupt: the step never reached its child process ($SIG_RESULT)"
+else
+    if [ "$SIG_RESULT" -ne 0 ]; then
+        pass "interrupt: the run ends with a non-zero status ($SIG_RESULT)"
+    else
+        fail "interrupt: the run exited 0 after SIGINT"
+    fi
+
+    # The child gets a moment to disappear: its exit is asynchronous to the
+    # orchestrator's. A process that ignored the signal is still there after it.
+    waited=0
+    while kill -0 "$SIG_CHILD" 2>/dev/null && [ "$waited" -lt 30 ]; do
+        sleep 0.1
+        waited=$((waited + 1))
+    done
+    if ! kill -0 "$SIG_CHILD" 2>/dev/null; then
+        pass "interrupt: the step's child process is gone, nothing is orphaned"
+    else
+        fail "interrupt: the step's child process (pid $SIG_CHILD) survived SIGINT as an orphan"
+        kill -KILL "$SIG_CHILD" 2>/dev/null
+    fi
+
+    if [ ! -e "$SIG_HOME/step-markers/after-interrupt" ] && [ ! -d "$SIG_HOME/moonraker" ]; then
+        pass "interrupt: nothing ran after the interrupted command"
+    else
+        fail "interrupt: the run continued after SIGINT"
+    fi
+fi
+
+# ------------------------------------------------------------------------------
+# 6. The other half of the defect: a TTY on stdin with nobody watching.
 #    `script` allocates a pty, so katana_pause sees a terminal. Under
 #    KATANA_NONINTERACTIVE it must return immediately; the pre-fix code blocked
 #    here until the timeout killed it.

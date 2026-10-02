@@ -26,6 +26,84 @@ function run_printer_config_wizard() {
     done
 }
 
+# Shared guard for every generator below. Call it immediately before the
+# write; a non-zero return means "do not write" and the generator must return.
+#
+#   printer_cfg_guard_overwrite "$config_dir/printer.cfg" || return 1
+#
+# All four generators used to end in an unconditional `cat > printer.cfg`. On a
+# fresh host that is the feature. On a configured printer it replaced the one
+# file that holds the pin map, the PID values, the probe offset and — below the
+# SAVE_CONFIG marker — every calibration result Klipper has stored, with a
+# template. Nothing asked, nothing was kept, and on an unattended run the
+# closing katana_pause is skipped, so it did not even slow down.
+#
+# The rules:
+#   - no printer.cfg        nothing is destroyed, so nothing is asked
+#   - printer.cfg exists    katana_confirm_destructive, operation class
+#                           `overwrite` — the class the other config-replacing
+#                           paths use (CAN interface file, StealthChanger
+#                           config, UUID injection into printer.cfg). Unattended
+#                           that is a refusal unless KATANA_ALLOW_DESTRUCTIVE
+#                           names `overwrite`; --yes does not cover it.
+#   - confirmed             the existing file is copied next to itself BEFORE
+#                           the generator writes, and the copy is verified. If
+#                           the backup cannot be written or does not match, the
+#                           generator does not run: consent to overwrite was
+#                           given on the promise of a backup.
+#
+# The backup is named printer.cfg.bak.<YYYYmmdd_HHMMSS>. Deliberately not
+# `*.cfg`: a config that pulls in its neighbours with `[include *.cfg]` would
+# otherwise load the stale copy on the next Klipper start.
+#
+# Confirmation and backup are one function, called directly before the write,
+# so there is no path on which one happens without the other and no prompt
+# between the backup and the overwrite that could abort and leave a backup of
+# a file nobody replaced.
+function printer_cfg_guard_overwrite() {
+    local config_file="$1"
+
+    # -L as well as -e: a dangling symlink is "nothing to back up" for cp but
+    # the write would still go through it, so it is treated as existing.
+    if [[ ! -e "$config_file" && ! -L "$config_file" ]]; then
+        return 0
+    fi
+
+    log_warn "printer.cfg existiert bereits: $config_file"
+    echo "  Die Datei wird durch die Vorlage ERSETZT. Vorher wird eine Sicherung"
+    echo "  im selben Verzeichnis angelegt (printer.cfg.bak.<Zeitstempel>)."
+    if ! katana_confirm_destructive "  Bestehende printer.cfg ueberschreiben? [y/N]: " overwrite; then
+        log_info "printer.cfg wurde nicht veraendert."
+        return 1
+    fi
+
+    local stamp backup suffix
+    if ! stamp="$(date '+%Y%m%d_%H%M%S')" || [[ -z "$stamp" ]]; then
+        log_error "Zeitstempel fuer die Sicherung konnte nicht erzeugt werden — printer.cfg bleibt unveraendert."
+        return 1
+    fi
+    backup="${config_file}.bak.${stamp}"
+    # Two overwrites within the same second must not share a backup name: the
+    # second copy would replace the first backup, which is the original.
+    suffix=1
+    while [[ -e "$backup" || -L "$backup" ]]; do
+        backup="${config_file}.bak.${stamp}.${suffix}"
+        suffix=$((suffix + 1))
+    done
+
+    if ! cp -p -- "$config_file" "$backup"; then
+        log_error "Sicherung nach $backup fehlgeschlagen — printer.cfg bleibt unveraendert."
+        return 1
+    fi
+    if ! cmp -s -- "$config_file" "$backup"; then
+        log_error "Sicherung $backup stimmt nicht mit dem Original ueberein — printer.cfg bleibt unveraendert."
+        return 1
+    fi
+
+    log_success "Sicherung angelegt: $backup"
+    return 0
+}
+
 function create_basic_printer_cfg() {
     draw_header "BASIC PRINTER CONFIG"
     
@@ -54,7 +132,9 @@ function create_basic_printer_cfg() {
     
     local config_dir="$HOME/printer_data/config"
     mkdir -p "$config_dir"
-    
+
+    printer_cfg_guard_overwrite "$config_dir/printer.cfg" || return 1
+
     cat > "$config_dir/printer.cfg" <<EOF
 # ============================================================
 # KATANAOS Generated printer.cfg
@@ -137,7 +217,9 @@ function create_ender3_printer_cfg() {
     
     local config_dir="$HOME/printer_data/config"
     mkdir -p "$config_dir"
-    
+
+    printer_cfg_guard_overwrite "$config_dir/printer.cfg" || return 1
+
     cat > "$config_dir/printer.cfg" <<'EOF'
 # ============================================================
 # KATANAOS Generated - Ender-3 Template
@@ -239,7 +321,9 @@ function create_voron_printer_cfg() {
     
     local config_dir="$HOME/printer_data/config"
     mkdir -p "$config_dir"
-    
+
+    printer_cfg_guard_overwrite "$config_dir/printer.cfg" || return 1
+
     cat > "$config_dir/printer.cfg" <<'EOF'
 # ============================================================
 # KATANAOS Generated - Voron 2.4 / Trident Template
@@ -368,7 +452,9 @@ function create_custom_printer_cfg() {
     
     local config_dir="$HOME/printer_data/config"
     mkdir -p "$config_dir"
-    
+
+    printer_cfg_guard_overwrite "$config_dir/printer.cfg" || return 1
+
     cat > "$config_dir/printer.cfg" <<'EOF'
 # ============================================================
 # KATANAOS Generated - Custom Printer Template

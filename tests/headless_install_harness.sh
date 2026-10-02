@@ -27,6 +27,23 @@
 #   ok          the fixed code path
 #   prefix-bug  do_install_mainsail is restored to its pre-fix ending (a bare
 #               `read -r -p`) to prove this test detects the regression
+#   step-midfail
+#               the klipper step is a function whose MIDDLE command fails and
+#               whose remaining commands would succeed — the shape of a failed
+#               git clone followed by a virtualenv build and log_success
+#   step-midfail-nested
+#               the same, but the failing command is the real exec_silent
+#               returning 1, called as a bare statement exactly as
+#               do_install_klipper calls it
+#   tested-context
+#               run_headless_install is invoked as `... || rc=$?`, the call
+#               shape under which Bash ignores `set -e` in every step
+#   step-sigint the klipper step blocks in a foreground child process, so the
+#               caller can interrupt the run and check what is left behind
+#
+# The step-* and tested-context modes leave marker files in
+# $HOME/step-markers so the caller asserts on what actually ran, not on what
+# the exit code implies.
 # ==============================================================================
 
 # No `set -e`: this harness must reach its own exit statement so the caller sees
@@ -110,6 +127,53 @@ if [ "$MODE" = "prefix-bug" ]; then
     }
 fi
 
+# --- fail-fast guards ---------------------------------------------------------
+# Each of these replaces the klipper step, which runs first, so the assertions
+# can also check that the steps after it never started.
+MARKERS="$HOME/step-markers"
+
+case "$MODE" in
+    step-midfail|tested-context)
+        do_install_klipper() {
+            mkdir -p "$MARKERS"
+            : > "$MARKERS/before-failure"
+            false
+            : > "$MARKERS/after-failure"
+            log_success "Klipper instance ready."
+        }
+        ;;
+    step-midfail-nested)
+        do_install_klipper() {
+            mkdir -p "$MARKERS"
+            : > "$MARKERS/before-failure"
+            exec_silent "Cloning Klipper" "false"
+            : > "$MARKERS/after-failure"
+            log_success "Klipper instance ready."
+        }
+        ;;
+    step-sigint)
+        do_install_klipper() {
+            mkdir -p "$MARKERS"
+            # A foreground child, like git or pip during a real step. It
+            # publishes its own PID so the caller can check it is gone.
+            bash -c 'printf "%s\n" "$$" > "$1"; exec sleep 60' _ "$MARKERS/child.pid"
+            : > "$MARKERS/after-interrupt"
+            log_success "Klipper instance ready."
+        }
+        ;;
+esac
+
+if [ "$MODE" = "tested-context" ]; then
+    # The call shape that used to be in katanaos.sh. Under it Bash ignores -e
+    # in every step; headless_run_step has to notice and refuse.
+    tested_rc=0
+    run_headless_install "${KATANA_TEST_PROFILE:-standard}" \
+                         "${KATANA_TEST_UI:-mainsail}" 1 0 || tested_rc=$?
+    exit "$tested_rc"
+fi
+
+# A plain statement followed by `exit $?` — the same shape as main() in
+# katanaos.sh, and the only one under which the per-step `set -e` is live.
 run_headless_install "${KATANA_TEST_PROFILE:-standard}" \
                      "${KATANA_TEST_UI:-mainsail}" 1 0
 exit $?
