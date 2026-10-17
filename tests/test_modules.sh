@@ -71,7 +71,7 @@ while IFS= read -r f; do
     if bash -n "$f" 2>"$SYN_ERR"; then
         :
     else
-        fail "Syntaxfehler: ${f#$KATANA_ROOT/}"
+        fail "Syntaxfehler: ${f#"$KATANA_ROOT"/}"
         sed 's/^/        /' "$SYN_ERR"
         SYNTAX_OK=0
     fi
@@ -85,9 +85,14 @@ echo "═══ TEST 2: SANDBOX LOAD (Module ohne System-Eingriff laden) ══�
 # und geben die definierten Funktionen aus.
 DEFINED_FUNCS="$(
     # --- Stubs fuer System-Tools, damit beim Sourcen nichts passiert ---
+    # Invoked indirectly by the sourced modules, never by this file.
+    # shellcheck disable=SC2329
     sudo()       { :; }
+    # shellcheck disable=SC2329
     apt-get()    { :; }
+    # shellcheck disable=SC2329
     systemctl()  { return 1; }
+    # shellcheck disable=SC2329
     dpkg()       { return 1; }
     export -f sudo apt-get systemctl dpkg 2>/dev/null
 
@@ -95,6 +100,7 @@ DEFINED_FUNCS="$(
     set +e
     # ERR-Trap NICHT setzen (wir wollen ja alle Module trotz Fehler laden)
     for m in "${CORE_MODULES[@]}" "${OPT_MODULES[@]}"; do
+        # shellcheck source=/dev/null
         [ -f "$KATANA_ROOT/$m" ] && source "$KATANA_ROOT/$m" 2>/dev/null
     done
     declare -F | awk '{print $3}'

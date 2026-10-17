@@ -22,6 +22,7 @@ function load_board_profile() {
     local board_name="$1"
     local profile="$FLASH_PROFILES_DIR/${board_name}.config"
     if [ -f "$profile" ]; then
+        # shellcheck source=/dev/null
         source "$profile"
         return 0
     else

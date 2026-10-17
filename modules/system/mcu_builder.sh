@@ -86,7 +86,7 @@ function build_mcu() {
     make olddefconfig > /dev/null 2>&1
     
     log_info "Compiling firmware (this takes a moment)..."
-    make -j$(nproc)
+    make -j"$(nproc)"
     local build_result=$?
     
     if [ $build_result -eq 0 ] && [ -f "$KLIPPER_DIR/out/klipper.bin" ]; then

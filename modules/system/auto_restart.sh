@@ -75,10 +75,10 @@ function setup_service_restart() {
     fi
 
     # Create override directory
-    sudo mkdir -p /etc/systemd/system/${service}.service.d
+    sudo mkdir -p "/etc/systemd/system/${service}.service.d"
     
     # Create override.conf
-    sudo tee /etc/systemd/system/${service}.service.d/override.conf > /dev/null <<EOF
+    sudo tee "/etc/systemd/system/${service}.service.d/override.conf" > /dev/null <<EOF
 [Service]
 # Auto-restart configuration
 Restart=on-failure

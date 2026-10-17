@@ -223,6 +223,7 @@ function do_install_moonraker() {
     # must not abort provisioning. The venv/pip step below is the real gate —
     # if a genuinely required header is absent, the requirements install fails
     # there with a readable error instead of here with an apt exit code.
+    # shellcheck disable=SC2024 # the log is the invoking user's file; only the command needs root
     sudo apt-get install -y python3-virtualenv python3-dev liblmdb-dev \
         libopenjp2-7 libsodium-dev zlib1g-dev libjpeg-dev packagekit \
         python3-wheel python3-setuptools >>"${LOG_FILE:-/dev/null}" 2>&1 || \
@@ -345,6 +346,7 @@ POLLIT
     # Tolerated: `enable` is idempotent and already done by the template
     # installer; a non-zero here (unit already enabled, no-op link) must not
     # abort the run.
+    # shellcheck disable=SC2024 # the log is the invoking user's file; only the command needs root
     sudo systemctl enable "$service_name" >>"${LOG_FILE:-/dev/null}" 2>&1 || true
     # Tolerated at this line only so the health check below can produce a
     # readable diagnosis instead of a bare exit code.
@@ -412,18 +414,18 @@ function do_update_klipper() {
     # Check for updates
     local current_sha=$(git rev-parse HEAD)
     git fetch origin
-    local latest_sha=$(git rev-parse origin/$branch 2>/dev/null)
+    local latest_sha=$(git rev-parse "origin/$branch" 2>/dev/null)
     
     if [ "$current_sha" == "$latest_sha" ]; then
         log_success "Klipper is already up to date."
     else
-        log_info "Updating from $(git rev-parse --short HEAD) to $(git rev-parse --short origin/$branch)..."
-        git pull origin $branch
+        log_info "Updating from $(git rev-parse --short HEAD) to $(git rev-parse --short "origin/$branch")..."
+        git pull origin "$branch"
         
         # Rebuild
         log_info "Rebuilding Klipper..."
         make clean
-        make -j$(nproc)
+        make -j"$(nproc)"
         
         # Restart service
         sudo systemctl restart klipper
@@ -465,13 +467,13 @@ function do_update_moonraker() {
     # Check for updates
     local current_sha=$(git rev-parse HEAD)
     git fetch origin
-    local latest_sha=$(git rev-parse origin/$branch 2>/dev/null)
+    local latest_sha=$(git rev-parse "origin/$branch" 2>/dev/null)
     
     if [ "$current_sha" == "$latest_sha" ]; then
         log_success "Moonraker is already up to date."
     else
-        log_info "Updating from $(git rev-parse --short HEAD) to $(git rev-parse --short origin/$branch)..."
-        git pull origin $branch
+        log_info "Updating from $(git rev-parse --short HEAD) to $(git rev-parse --short "origin/$branch")..."
+        git pull origin "$branch"
         
         # Install requirements
         log_info "Installing dependencies..."

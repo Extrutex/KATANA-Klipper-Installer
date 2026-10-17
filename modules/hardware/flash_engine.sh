@@ -23,6 +23,7 @@ EOF
 
 function load_workflow_state() {
     if [ -f "$KATANA_STATE_FILE" ]; then
+        # shellcheck source=/dev/null
         source "$KATANA_STATE_FILE"
         return 0
     fi
@@ -56,6 +57,7 @@ print("\t".join((f.get("BOARD_NAME", ""), f.get("ARCH", "unknown"),
         return 0
     fi
     # Legacy fallback: execute the meta file (pre-phase-3 behavior)
+    # shellcheck source=/dev/null
     source "$meta"
 }
 
@@ -375,7 +377,7 @@ function build_and_flash_saved() {
     make olddefconfig > /dev/null
     make clean > /dev/null
     
-    if make -j$(nproc); then
+    if make -j"$(nproc)"; then
         log_success "Build complete."
         
         # Update timestamp
@@ -535,7 +537,7 @@ function run_build_and_flash() {
     make clean > /dev/null
     
     log_info "Kompiliere (make -j$(nproc))..."
-    if make -j$(nproc); then
+    if make -j"$(nproc)"; then
         log_success "Firmware kompiliert!"
         save_workflow_state "KLIPPER_BUILT" "klipper" "Firmware kompiliert, bereit zum Flashen"
     else
@@ -790,7 +792,7 @@ function run_linux_wizard() {
     make clean > /dev/null
 
     log_info "Compiling..."
-    if make -j$(nproc); then
+    if make -j"$(nproc)"; then
         log_success "Build complete!"
     else
         log_error "Build failed."
@@ -904,7 +906,7 @@ function flash_bin_artifact() {
     for dev in /dev/serial/by-id/*; do
         if [ -e "$dev" ]; then
             serial_device="$dev"
-            echo -e "  ${C_GREEN}●${NC} USB Serial: $(basename $dev)"
+            echo -e "  ${C_GREEN}●${NC} USB Serial: $(basename "$dev")"
         fi
     done
 

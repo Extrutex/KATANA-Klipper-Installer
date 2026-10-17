@@ -30,7 +30,7 @@ function run_instance_manager() {
 function list_instances() {
     # Find all printer_data directories that actually contain a config folder
     local instances=()
-    for d in $HOME/printer_data*; do
+    for d in "$HOME"/printer_data*; do
         if [ -d "$d/config" ]; then
             instances+=("$d")
         fi
@@ -80,7 +80,7 @@ function add_new_instance() {
     
     # 2. Find next free port
     local next_port=7125
-    local ports_in_use=$(grep "^port =" $HOME/printer_data*/config/moonraker.conf 2>/dev/null | awk '{print $3}')
+    local ports_in_use=$(grep "^port =" "$HOME"/printer_data*/config/moonraker.conf 2>/dev/null | awk '{print $3}')
     while true; do
         if ! echo "$ports_in_use" | grep -qx "$next_port"; then
             break

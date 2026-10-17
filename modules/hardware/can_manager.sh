@@ -326,7 +326,7 @@ function flash_via_katapult_wizard() {
         echo ""
         if katana_confirm_destructive "  Add this UUID to printer.cfg? [y/N]: " overwrite; then
             # 2. Select target instance
-            local instances=($(ls -d $HOME/printer_data* 2>/dev/null))
+            local instances=($(ls -d "$HOME"/printer_data* 2>/dev/null))
             if [ ${#instances[@]} -eq 1 ]; then
                 inject_uuid_to_config "$selected_uuid" "${instances[0]}"
             else
@@ -361,11 +361,11 @@ function inject_uuid_to_config() {
     local config_file="$data_dir/config/printer.cfg"
     
     if [ ! -f "$config_file" ]; then
-        log_error "printer.cfg not found in $(basename $data_dir)!"
+        log_error "printer.cfg not found in $(basename "$data_dir")!"
         return 1
     fi
     
-    log_info "Updating $(basename $data_dir)/config/printer.cfg..."
+    log_info "Updating $(basename "$data_dir")/config/printer.cfg..."
     
     # Check if [mcu can0] exists
     if grep -q "\[mcu can0\]" "$config_file"; then
